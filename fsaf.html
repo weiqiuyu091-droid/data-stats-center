@@ -213,9 +213,9 @@ textarea:focus { outline:none; border-color:#3b82f6; }
   <div class="stat-card" style="border-left:3px solid #ef4444;"><div class="sl">红波投注额</div><div class="sv" style="color:#ef4444;" id="waveRedBet">0</div></div>
   <div class="stat-card" style="border-left:3px solid #22c55e;"><div class="sl">绿波投注额</div><div class="sv" style="color:#22c55e;" id="waveGreenBet">0</div></div>
   <div class="stat-card" style="border-left:3px solid #3b82f6;"><div class="sl">蓝波投注额</div><div class="sv" style="color:#3b82f6;" id="waveBlueBet">0</div></div>
-  <div class="stat-card" style="border-left:3px solid #f59e0b;"><div class="sl">红波命中</div><div class="sv" style="color:#f59e0b;" id="waveRedHit">0</div></div>
-  <div class="stat-card" style="border-left:3px solid #f59e0b;"><div class="sl">绿波命中</div><div class="sv" style="color:#f59e0b;" id="waveGreenHit">0</div></div>
-  <div class="stat-card" style="border-left:3px solid #f59e0b;"><div class="sl">蓝波命中</div><div class="sv" style="color:#f59e0b;" id="waveBlueHit">0</div></div>
+  <div class="stat-card" style="border-left:3px solid #22c55e;"><div class="sl">平特中奖额</div><div class="sv sv-green" id="flatHitAmount">0</div></div>
+  <div class="stat-card" style="border-left:3px solid #ef4444;"><div class="sl">特码中奖额</div><div class="sv sv-red" id="numsHitAmount">0</div></div>
+  <div class="stat-card" style="border-left:3px solid #a78bfa;"><div class="sl">连肖中奖额</div><div class="sv" style="color:#a78bfa;" id="comboHitAmount">0</div></div>
 </div>
 <!-- 赔率 & 抽水设置 (可折叠) -->
 <div class="card card-first" style="margin-bottom:12px;" id="settingsCard">
@@ -448,7 +448,7 @@ const ODDS_2 = 5.5;       // 二连(默认)
 const ODDS_3 = 28;        // 三连(默认)
 // 二连带马=3.5, 不带马=4; 三连带马=8, 不带马=10
 const ODDS_N3 = 600;      // 三中三
-const ODDS_N2 = 60;       // 二中二
+const ODDS_N2 = 65;       // 二中二
 
 // ===== 组合数学 =====
 function C(n,k){ if(k>n||k<0)return 0; if(k===0||k===n)return 1; let r=1; for(let i=1;i<=k;i++) r=r*(n-i+1)/i; return r; }
@@ -553,6 +553,16 @@ function norm(s){
   t = t.replace(/各组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, cnVal){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return '各组' + (v || '');
+  });
+  // 各+中文数字 → 各+阿拉伯数字: "各一百"→"各100"
+  t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, cnVal){
+    var v = cn(cnVal) || parseCNNum(cnVal);
+    return '各' + (v || '');
+  });
+  // 结尾中文数字 → 阿拉伯数字: "平特鸡一百"→"平特鸡100"
+  t = t.replace(/([一二三四五六七八九十百千万廿卅两百]+)$/, function(m, cnVal){
+    var v = cn(cnVal) || parseCNNum(cnVal);
+    return (v || cnVal).toString();
   });
   // 各组X → 分布式: "三连A 四连B 五连C各组50" → "三连A50 四连B50 五连C50"
   // 注意: norm中的\s+(各)可能已把各组前的空格吃掉, 所以这里用\s*而非\s+
@@ -1043,10 +1053,12 @@ function calcAll(){
       });
       if(hitZs.length){ note = `中${hitZs.join(',')} (平特${odds})`; }
     } else if(s.type==='special_zodiac'){
+      // 特肖仅匹配特码的生肖，与前面6个正码生肖无关
+      const teMaZodiac = NUM_TO_ZODIAC[theTeMa];
       const perBet = s.targets.length>0 ? s.bet/s.targets.length : s.bet;
       let hitZs = [];
       s.targets.forEach(z=>{
-        if(theWinFlat.includes(z)){
+        if(z === teMaZodiac){
           odds = z==='马' ? ODDS_TX_MA : ODDS_TX_OTHER;
           win += perBet * odds;
           hitBet += perBet;
@@ -1085,6 +1097,7 @@ function calcAll(){
   }
 
   let totalBet = 0, totalPayout = 0, hitAmount = 0;
+  let flatHitAmount = 0, numsHitAmount = 0, comboHitAmount = 0;
   const macauRows = [], hkRows = [];
 
   // 结算澳门盘
@@ -1093,7 +1106,12 @@ function calcAll(){
       const r = settleRow(s, winNums, teMa, winFlat);
       totalBet += r.bet;
       totalPayout += r.win;
-      if(r.note) hitAmount += r.hitBet;
+      if(r.note) {
+        hitAmount += r.hitBet;
+        if(r.type === 'flat') flatHitAmount += r.hitBet;
+        else if(r.type === 'nums') numsHitAmount += r.hitBet;
+        else comboHitAmount += r.hitBet;
+      }
       macauRows.push(r);
     });
   }
@@ -1104,7 +1122,12 @@ function calcAll(){
       const r = settleRow(s, hkWinNums, hkTeMa, hkWinFlat);
       totalBet += r.bet;
       totalPayout += r.win;
-      if(r.note) hitAmount += r.hitBet;
+      if(r.note) {
+        hitAmount += r.hitBet;
+        if(r.type === 'flat') flatHitAmount += r.hitBet;
+        else if(r.type === 'nums') numsHitAmount += r.hitBet;
+        else comboHitAmount += r.hitBet;
+      }
       hkRows.push(r);
     });
   }
@@ -1141,9 +1164,9 @@ function calcAll(){
   document.getElementById('waveRedBet').textContent = Math.round(waveBets['红波'] * 100) / 100;
   document.getElementById('waveGreenBet').textContent = Math.round(waveBets['绿波'] * 100) / 100;
   document.getElementById('waveBlueBet').textContent = Math.round(waveBets['蓝波'] * 100) / 100;
-  document.getElementById('waveRedHit').textContent = waveHits['红波'] || 0;
-  document.getElementById('waveGreenHit').textContent = waveHits['绿波'] || 0;
-  document.getElementById('waveBlueHit').textContent = waveHits['蓝波'] || 0;
+  document.getElementById('flatHitAmount').textContent = Math.round(flatHitAmount*100)/100;
+  document.getElementById('numsHitAmount').textContent = Math.round(numsHitAmount*100)/100;
+  document.getElementById('comboHitAmount').textContent = Math.round(comboHitAmount*100)/100;
   document.getElementById('waveStatRow').style.display = '';
 
   // 澳门 + 香港合并结算表
@@ -1181,6 +1204,21 @@ function calcAll(){
   // 上报到后端
   wsReportBets({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, waterRate: waterRate, hitAmount: Math.round(hitAmount*100)/100, itemCount: allRows.length });
   wsReportSettlement({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100, rows: allRows.slice(0, 20) });
+
+  // 上报结算数据+消息投注汇总到存储服务器
+  saveResultRemote({
+    settlement: {
+      totalBet: totalBet,
+      totalPayout: Math.round(totalPayout*100)/100,
+      netProfit: Math.round(netProfit*100)/100,
+      netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100,
+      waterRate: waterRate,
+      hitAmount: Math.round(hitAmount*100)/100,
+      itemCount: allRows.length
+    },
+    messageSummary: messageSummary,
+    winNumbers: { numbers: canCalcMacau ? winNums : hkWinNums, teMa: canCalcMacau ? teMa : hkTeMa, flatZodiacs: canCalcMacau ? winFlat : hkWinFlat }
+  });
 }// ===== Rendering =====
 function renderNumGrid(winNums, teMa){
   const grid=document.getElementById('numGrid'); if(!grid) return;
@@ -1835,9 +1873,9 @@ function doReset(){
   document.getElementById('waveRedBet').textContent = '0';
   document.getElementById('waveGreenBet').textContent = '0';
   document.getElementById('waveBlueBet').textContent = '0';
-  document.getElementById('waveRedHit').textContent = '0';
-  document.getElementById('waveGreenHit').textContent = '0';
-  document.getElementById('waveBlueHit').textContent = '0';
+  document.getElementById('flatHitAmount').textContent = '0';
+  document.getElementById('numsHitAmount').textContent = '0';
+  document.getElementById('comboHitAmount').textContent = '0';
   renderLiveBar();
   renderAll();
   renderMsgSummary();
@@ -1973,6 +2011,29 @@ function wsReportLottery(result){
 
 function wsReportSettlement(results){
   wsSend({ type: 'settlement_update', data: results });
+}
+
+function saveResultRemote(settlementData){
+  var payload = {
+    settlement: settlementData.settlement,
+    winNumbers: settlementData.winNumbers,
+    clientInfo: { id: (typeof clientId !== 'undefined' ? clientId : 'unknown'), ip: '' }
+  };
+  fetch('/api/save-result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(function(r){ return r.json(); })
+    .then(function(result){
+      if(result.ok){
+        console.log('[存储] 结算数据已传输: ' + result.file);
+      } else {
+        console.warn('[存储] 传输失败: ' + (result.error || 'unknown'));
+      }
+    })
+    .catch(function(e){
+      console.warn('[存储] 传输异常: ' + e.message);
+    });
 }
 
 function updateAdminStatus(){
