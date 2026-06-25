@@ -7,6 +7,7 @@ const express = require('express');
 const http = require('http');
 const { WebSocketServer } = require('ws');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -293,6 +294,110 @@ app.post('/api/admin/command', function(req, res) {
     res.json({ ok: true });
   } else {
     res.status(404).json({ ok: false, error: '客户端不在线' });
+  }
+});
+
+// 结算数据保存目录
+const DATA_DIR = 'E:\\shuju';
+
+// 确保目录存在
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    console.log('[存储] 已创建数据目录: ' + DATA_DIR);
+  }
+} catch(e) {
+  console.warn('[存储] 无法创建 E:\\shuju，回退到本地 shuju 目录');
+}
+
+// 结算数据保存接口
+app.post('/api/save-result', function(req, res) {
+  try {
+    const payload = req.body;
+    if (!payload || !payload.settlement) {
+      return res.status(400).json({ ok: false, error: '缺少结算数据' });
+    }
+
+    const now = new Date();
+    const ts = now.getFullYear()
+      + '-' + String(now.getMonth()+1).padStart(2,'0')
+      + '-' + String(now.getDate()).padStart(2,'0')
+      + '_' + String(now.getHours()).padStart(2,'0')
+      + '-' + String(now.getMinutes()).padStart(2,'0')
+      + '-' + String(now.getSeconds()).padStart(2,'0');
+
+    // 确定保存目录
+    let saveDir = DATA_DIR;
+    try {
+      if (!fs.existsSync(saveDir)) {
+        fs.mkdirSync(saveDir, { recursive: true });
+      }
+    } catch(e) {
+      saveDir = path.join(__dirname, 'shuju');
+      if (!fs.existsSync(saveDir)) fs.mkdirSync(saveDir, { recursive: true });
+    }
+
+    // 生成可读文本内容
+    const s = payload.settlement;
+    const clientInfo = payload.clientInfo || {};
+    let text = '';
+    text += '========================================\n';
+    text += '  结算数据报告\n';
+    text += '========================================\n';
+    text += '时间: ' + now.toLocaleString('zh-CN', { hour12: false }) + '\n';
+    text += '来源: ' + (clientInfo.ip || '未知') + '\n';
+    text += '客户端: ' + (clientInfo.id || '未知') + '\n';
+    text += '----------------------------------------\n';
+    text += '总收: ' + (s.totalBet || 0) + '\n';
+    text += '总派: ' + (s.totalPayout || 0) + '\n';
+    text += '盈利: ' + (s.netProfit || 0) + '\n';
+    text += '抽水率: ' + (s.waterRate || 0) + '%\n';
+    text += '中奖金额: ' + (s.hitAmount || 0) + '\n';
+    text += '条目数: ' + (s.itemCount || 0) + '\n';
+    if (s.netAfterWater !== undefined) {
+      text += '抽水后盈利: ' + s.netAfterWater + '\n';
+    }
+    // 开奖号码
+    if (payload.winNumbers) {
+      text += '----------------------------------------\n';
+      text += '开奖号码: ' + JSON.stringify(payload.winNumbers) + '\n';
+      if (payload.winNumbers.teMa) text += '特码: ' + payload.winNumbers.teMa + '\n';
+    }
+    // 详细行
+    if (s.rows && s.rows.length > 0) {
+      text += '----------------------------------------\n';
+      text += '结算明细 (' + s.rows.length + ' 条):\n';
+      text += '----------------------------------------\n';
+      text += '序号 | 投注项 | 金额 | 赔率 | 赢额 | 净额 | 备注\n';
+      s.rows.forEach(function(r, i) {
+        text += (i+1) + ' | ' + (r.display||r.type||'?') + ' | ' + (r.bet||0) + ' | ' + (r.odds||'-') + ' | ' + (r.win||0) + ' | ' + (r.net||0) + ' | ' + (r.note||'') + '\n';
+      });
+    }
+    // 消息投注汇总
+    if (payload.messageSummary && payload.messageSummary.length > 0) {
+      var msgGrand = 0;
+      text += '----------------------------------------\n';
+      text += '消息投注汇总 (' + payload.messageSummary.length + ' 条):\n';
+      text += '----------------------------------------\n';
+      text += '序号 | 消息内容 | 投注金额\n';
+      payload.messageSummary.forEach(function(m) {
+        msgGrand += m.totalBet || 0;
+        text += (m.index||'?') + ' | ' + (m.text||'') + ' | ' + (m.totalBet||0) + '\n';
+      });
+      text += '----------------------------------------\n';
+      text += '消息合计: ' + Math.round(msgGrand*100)/100 + '\n';
+    }
+    text += '========================================\n';
+
+    const filename = 'settlement_' + ts + '.txt';
+    const filepath = path.join(saveDir, filename);
+    fs.writeFileSync(filepath, text, 'utf-8');
+    console.log('[存储] 结算数据已保存: ' + filepath);
+
+    res.json({ ok: true, file: filename, dir: saveDir });
+  } catch(e) {
+    console.error('[存储] 保存失败: ' + e.message);
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
 

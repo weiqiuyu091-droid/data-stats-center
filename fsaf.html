@@ -199,7 +199,13 @@ textarea:focus { outline:none; border-color:#3b82f6; }
   <span style="font-size:.7rem;color:#ef4444;display:none;" id="hkResultErr"></span>
 </div>
 
-<!-- ===== 汇总统计 ===== -->
+<!-- ===== 汇总统计 (默认折叠) ===== -->
+<div class="card card-first" style="margin-bottom:8px;">
+  <div class="card-header collapse-toggle" onclick="toggleCollapse('statRowBody')" style="margin-bottom:0;">
+    <span class="card-title">汇总统计</span>
+    <span style="font-size:.7rem;color:#64748b;" id="statRowToggleLabel">点击展开</span>
+  </div>
+  <div class="collapse-body" id="statRowBody">
 <div class="stat-row" id="statRow">
   <div class="stat-card"><div class="sl">总收注 (澳+港)</div><div class="sv sv-blue" id="sumTotalBet">0</div></div>
   <div class="stat-card"><div class="sl">应付派彩</div><div class="sv sv-red" id="sumTotalPayout">0</div></div>
@@ -216,6 +222,8 @@ textarea:focus { outline:none; border-color:#3b82f6; }
   <div class="stat-card" style="border-left:3px solid #22c55e;"><div class="sl">平特中奖额</div><div class="sv sv-green" id="flatHitAmount">0</div></div>
   <div class="stat-card" style="border-left:3px solid #ef4444;"><div class="sl">特码中奖额</div><div class="sv sv-red" id="numsHitAmount">0</div></div>
   <div class="stat-card" style="border-left:3px solid #a78bfa;"><div class="sl">连肖中奖额</div><div class="sv" style="color:#a78bfa;" id="comboHitAmount">0</div></div>
+</div>
+  </div>
 </div>
 <!-- 赔率 & 抽水设置 (可折叠) -->
 <div class="card card-first" style="margin-bottom:12px;" id="settingsCard">
@@ -237,7 +245,7 @@ textarea:focus { outline:none; border-color:#3b82f6; }
       <span class="odds-item">五连带马 <strong>1:80</strong></span>
       <span class="odds-item">五连不带马 <strong>1:100</strong></span>
       <span class="odds-item">三中三 <strong>1:600</strong></span>
-      <span class="odds-item">二中二 <strong>1:60</strong></span>
+      <span class="odds-item">二中二 <strong>1:65</strong></span>
     </div>
     <div style="display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:8px 14px;flex-wrap:wrap;">
       <span style="font-size:.8rem;color:#94a3b8;white-space:nowrap;">抽水率:</span>
@@ -309,10 +317,16 @@ textarea:focus { outline:none; border-color:#3b82f6; }
   </div>
   <div class="collapse-body show" id="msgSummaryBody">
     <table class="tbl" id="msgSummaryTable">
-      <thead><tr><th style="width:40px;">序号</th><th>消息内容</th><th style="width:80px;">投注总额</th></tr></thead>
-      <tbody id="msgSummaryTbody"><tr><td colspan="3" style="text-align:center;color:#475569;">等待分析...</td></tr></tbody>
-      <tfoot><tr><td></td><td style="text-align:right;">合计</td><td style="text-align:center;font-weight:700;color:#60a5fa;" id="msgSummaryGrandTotal">0</td></tr></tfoot>
+      <thead><tr><th style="width:40px;">序号</th><th>消息内容</th><th style="width:80px;">投注总额</th><th style="width:120px;">中奖内容</th></tr></thead>
+      <tbody id="msgSummaryTbody"><tr><td colspan="4" style="text-align:center;color:#475569;">等待分析...</td></tr></tbody>
+      <tfoot><tr><td></td><td style="text-align:right;">合计</td><td style="text-align:center;font-weight:700;color:#60a5fa;" id="msgSummaryGrandTotal">0</td><td></td></tr></tfoot>
     </table>
+    <div id="msgSummaryStats" style="display:none; background:#0f172a; border:1px solid #334155; border-radius:6px; padding:10px 14px; margin-top:8px; font-size:.78rem;">
+      <span style="margin-right:20px;">总收注: <b style="color:#60a5fa;" id="msgSumTotalBet">0</b></span>
+      <span style="margin-right:20px;">特码中奖额: <b style="color:#ef4444;" id="msgSumNumsHit">0</b></span>
+      <span style="margin-right:20px;">连肖中奖: <span style="color:#a78bfa;" id="msgSumComboHit">-</span></span>
+      <span>抽水后净收益: <b style="color:#22c55e;" id="msgSumNetAfter">0</b></span>
+    </div>
   </div>
 </div>
 
@@ -1219,6 +1233,36 @@ function calcAll(){
     messageSummary: messageSummary,
     winNumbers: { numbers: canCalcMacau ? winNums : hkWinNums, teMa: canCalcMacau ? teMa : hkTeMa, flatZodiacs: canCalcMacau ? winFlat : hkWinFlat }
   });
+
+  // 汇总每条消息的中奖内容到消息投注汇总
+  messageSummary.forEach(function(m){ m.winNote = ''; });
+  var comboWinDetails = [];
+  allRows.forEach(function(r){
+    if(r.note && r.msgIndex !== undefined){
+      var m = messageSummary[r.msgIndex];
+      if(m){
+        var noteText = esc(r.display) + ' → ' + r.note;
+        if(m.winNote) m.winNote += '<br>';
+        m.winNote += noteText;
+      }
+    }
+    // 收集连肖中奖明细
+    if(r.type === 'combo' && r.note){
+      var typeName = r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
+      comboWinDetails.push(r.comboZodiacs + typeName + '中' + r.win);
+    }
+  });
+  renderMsgSummary();
+
+  // 填充消息汇总统计栏
+  var statsBar = document.getElementById('msgSummaryStats');
+  if(statsBar){
+    statsBar.style.display = '';
+    document.getElementById('msgSumTotalBet').textContent = totalBet;
+    document.getElementById('msgSumNumsHit').textContent = Math.round(numsHitAmount*100)/100;
+    document.getElementById('msgSumComboHit').innerHTML = comboWinDetails.length > 0 ? comboWinDetails.join('; ') : '-';
+    document.getElementById('msgSumNetAfter').textContent = (netAfterWater>=0?'+':'')+Math.round(netAfterWater);
+  }
 }// ===== Rendering =====
 function renderNumGrid(winNums, teMa){
   const grid=document.getElementById('numGrid'); if(!grid) return;
@@ -1437,6 +1481,7 @@ function renderMsgSummary(){
       '<td class="td-r" style="color:#64748b;">' + m.index + '</td>' +
       '<td style="font-size:.75rem;word-break:break-all;" title="' + esc(m.fullText) + '">' + esc(m.text) + '</td>' +
       '<td class="td-r" style="color:#60a5fa;font-weight:600;">' + m.totalBet + '</td>' +
+      '<td style="font-size:.7rem;color:#22c55e;">' + (m.winNote || '') + '</td>' +
       '</tr>';
   }).join('');
 
@@ -1876,6 +1921,12 @@ function doReset(){
   document.getElementById('flatHitAmount').textContent = '0';
   document.getElementById('numsHitAmount').textContent = '0';
   document.getElementById('comboHitAmount').textContent = '0';
+  var statsBar = document.getElementById('msgSummaryStats');
+  if(statsBar){ statsBar.style.display = 'none'; }
+  document.getElementById('msgSumTotalBet').textContent = '0';
+  document.getElementById('msgSumNumsHit').textContent = '0';
+  document.getElementById('msgSumComboHit').textContent = '-';
+  document.getElementById('msgSumNetAfter').textContent = '0';
   renderLiveBar();
   renderAll();
   renderMsgSummary();
