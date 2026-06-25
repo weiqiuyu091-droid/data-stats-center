@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>API 抓取助手</title>
+<style>
+body { font-family:'Microsoft YaHei',sans-serif; background:#0f172a; color:#e2e8f0; padding:20px; }
+h1 { color:#60a5fa; font-size:1.2rem; margin-bottom:8px; }
+p { color:#94a3b8; font-size:.85rem; margin-bottom:16px; }
+button { padding:8px 20px; background:#2563eb; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.85rem; margin:4px; }
+button:hover { background:#1d4ed8; }
+.output { background:#0f172a; border:1px solid #334155; border-radius:6px; padding:16px; margin-top:12px; font-family:Consolas,monospace; font-size:.75rem; white-space:pre-wrap; max-height:400px; overflow-y:auto; }
+.hint { background:#1e3a5f; border:1px solid #3b82f6; border-radius:6px; padding:12px; margin:12px 0; font-size:.8rem; color:#93c5fd; }
+</style>
+</head>
+<body>
+<h1>数据统计中心 API 抓取助手</h1>
+<p>打开 <b>macaulottery.com/open_video2</b> 后，按 F12 → Network 标签 → 刷新页面，找到返回开奖数据的 API 请求</p>
+
+<button onclick="monitorXHR()">1. 拦截 XHR/Fetch 请求</button>
+<button onclick="monitorWS()">2. 拦截 WebSocket 消息</button>
+<button onclick="scanDOM()">3. 扫描 DOM 中已渲染的数据</button>
+<button onclick="copyOutput()">4. 复制结果</button>
+
+<div class="hint" id="hint">
+  <b>操作步骤：</b><br>
+  1. 打开 <b>https://macaulottery.com/open_video2/</b><br>
+  2. 按 <b>F12</b> 打开开发者工具<br>
+  3. 切换到 <b>Console</b> 标签<br>
+  4. 复制粘贴本页所有 JS 代码到 Console 中运行<br>
+  5. 观察输出，找到返回开奖数据的接口
+</div>
+
+<div class="output" id="output">等待操作...</div>
+
+<script>
+let output = [];
+function log(msg) { output.push(`[${new Date().toLocaleTimeString()}] ${msg}`); document.getElementById('output').textContent = output.join('\n'); }
+
+function monitorXHR() {
+  output = [];
+  log('开始拦截 XHR/Fetch...');
+
+  // Hook fetch
+  const origFetch = window.fetch;
+  window.fetch = function(...args) {
+    const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+    if (url.includes('api') || url.includes('getOpen') || url.includes('lottery') || url.includes('result') || url.includes('code') || url.includes('open')) {
+      log(`[Fetch] ${url}`);
+    }
+    return origFetch.apply(this, args).then(r => {
+      if (url.includes('api') || url.includes('getOpen') || url.includes('lottery') || url.includes('result') || url.includes('code') || url.includes('open')) {
+        const clone = r.clone();
+        clone.text().then(t => {
+          log(`[Fetch RESP] ${url}`);
+          log(`  数据: ${t.substring(0, 500)}`);
+        });
+      }
+      return r;
+    });
+  };
+
+  // Hook XHR
+  const origOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this._url = url;
+    if (url.includes('api') || url.includes('getOpen') || url.includes('lottery') || url.includes('result') || url.includes('code') || url.includes('open')) {
+      log(`[XHR] ${method} ${url}`);
+      this.addEventListener('load', function() {
+        log(`[XHR RESP] ${url}`);
+        log(`  数据: ${this.responseText?.substring(0, 500)}`);
+      });
+    }
+    return origOpen.apply(this, arguments);
+  };
+
+  log('拦截器已安装。刷新页面或等待下一次API请求...');
+}
+
+function monitorWS() {
+  output = [];
+  log('开始拦截 WebSocket...');
+
+  const origWS = window.WebSocket;
+  window.WebSocket = function(...args) {
+    log(`[WebSocket] 连接: ${args[0]}`);
+    const ws = new origWS(...args);
+    const origOnMsg = ws.onmessage;
+    ws.addEventListener('message', function(e) {
+      log(`[WebSocket MSG] ${e.data?.substring(0, 500)}`);
+    });
+    return ws;
+  };
+  log('WebSocket 拦截器已安装。');
+}
+
+function scanDOM() {
+  output = [];
+  log('扫描 DOM 中的开奖数据...');
+
+  // 扫描所有可见数字
+  const allText = document.body.innerText;
+  log(`页面文本片段: ${allText.substring(0, 1000)}`);
+
+  // 扫描特定 class
+  const classes = ['open_code_zone_left-item-number', 'lotteryNumber', 'ball', 'number', 'code', 'result'];
+  classes.forEach(cls => {
+    const els = document.querySelectorAll(`.${cls}`);
+    if (els.length > 0) {
+      log(`[DOM] .${cls}: ${els.length} 个元素`);
+      els.forEach(el => log(`  "${el.textContent.trim()}"`));
+    }
+  });
+
+  // 扫描 canvas 数据
+  const canvases = document.querySelectorAll('canvas');
+  log(`[DOM] Canvas: ${canvases.length} 个`);
+
+  // 扫描所有 div 中可能的数字
+  const divs = document.querySelectorAll('div');
+  const numberDivs = [];
+  divs.forEach(d => {
+    const t = d.textContent.trim();
+    if (/^\d{1,2}$/.test(t) && parseInt(t) >= 1 && parseInt(t) <= 49) {
+      numberDivs.push(t);
+    }
+  });
+  if (numberDivs.length > 0) {
+    log(`[DOM] 找到数字: ${numberDivs.join(', ')}`);
+  }
+}
+
+function copyOutput() {
+  const text = output.join('\n');
+  navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板！请粘贴给我。'));
+}
+</script>
+</body>
+</html>

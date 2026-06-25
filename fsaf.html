@@ -1,0 +1,2159 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据统计中心</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Microsoft YaHei',sans-serif; background:#0f172a; color:#cbd5e1; min-height:100vh; padding:16px; }
+.container { max-width:1300px; margin:0 auto; }
+
+/* ===== 实时开奖区域 ===== */
+.live-bar { background:#1e293b; border:1px solid #334155; border-radius:8px; padding:14px 20px; margin-bottom:12px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.live-bar .status { display:flex; align-items:center; gap:6px; }
+.live-dot { width:8px; height:8px; border-radius:50%; background:#ef4444; animation:blink 1s infinite; }
+.live-dot.online { background:#22c55e; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.live-bar .label { font-size:.75rem; color:#64748b; white-space:nowrap; }
+.live-bar .info { font-size:.8rem; color:#94a3b8; }
+
+/* Number balls */
+.balls { display:flex; gap:10px; align-items:center; }
+.ball { width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.2rem; color:#fff; position:relative; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+.ball.red { background:linear-gradient(135deg,#ef4444,#b91c1c); } /* 红波 */
+.ball.green { background:linear-gradient(135deg,#22c55e,#15803d); } /* 绿波 */
+.ball.blue { background:linear-gradient(135deg,#3b82f6,#1d4ed8); } /* 蓝波 */
+.ball.te { width:64px; height:64px; font-size:1.5rem; box-shadow:0 0 16px rgba(245,158,11,.4); } /* 特码加大+光晕 */
+.ball .zodiac-tag { position:absolute; bottom:-16px; font-size:.7rem; color:#fbbf24; white-space:nowrap; font-weight:500; }
+
+/* Flat zodiac display */
+.flat-tags { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.flat-tag { padding:4px 12px; border-radius:4px; font-size:.8rem; font-weight:600; background:#1e3a5f; color:#60a5fa; border:1px solid #3b82f6; }
+
+/* Refresh controls */
+.refresh-row { display:flex; gap:8px; align-items:center; }
+.btn { padding:6px 16px; border:none; border-radius:4px; cursor:pointer; font-size:.8rem; font-weight:600; transition:all .15s; }
+.btn-primary { background:#2563eb; color:#fff; }
+.btn-primary:hover { background:#1d4ed8; }
+.btn-outline { background:transparent; border:1px solid #475569; color:#94a3b8; }
+.btn-outline:hover { border-color:#64748b; color:#e2e8f0; }
+.btn-sm { padding:4px 10px; font-size:.7rem; }
+.btn-success { background:#16a34a; color:#fff; }
+.btn-success:hover { background:#15803d; }
+.btn-danger { background:#dc2626; color:#fff; }
+.btn-danger:hover { background:#b91c1c; }
+.btn-amber { background:#d97706; color:#fff; }
+.btn-amber:hover { background:#b45309; }
+
+/* Tabs */
+.tabs { display:flex; gap:0; margin-top:12px; }
+.tab-btn { padding:8px 24px; border:none; background:#1e293b; color:#64748b; cursor:pointer; font-size:.85rem; font-weight:600; border-bottom:2px solid transparent; }
+.tab-btn:first-child { border-radius:6px 0 0 0; }
+.tab-btn:last-child { border-radius:0 6px 0 0; }
+.tab-btn.active { background:#1e3a5f; color:#60a5fa; border-bottom-color:#60a5fa; }
+
+/* Cards */
+.card { background:#1e293b; border:1px solid #334155; border-radius:0 0 8px 8px; padding:16px; margin-bottom:12px; }
+.card-first { border-radius:8px; }
+.card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.card-title { font-size:.9rem; font-weight:600; color:#e2e8f0; }
+
+/* Textarea */
+textarea { width:100%; height:160px; padding:12px; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#e2e8f0; font-size:.8rem; resize:vertical; line-height:1.7; font-family:'Consolas','Microsoft YaHei',monospace; }
+textarea:focus { outline:none; border-color:#3b82f6; }
+
+/* Number grid 7 cols */
+.num-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.num-cell { background:#0f172a; border:1px solid #1e293b; border-radius:4px; padding:6px 2px; text-align:center; }
+.num-cell .n { font-size:.85rem; color:#94a3b8; }
+.num-cell .v { font-size:.7rem; color:#475569; margin-top:1px; min-height:16px; }
+.num-cell.has-bet { border-color:#2563eb; background:#1e293b; }
+.num-cell.has-bet .n { color:#e2e8f0; }
+.num-cell.has-bet .v { color:#60a5fa; font-weight:600; }
+.num-cell.win { border-color:#22c55e; background:#052e16; box-shadow:0 0 4px rgba(34,197,94,.3); }
+.num-cell.win .n { color:#4ade80; font-weight:700; }
+.num-cell.win .v { color:#4ade80; }
+.num-cell.tema { border-color:#22c55e; background:#052e16; box-shadow:0 0 8px rgba(34,197,94,.5); }
+.num-cell.tema .n { color:#4ade80; font-weight:700; font-size:.95rem; }
+.num-cell.alert-top10 { border-color:#ef4444; background:#450a0a; box-shadow:0 0 6px rgba(239,68,68,.35); }
+.num-cell.alert-top10 .n { color:#f87171; font-weight:700; }
+.num-cell.alert-top10 .v { color:#fca5a5; }
+.num-cell.alert-tema { border-color:#f59e0b; background:linear-gradient(135deg, #7f1d1d 50%, #166534 50%); box-shadow:0 0 8px rgba(239,68,68,.35); }
+.num-cell.alert-tema .n { color:#fbbf24; font-weight:700; font-size:.95rem; }
+.num-cell.alert-tema .v { color:#fca5a5; }
+
+/* Tables */
+.tbl { width:100%; border-collapse:collapse; font-size:.78rem; }
+.tbl th { background:#0f172a; color:#64748b; padding:8px 10px; text-align:left; font-weight:500; border-bottom:2px solid #334155; }
+.tbl td { padding:6px 10px; border-bottom:1px solid #1e293b; color:#cbd5e1; }
+.tbl tr:hover td { background:#0f172a; }
+.tbl .td-r { text-align:center; }
+.tbl .td-win { text-align:center; color:#22c55e; font-weight:600; }
+.tbl .td-lose { text-align:center; color:#ef4444; }
+.tbl .td-net { text-align:center; font-weight:700; }
+.tbl .net-pos { color:#22c55e; }
+.tbl .net-neg { color:#ef4444; }
+.tbl tfoot td { font-weight:700; color:#e2e8f0; border-top:2px solid #334155; }
+
+/* Stat cards */
+.stat-row { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:12px; }
+.stat-card { background:#0f172a; border:1px solid #1e293b; border-radius:6px; padding:12px; text-align:center; }
+.stat-card .sl { font-size:.7rem; color:#64748b; }
+.stat-card .sv { font-size:1.3rem; font-weight:700; margin-top:4px; }
+.sv-blue { color:#60a5fa; }
+.sv-green { color:#22c55e; }
+.sv-red { color:#ef4444; }
+.sv-amber { color:#f59e0b; }
+
+/* Odds display */
+.odds-bar { display:flex; gap:16px; flex-wrap:wrap; font-size:.75rem; color:#64748b; margin-top:6px; }
+.odds-item { padding:2px 8px; background:#0f172a; border-radius:4px; border:1px solid #1e293b; }
+.odds-item strong { color:#fbbf24; }
+
+/* Collapse */
+.collapse-toggle { cursor:pointer; user-select:none; }
+.collapse-toggle::before { content:'▸ '; font-size:.7rem; color:#475569; }
+.collapse-toggle.open::before { content:'▾ '; }
+.collapse-body { display:none; }
+.collapse-body.show { display:block; }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.6); z-index:100; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:#1e293b; border:1px solid #334155; border-radius:8px; padding:24px; max-width:380px; width:90%; }
+.modal-box h3 { color:#e2e8f0; margin-bottom:8px; }
+.modal-box p { color:#94a3b8; font-size:.8rem; margin-bottom:16px; }
+.modal-btns { display:flex; gap:8px; justify-content:flex-end; }
+
+.toast { position:fixed; top:16px; right:16px; background:#065f46; color:#d1fae5; padding:8px 16px; border-radius:6px; font-size:.8rem; z-index:200; opacity:0; transform:translateX(100%); transition:all .3s; }
+.toast.show { opacity:1; transform:translateX(0); }
+
+@media (max-width:768px) {
+  .stat-row { grid-template-columns:repeat(2,1fr); }
+  .balls { gap:5px; }
+  .ball { width:36px; height:36px; font-size:.85rem; }
+  .ball.te { width:44px; height:44px; font-size:1.05rem; }
+  .num-grid { grid-template-columns:repeat(7,1fr); gap:2px; }
+}
+
+/* Highlight for matched flat zodiac in ball */
+.ball .flat-hit { position:absolute; top:-6px; right:-6px; width:14px; height:14px; border-radius:50%; background:#22c55e; border:2px solid #0f172a; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ===== 实时开奖显示 ===== -->
+<div class="live-bar" id="liveBar" style="padding:18px 24px; gap:20px;">
+  <div class="status">
+    <div class="live-dot" id="liveDot"></div>
+    <span class="label" id="liveStatus" style="font-size:1rem; font-weight:600;">等待数据...</span>
+  </div>
+  <div class="balls" id="liveBalls">
+    <span class="info">--</span>
+  </div>
+  <div style="flex:1;"></div>
+  <div class="flat-tags" id="liveFlatTags"></div>
+  <div class="refresh-row">
+    <span class="info" id="liveTime" style="font-size:.9rem;">--</span>
+    <button class="btn btn-outline btn-sm" onclick="toggleAutoRefresh()" id="btnAuto" title="开始自动刷新">开始自动刷新</button>
+    <button class="btn btn-outline btn-sm" onclick="manualFetch()" title="立即刷新一次">立即刷新</button>
+  </div>
+</div>
+
+<!-- ===== 香港开奖手动输入 ===== -->
+<div class="live-bar" id="hkInputBar" style="padding:14px 20px; gap:12px; border-color:#f59e0b; background:#1e1b1a;">
+  <span class="label" style="font-size:.85rem; color:#fbbf24; font-weight:600;">香港开奖</span>
+  <span style="font-size:.7rem;color:#64748b;">特码</span>
+  <input type="text" id="hkTeMa" placeholder="特码" maxlength="2"
+    style="width:52px;height:52px;border-radius:50%;text-align:center;font-weight:700;font-size:1.2rem;background:#1e293b;border:2px solid #f59e0b;color:#fbbf24;">
+  <span style="font-size:.7rem;color:#64748b;">正码</span>
+  <input type="text" id="hkNum1" placeholder="1" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
+  <input type="text" id="hkNum2" placeholder="2" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
+  <input type="text" id="hkNum3" placeholder="3" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
+  <input type="text" id="hkNum4" placeholder="4" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
+  <input type="text" id="hkNum5" placeholder="5" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
+  <input type="text" id="hkNum6" placeholder="6" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
+  <button class="btn btn-amber btn-sm" onclick="applyHKResult()" style="margin-left:4px;">确认香港开奖</button>
+  <span style="font-size:.7rem;color:#ef4444;display:none;" id="hkResultErr"></span>
+</div>
+
+<!-- ===== 汇总统计 ===== -->
+<div class="stat-row" id="statRow">
+  <div class="stat-card"><div class="sl">总收注 (澳+港)</div><div class="sv sv-blue" id="sumTotalBet">0</div></div>
+  <div class="stat-card"><div class="sl">应付派彩</div><div class="sv sv-red" id="sumTotalPayout">0</div></div>
+  <div class="stat-card"><div class="sl">庄家净收益</div><div class="sv sv-green" id="sumNetProfit">0</div></div>
+  <div class="stat-card"><div class="sl">抽水后净收益</div><div class="sv sv-green" id="sumNetAfterWater">0</div></div>
+  <div class="stat-card"><div class="sl">命中总数额</div><div class="sv sv-amber" id="sumHitCount">0</div></div>
+  <div class="stat-card"><div class="sl">中奖金额</div><div class="sv sv-red" id="sumWinAmount">0</div></div>
+</div>
+<!-- 波色投注统计 -->
+<div class="stat-row" id="waveStatRow" style="display:none;">
+  <div class="stat-card" style="border-left:3px solid #ef4444;"><div class="sl">红波投注额</div><div class="sv" style="color:#ef4444;" id="waveRedBet">0</div></div>
+  <div class="stat-card" style="border-left:3px solid #22c55e;"><div class="sl">绿波投注额</div><div class="sv" style="color:#22c55e;" id="waveGreenBet">0</div></div>
+  <div class="stat-card" style="border-left:3px solid #3b82f6;"><div class="sl">蓝波投注额</div><div class="sv" style="color:#3b82f6;" id="waveBlueBet">0</div></div>
+  <div class="stat-card" style="border-left:3px solid #f59e0b;"><div class="sl">红波命中</div><div class="sv" style="color:#f59e0b;" id="waveRedHit">0</div></div>
+  <div class="stat-card" style="border-left:3px solid #f59e0b;"><div class="sl">绿波命中</div><div class="sv" style="color:#f59e0b;" id="waveGreenHit">0</div></div>
+  <div class="stat-card" style="border-left:3px solid #f59e0b;"><div class="sl">蓝波命中</div><div class="sv" style="color:#f59e0b;" id="waveBlueHit">0</div></div>
+</div>
+<!-- 赔率 & 抽水设置 (可折叠) -->
+<div class="card card-first" style="margin-bottom:12px;" id="settingsCard">
+  <div class="card-header collapse-toggle open" onclick="toggleCollapse('settingsBody')" style="margin-bottom:0;">
+    <span class="card-title">赔率 & 抽水设置</span>
+    <span style="font-size:.7rem;color:#64748b;">点击折叠</span>
+  </div>
+  <div class="collapse-body show" id="settingsBody">
+    <div class="odds-bar" style="margin-bottom:8px;">
+      <span class="odds-item">特码赔率 <strong>1:47</strong></span>
+      <span class="odds-item">平特马赔率 <strong>1:1.8</strong></span>
+      <span class="odds-item">其他平特赔率 <strong>1:2.0</strong></span>
+      <span class="odds-item">二连带马 <strong>1:3.5</strong></span>
+      <span class="odds-item">二连不带马 <strong>1:4</strong></span>
+      <span class="odds-item">三连带马 <strong>1:8</strong></span>
+      <span class="odds-item">三连不带马 <strong>1:10</strong></span>
+      <span class="odds-item">四连带马 <strong>1:25</strong></span>
+      <span class="odds-item">四连不带马 <strong>1:30</strong></span>
+      <span class="odds-item">五连带马 <strong>1:80</strong></span>
+      <span class="odds-item">五连不带马 <strong>1:100</strong></span>
+      <span class="odds-item">三中三 <strong>1:600</strong></span>
+      <span class="odds-item">二中二 <strong>1:60</strong></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:8px 14px;flex-wrap:wrap;">
+      <span style="font-size:.8rem;color:#94a3b8;white-space:nowrap;">抽水率:</span>
+      <input type="range" id="waterSlider" min="0" max="30" value="0" step="0.5" oninput="updateWater(this.value)" style="flex:1;min-width:100px;accent-color:#f59e0b;">
+      <span style="font-size:.85rem;color:#fbbf24;font-weight:600;min-width:42px;" id="waterRateDisplay">0%</span>
+      <span style="font-size:.75rem;color:#64748b;white-space:nowrap;" id="waterInfo">抽水: 0</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tabs ===== -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('bets')">投注分析</button>
+  <button class="tab-btn" onclick="switchTab('detail')">号码明细</button>
+  <button class="tab-btn" onclick="switchTab('zodiac')">生肖统计</button>
+		  <button class="tab-btn" onclick="switchTab('picker')">挑码参考</button>
+	  <button class="tab-btn" onclick="switchTab('combo')">连码统计</button>
+	  <button class="tab-btn" onclick="switchTab('n3')">三中三统计</button>
+	  <button class="tab-btn" onclick="switchTab('n2')">二中二统计</button>
+	  <button class="tab-btn" onclick="switchTab('admin')" id="tabBtnAdmin" style="margin-left:auto;color:#f59e0b;border-color:transparent;">管理</button>
+</div>
+
+<!-- ===== Tab: 管理面板 ===== -->
+<div class="card card-first" id="tabAdmin" style="display:none;">
+  <div class="card-header"><span class="card-title">远程管理</span><span style="font-size:.7rem;color:#64748b;" id="adminConnStatus">未连接</span></div>
+  <div id="adminPanelContent">
+    <div style="text-align:center;padding:40px;color:#64748b;" id="adminAuthArea">
+      <div style="font-size:1.5rem;margin-bottom:12px;">&#x1f512;</div>
+      <input type="password" id="adminPasswordInput" placeholder="输入管理密码"
+        style="padding:8px 16px;background:#0f172a;border:1px solid #334155;border-radius:4px;color:#e2e8f0;font-size:.9rem;width:220px;text-align:center;"
+        onkeydown="if(event.key==='Enter')adminLogin()">
+      <div style="margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="adminLogin()">认证</button></div>
+      <div style="margin-top:6px;font-size:.7rem;color:#ef4444;display:none;" id="adminAuthErr"></div>
+    </div>
+    <div id="adminMainArea" style="display:none;">
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+        <span style="color:#94a3b8;font-size:.8rem;">在线设备:</span>
+        <span style="color:#4ade80;font-weight:600;font-size:.9rem;" id="adminClientCount">0</span>
+        <span style="flex:1;"></span>
+        <button class="btn btn-outline btn-sm" onclick="adminRefreshClients()">刷新</button>
+        <button class="btn btn-outline btn-sm" onclick="adminLogout()">退出</button>
+      </div>
+      <div id="adminClientList" style="max-height:500px;overflow-y:auto;">
+        <div style="color:#475569;text-align:center;padding:20px;">暂无线索</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tab 1: 投注分析 ===== -->
+<div class="card" id="tabBets">
+  <div class="card-header">
+    <span class="card-title">投注规则输入</span>
+    <span style="font-size:.7rem;color:#64748b;">Ctrl+Enter 确认</span>
+  </div>
+  <textarea id="inputRule" placeholder="粘贴玩家投注消息...&#10;&#10;支持格式：&#10;马蛇个10 · 02/08各15 · 平特猪狗各300&#10;牛狗羊三连500 · 香港虎牛二连500 · 猴兔牛鼠四连50 · 牛蛇鼠鸡羊五连50 · 狗猴兔鸡虎复式三连肖20一组&#10;香港平狗200 · 大各数10 · 单各10&#10;09各五十斤 · 狗龙虎鼠猪各号45&#10;7-5-4-6-8-1-3尾各数十 · 2-8尾各5&#10;01.04.18三中三十斤 · 23.03.40.28.45复试三中三各组10&#10;01.04.18.09.03复试二中二各组十斤&#10;&#10;每行一条或分号分隔"></textarea>
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button class="btn btn-primary" onclick="analyze()">分析投注</button>
+    <button class="btn btn-amber" onclick="calcAll()">计算输赢</button>
+    <button class="btn btn-danger" onclick="showReset()">重置</button>
+  </div>
+</div>
+
+<!-- 消息投注汇总 -->
+<div class="card card-first" id="msgSummaryCard" style="display:none; margin-bottom:12px;">
+  <div class="card-header collapse-toggle open" onclick="toggleCollapse('msgSummaryBody')" style="margin-bottom:0;">
+    <span class="card-title">消息投注汇总</span>
+    <span style="font-size:.7rem;color:#64748b;" id="msgSummaryCount"></span>
+  </div>
+  <div class="collapse-body show" id="msgSummaryBody">
+    <table class="tbl" id="msgSummaryTable">
+      <thead><tr><th style="width:40px;">序号</th><th>消息内容</th><th style="width:80px;">投注总额</th></tr></thead>
+      <tbody id="msgSummaryTbody"><tr><td colspan="3" style="text-align:center;color:#475569;">等待分析...</td></tr></tbody>
+      <tfoot><tr><td></td><td style="text-align:right;">合计</td><td style="text-align:center;font-weight:700;color:#60a5fa;" id="msgSummaryGrandTotal">0</td></tr></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- 投注明细表 -->
+<div class="card card-first" id="tabDetail" style="display:none;">
+  <div class="card-header"><span class="card-title">号码分布 (01-49)</span></div>
+  <div class="num-grid" id="numGrid"></div>
+</div>
+
+<div class="card card-first" id="tabPicker" style="display:none;">
+  <div class="card-header">
+    <span class="card-title">挑码数据参考 (macaulottery.com/picker)</span>
+    <span style="display:flex;gap:8px;align-items:center;">
+      <input type="file" id="pickerFileInput" accept=".json" style="display:none;" onchange="window._pickerFileChange(this)">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('pickerFileInput').click()">导入JSON</button>
+      <span style="font-size:.7rem;color:#64748b;" id="pickerStatus">未加载</span>
+    </span>
+  </div>
+  <div id="pickerPanel"><div style="color:#64748b;font-size:.75rem;text-align:center;padding:20px;">暂无挑码数据<br>请使用 <b>picker_scraper.html</b> 在 macaulottery.com/picker 页面抓取数据后导入</div></div>
+</div>
+<div class="card card-first" id="tabCombo" style="display:none;">
+  <div class="card-header">
+    <span class="card-title">连码投注统计</span>
+    <span style="font-size:.7rem;color:#64748b;">二连 / 三连 / 四连 / 五连</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="comboStatsGrid">
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;" id="comboDoublePanel">
+      <div style="font-size:.8rem;color:#60a5fa;margin-bottom:8px;font-weight:600;">二连投注</div>
+      <div id="comboDoubleBody" style="font-size:.72rem;color:#64748b;">等待分析...</div>
+    </div>
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;" id="comboTriplePanel">
+      <div style="font-size:.8rem;color:#f59e0b;margin-bottom:8px;font-weight:600;">三连投注</div>
+      <div id="comboTripleBody" style="font-size:.72rem;color:#64748b;">等待分析...</div>
+    </div>
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;" id="comboQuadPanel">
+      <div style="font-size:.8rem;color:#a78bfa;margin-bottom:8px;font-weight:600;">四连投注</div>
+      <div id="comboQuadBody" style="font-size:.72rem;color:#64748b;">等待分析...</div>
+    </div>
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;" id="comboQuintPanel">
+      <div style="font-size:.8rem;color:#f472b6;margin-bottom:8px;font-weight:600;">五连投注</div>
+      <div id="comboQuintBody" style="font-size:.72rem;color:#64748b;">等待分析...</div>
+    </div>
+  </div>
+</div>
+<div class="card card-first" id="tabN3" style="display:none;">
+  <div class="card-header">
+    <span class="card-title">三中三投注统计</span>
+    <span style="font-size:.7rem;color:#64748b;">C(n,3) 赔率600x</span>
+  </div>
+  <div id="n3StatsBody" style="font-size:.72rem;color:#64748b;max-height:500px;overflow-y:auto;">等待分析...</div>
+</div>
+<div class="card card-first" id="tabN2" style="display:none;">
+  <div class="card-header">
+    <span class="card-title">二中二投注统计</span>
+    <span style="font-size:.7rem;color:#64748b;">C(n,2) 赔率60x</span>
+  </div>
+  <div id="n2StatsBody" style="font-size:.72rem;color:#64748b;max-height:500px;overflow-y:auto;">等待分析...</div>
+</div>
+<div class="card card-first" id="tabZodiac" style="display:none;">
+  <div class="card-header"><span class="card-title">生肖投注统计</span></div>
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;" id="zodiacGrid"></div>
+</div>
+
+<!-- 结算明细 -->
+<div class="card card-first" id="settlementCard">
+  <div class="card-header collapse-toggle open" onclick="toggleCollapse('settlementBody')">
+    <span class="card-title">结算明细</span>
+    <span style="font-size:.7rem;color:#64748b;">点击折叠</span>
+  </div>
+  <div class="collapse-body show" id="settlementBody">
+    <table class="tbl">
+      <thead><tr><th>投注内容</th><th style="width:60px;">投注额</th><th style="width:50px;">类型</th><th style="width:60px;">赔率</th><th style="width:70px;">中奖额</th><th style="width:70px;">净结果</th></tr></thead>
+      <tbody id="settlementBody_tbody"><tr><td colspan="6" style="text-align:center;color:#475569;">等待投注...</td></tr></tbody>
+      <tfoot><tr><td>合计</td><td style="text-align:center;" id="footBet">0</td><td></td><td></td><td style="text-align:center;color:#22c55e;" id="footPayout">0</td><td style="text-align:center;font-weight:700;" id="footNet">0</td></tr></tfoot>
+    </table>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<!-- Reset Modal -->
+<div class="modal-overlay" id="resetModal">
+  <div class="modal-box">
+    <h3>重置确认</h3>
+    <p>将清除所有投注数据和开奖结果，确定继续？</p>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="document.getElementById('resetModal').classList.remove('show')">取消</button>
+      <button class="btn btn-danger" onclick="doReset()">确认重置</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ==================== SCRIPT ==================== -->
+<script>
+// ===== 生肖数据 =====
+const ZODIAC_MAP = {
+  马:["01","13","25","37","49"],蛇:["02","14","26","38"],龙:["03","15","27","39"],
+  兔:["04","16","28","40"],虎:["05","17","29","41"],牛:["06","18","30","42"],
+  鼠:["07","19","31","43"],猪:["08","20","32","44"],狗:["09","21","33","45"],
+  鸡:["10","22","34","46"],猴:["11","23","35","47"],羊:["12","24","36","48"]
+};
+const ALL_ZODIACS = ["马","蛇","龙","兔","虎","牛","鼠","猪","狗","鸡","猴","羊"];
+const ZODIAC_CHARS = ALL_ZODIACS.join('');
+const NUM_TO_ZODIAC = {};
+ALL_ZODIACS.forEach(z => ZODIAC_MAP[z].forEach(n => NUM_TO_ZODIAC[n] = z));
+const TAIL_MAP={};for(let d=0;d<=9;d++){const k=d.toString();TAIL_MAP[k]=[];for(let n=1;n<=49;n++)if(n%10===d)TAIL_MAP[k].push(n.toString().padStart(2,'0'));}
+
+const BIG=[],SMALL=[],ODD=[],EVEN=[];
+for(let i=1;i<=49;i++){ const n=i.toString().padStart(2,'0'); (i>=25?BIG:SMALL).push(n); (i%2?ODD:EVEN).push(n); }
+
+// ===== 波色映射 =====
+const WAVE_COLOR_MAP = {
+  红波: ["01","02","07","08","12","13","18","19","23","24","29","30","34","35","40","45","46"],
+  绿波: ["05","06","11","16","17","21","22","27","28","32","33","38","39","43","44","49"],
+  蓝波: ["03","04","09","10","14","15","20","25","26","31","36","37","41","42","47","48"]
+};
+const WAVE_COLORS = {"红":"红波","绿":"绿波","蓝":"蓝波"};
+const WAVE_COLOR_SETS = {};
+Object.keys(WAVE_COLOR_MAP).forEach(k => { WAVE_COLOR_SETS[k] = new Set(WAVE_COLOR_MAP[k]); });
+const NUM_TO_WAVE = {};
+Object.keys(WAVE_COLOR_MAP).forEach(k => { WAVE_COLOR_MAP[k].forEach(n => NUM_TO_WAVE[n] = k); });
+const SIZE_PARITY_MAP = {单:ODD,双:EVEN,大:BIG,小:SMALL};
+
+// ===== 庄家固定赔率 =====
+const ODDS_TM = 47;       // 特码
+const ODDS_PT_MA = 1.8;   // 平特马
+const ODDS_PT_OTHER = 2;  // 其他平特
+	const ODDS_TX_MA = 10;    // 特肖马
+	const ODDS_TX_OTHER = 11; // 特肖其他
+const ODDS_2 = 5.5;       // 二连(默认)
+const ODDS_3 = 28;        // 三连(默认)
+// 二连带马=3.5, 不带马=4; 三连带马=8, 不带马=10
+const ODDS_N3 = 600;      // 三中三
+const ODDS_N2 = 60;       // 二中二
+
+// ===== 组合数学 =====
+function C(n,k){ if(k>n||k<0)return 0; if(k===0||k===n)return 1; let r=1; for(let i=1;i<=k;i++) r=r*(n-i+1)/i; return r; }
+function combinations(arr,k){
+  if(k===0)return [[]]; if(arr.length<k)return[];
+  const r=[]; for(let i=0;i<=arr.length-k;i++){ const f=arr[i]; combinations(arr.slice(i+1),k-1).forEach(c=>r.push([f,...c])); }
+  return r;
+}
+
+// ===== 游戏状态 =====
+let betSummary = [];        // {display, bet, type:'nums'|'flat'|'combo'|'n3'|'n2', targets[], comboZodiacs?, comboType?, msgIndex?}
+let messageSummary = [];    // {index, text, totalBet}
+let numberBets = {};        // num -> total bet amount
+let flatBets = {};          // zodiac -> total bet amount
+let specialZodiacBets = {}; // 特肖 -> {bet, zodiac}
+let comboBets = [];         // combo entries (zodiac-based)
+let numComboBets = [];      // number combo entries (三中三/二中二)
+
+let liveResult = null;      // {numbers:[7], teMa, flatZodiacs:[], timestamp}
+let hkResult = null;        // {numbers:[7], teMa, flatZodiacs:[]} — 手动输入香港开奖
+let hkBetSummary = [];      // 香港盘投注 (独立于澳门盘)
+let hkNumberBets = {};      // 香港盘号码投注额
+let hkFlatBets = {};        // 香港盘平特投注
+let hkSpecialZodiacBets = {}; // 香港盘特肖
+let hkComboBets = [];       // 香港盘连肖
+let hkNumComboBets = [];    // 香港盘三中三/二中二
+let autoRefreshTimer = null;
+let autoRefreshOn = false;
+let currentTab = 'bets';
+let waterRate = 0;  // 抽水率 0-30%
+
+// ===== 中文数字 =====
+const CN = {
+  一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,
+  十一:11,十二:12,十三:13,十四:14,十五:15,十六:16,十七:17,十八:18,十九:19,
+  二十:20,廿:20,廿一:21,廿二:22,廿三:23,廿四:24,廿五:25,廿六:26,廿七:27,廿八:28,廿九:29,
+  三十:30,卅:30,卅一:31,卅二:32,卅三:33,卅四:34,卅五:35,卅六:36,卅七:37,卅八:38,卅九:39,
+  四十:40,四十一:41,四十二:42,四十三:43,四十四:44,四十五:45,四十六:46,四十七:47,四十八:48,四十九:49,
+  五十:50,五十一:51,五十二:52,五十三:53,五十四:54,五十五:55,五十六:56,五十七:57,五十八:58,五十九:59,
+  六十:60,六十一:61,六十二:62,六十三:63,六十四:64,六十五:65,六十六:66,六十七:67,六十八:68,六十九:69,
+  七十:70,七十一:71,七十二:72,七十三:73,七十四:74,七十五:75,八十:80,九十:90,一百:100,一百五:150,一百五十:150,一百五十五:155,两百:200
+};
+const CNK = Object.keys(CN).sort((a,b)=>b.length-a.length);
+
+// ===== Parsing helpers =====
+function cn(s){ for(let k of CNK) if(s===k) return CN[k]; for(let k of CNK) if(s.startsWith(k)){ var rest=s.slice(k.length); if(!/^[一二三四五六七八九十百千万廿卅两百]$/.test(rest[0]||'')) return CN[k]; } return 0; }
+function parseCNNum(s){
+  if(CN[s]) return CN[s];
+  let total=0, tmp=0;
+  const units={千:1000,百:100,十:10};
+  for(const c of s){
+    if(c in units){ tmp=(tmp||1)*units[c]; total+=tmp; tmp=0; }
+    else if(c==='零') continue;
+    else { const v=CN[c]; if(v) tmp=v; else return 0; }
+  }
+  return total+tmp;
+}
+function isHK(r){ return /香港|香|港/.test(r); }
+function stripSender(s){ return s.replace(/^[^\d]{1,15}?[：:]\s*/,'').trim(); }
+function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|澳特|澳|利来|门特|门|新)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
+function stripHK(s){ return s.replace(/^(?:香港|港|香)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
+function expandDot(s){ return s.replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 '); }
+function norm(s){
+  let t = s.replace(/[+＋]/g,'').replace(/。/g,'')
+    .replace(/免/g,'兔').replace(/于一肖/g,'一肖')
+    .replace(/候/g,'猴')  // 候→猴 纠错
+    .replace(/元/g,'块')  // 元→块 归一化
+    .replace(/复试/g,'复式')  // 复试→复式 归一化
+    .replace(/\d+期\s*/g,'')  // 去掉 "173期" 等期号前缀
+    .replace(/号各/g,'各数').replace(/名数/g,'各数')  // "09号各30" → "09各数30", 名数→各数
+    .replace(/蚊/g,'')  // 蚊→去掉 (粤语元)
+    // 到 范围展开: 01到12 → 01 02 03 ... 12
+    .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); })
+    .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
+    // 个数<中文>斤 → 各数<数字>斤
+    .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
+    .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/=/g,'各')  // =各 → 各 (避免各各).replace(/数十/g,'10')
+    .replace(/单数/g,'单').replace(/双数/g,'双')  // 单数→单, 双数→双 (用于大小单双匹配)
+    .replace(/各\.(\d)/g,'各$1')  // "各.10" → "各10"
+    .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
+    .replace(/(?<!各)数十斤/g,'各10斤').replace(/(?<!各)数十米/g,'各10米').replace(/(?<!各)数十块/g,'各10块')
+    .replace(/平特\s*一肖/g,'平特')
+    .replace(/(\d)[Oo](\d)/g,'$10$2').replace(/(\d+)[A-Za-z]+/g,'$1')
+    .replace(/门\s*$/g,'')  // 去掉末尾的 "门"
+    .replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 ').replace(/(\d{1,2})\.(?![\d]{1,2})/g,'$1 ')  // "5.05"→"5 05", "25.35"→"25 35", and "10.绿"→"10 绿"
+    // "各肖"→平特(flat bet per zodiac): "狗马各肖45" → "平特狗45 平特马45"
+    .replace(new RegExp(`([${ZODIAC_CHARS}]+)各肖\\s*(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
+      return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
+    })
+    // "X肖" → "X" (strip 肖 after zodiac char): "虎肖" → "虎"
+    .replace(new RegExp(`([${ZODIAC_CHARS}])肖`,'g'), '$1')
+    .replace(/(\d{1,2})\s*([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, (m,n1,n2,n3)=>n1+'各'+cn(n2)+n3)
+    .replace(/(\d{1,2})\s*[-—－]+\s*(\d+(?:\.\d+)?)\s*(斤|米|块)/g,'$1各$2$3')
+    .replace(/(\d{1,2})\s*[-—－]{2,}\s*(\d+(?:\.\d+)?)/g,'$1各$2').replace(/[*、]+/g,' ').replace(/[-—－]+/g,' ')
+    .replace(/(\d)([A-Za-z])?[，、](?=[红绿蓝单双大小平特特肖])/g,'$1$2 ').replace(/\s+(各)/g,'$1').replace(/(各)\s+/g,'$1').replace(/\s+/g,' ').trim();
+  // "平特1尾下1200" → "平特1尾1200" (去掉数字前的下)
+  t = t.replace(/(\d{1,2})\s*下\s*(\d+(?:\.\d+)?)/g,'$1各$2');
+  t = t.replace(/下(\d+(?:\.\d+)?)/g,'$1');
+  // 纯中文数字+单位 → 数字+单位: "五十斤"→"50斤", "五十米"→"50米", "五十块"→"50块"
+  t = t.replace(/([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return (v||'')+n2; });
+  // 各组五十 → 各组50 (中文数字转换)
+  t = t.replace(/各组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, cnVal){
+    var v = cn(cnVal) || parseCNNum(cnVal);
+    return '各组' + (v || '');
+  });
+  // 各组X → 分布式: "三连A 四连B 五连C各组50" → "三连A50 四连B50 五连C50"
+  // 注意: norm中的\s+(各)可能已把各组前的空格吃掉, 所以这里用\s*而非\s+
+  t = t.replace(/^(?!.*(?:三中三|二中二))(.+)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/g, function(m, prefix, val){
+    return prefix.split(/\s+/).map(function(seg){ return seg + val; }).join(' ');
+  });
+  // 连肖前缀去除: "连肖 A复式B连肖C一组" → "A复式B连肖C一组"
+  t = t.replace(/^连肖\s*/g, '');
+  // 复式X连肖 → 规范化: "A复式三连肖20一组共10组" → "A复式三连20各10组"
+  t = t.replace(/复式(二连|三连|四连|五连)肖\s*(\d+(?:\.\d+)?)\s*一组(?:共(\d+)组)?/g, function(m, lx, v, cnt){
+    return '复式' + lx + ' ' + v + '各' + (cnt || '?') + '组';
+  });
+  // 一组共X组简化 → 各X组
+  t = t.replace(/(\d+(?:\.\d+)?)\s*一组共(\d+)组/g, '$1各$2组');
+  return t;
+}
+function clean(s){ return s.replace(/^[、，,\s\-－—ㅤ]+/,'').replace(/[、，,。.\s\-－—ㅤ]+$/,'').replace(/[。]/g,'').trim(); }
+
+const KW = '(?:各数|个数|各号|号|个(?!组)|各(?!组))';
+
+function splitBets(seg){
+  const ends = new Set();
+  const ps = [
+    new RegExp(`\\s*${KW}\\s*(?:[\\u4e00-\\u9fa5]+|\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`,'gi'),
+    new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*[${ZODIAC_CHARS}]+\\s*\\d+(?:\\.\\d+)?\\s*(?:斤|米|块)?`,'gi'),
+    new RegExp(`[${ZODIAC_CHARS}]+(?:二连|三连|四连|五连)\\s*\\d+(?:\\.\\d+)?\\s*(?:斤|米|块)?`,'g'),
+    new RegExp(`(?:平特[，,\\s]*[${ZODIAC_CHARS}]+|平[${ZODIAC_CHARS}])\\s*[，,]?\\s*\\d+\\s*(?:斤|米|块)?`,'g'),
+    new RegExp(`(?:特肖[，,\\s]*[${ZODIAC_CHARS}]+|特肖[${ZODIAC_CHARS}])\\s*[，,]?\\s*\\d+\\s*(?:斤|米|块)?`,'g'),
+    new RegExp(`[\\d]{1,2}(?:\\.[\\d]{1,2})+[\\s\\S]*?(?:斤|米|块|\\d)(?=\\s|$)`,'gi'),
+    new RegExp(`\\d{1,2}\\s+[一二三四五六七八九十百千万廿卅两百]+\\s*(?:斤|米|块)`,'gi')
+  ];
+  ps.forEach(re=>{ let m; const r=new RegExp(re.source,re.flags); while((m=r.exec(seg))!==null) ends.add(m.index+m[0].length); });
+  const sorted=[...ends].sort((a,b)=>a-b);
+  if(!sorted.length) return [seg.trim()].filter(Boolean);
+  const parts=[]; let start=0;
+  sorted.forEach(end=>{ const p=seg.slice(start,end).trim(); if(p) parts.push(p); start=end; });
+  const tail=seg.slice(start).trim(); if(tail) parts.push(tail);
+  return parts.length?parts:[seg.trim()];
+}
+
+function expandDashGe(l){
+  const re=/(\d{1,2})\s*[—\-－~～]+\s*各\s*[—\-－~～]+\s*(\d+(?:\.\d+)?)\s*(?:斤|米|块)?/gi;
+  const parts=[]; let m;
+  while((m=re.exec(l))!==null){ const n=parseInt(m[1]); if(n>=1&&n<=49) parts.push(`${n}各${m[2]}`); }
+  if(!parts.length) return null;
+  const rest=l.replace(re,'').replace(/[梧影\s：:，,、]+/g,'').trim();
+  return rest.length<3?parts:null;
+}
+
+function expandLine(l){
+  const s=norm(stripHK(stripMacau(stripSender(l))));
+  const dr=expandDashGe(s);
+  if(dr){ return dr.map(d=>{ const c=clean(d); return c||null; }).filter(Boolean); }
+  // 复式连肖展开: "狗猴兔鸡虎复式三连 20各10组" → C(5,3)=10条
+  const fuRe = new RegExp(`^([${ZODIAC_CHARS}]+)复式(二连|三连|四连|五连)\\s+(\\d+(?:\\.\\d+)?)\\s*各(\\d+)组`);
+  const fuM = s.match(fuRe);
+  if(fuM){
+    const zs = fuM[1].split('');
+    const lxType = fuM[2];
+    const perVal = parseFloat(fuM[3]);
+    const k = lxType==='二连'?2:lxType==='三连'?3:lxType==='四连'?4:5;
+    const cb = combinations(zs, k);
+    return cb.map(function(c){ return c.join('') + lxType + perVal; });
+  }
+  // 复式连肖快捷(无明确组数): "狗猴兔鸡虎复式三连肖20" → 自动计算C(5,3)=10组
+  const fuShortRe = new RegExp(`^([${ZODIAC_CHARS}]+)\\s*复式(二连|三连|四连|五连)肖?\\s*(\\d+(?:\\.\\d+)?)\\s*$`);
+  const fuShortM = s.match(fuShortRe);
+  if(fuShortM){
+    const zs = fuShortM[1].split('');
+    const lxType = fuShortM[2];
+    const perVal = parseFloat(fuShortM[3]);
+    const k = lxType==='二连'?2:lxType==='三连'?3:lxType==='四连'?4:5;
+    if(zs.length >= k){
+      const cb = combinations(zs, k);
+      return cb.map(function(c){ return c.join('') + lxType + perVal; });
+    }
+  }
+  // Split multi-bet lines on 平特/特肖 boundaries
+  const flatMarker = s.includes('平特') ? '平特' : (s.includes('特肖') ? '特肖' : null);
+  if(flatMarker){
+    const parts=[]; let idx=s.indexOf(flatMarker), prev=0;
+    while((idx=s.indexOf(flatMarker,prev+2))!==-1){ parts.push(s.slice(prev,idx).trim()); prev=idx; }
+    parts.push(s.slice(prev).trim());
+    // Merge separated HK prefixes back into the following segment
+    const merged=[]; for(var pi=0;pi<parts.length;pi++){
+      if(/^(?:香港|港|香)$/.test(parts[pi])&&pi+1<parts.length){ parts[pi+1]=parts[pi]+parts[pi+1]; }
+      else{ merged.push(parts[pi]); }
+    }
+    if(merged.length>1){
+      const all=[]; merged.forEach(function(p){ splitBets(p).forEach(function(sp){ var c=clean(sp); if(c) all.push(c); }); });
+      return all;
+    }
+  }
+  return splitBets(s).map(p=>{ const c=clean(p); return c||null; }).filter(Boolean);
+}
+
+function getVal(txt){
+  const n=norm(txt);
+  let m=n.match(new RegExp(`\\s*${KW}\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(m) return parseFloat(m[1]);
+  m=n.match(new RegExp(`\\s*${KW}\\s*([\\u4e00-\\u9fa5]+)\\s*(?:斤|米|块)?\\s*$`));
+  if(m){ const v=cn(m[1])||parseCNNum(m[1]); if(v>0) return v; }
+  if(!/各/.test(n)){
+    m=n.match(/(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/);
+    if(m){ const b=n.slice(0,m.index).trim(); if(b.length>0) return parseFloat(m[1]); }
+    m=n.match(/^(.+?)([一二三四五六七八九十百千万廿卅两]+)\s*(?:斤|米|块)?\s*$/);
+    if(m){ const v=cn(m[2])||parseCNNum(m[2]); if(v>0) return v; }
+    m=n.match(/^(.+?)\s+([一二三四五六七八九十百千万廿卅两]+)\s*(?:斤|米|块)?\s*$/);
+    if(m){ const v=cn(m[2])||parseCNNum(m[2]); if(v>0) return v; }
+    m=n.match(/^(\d{1,2})\s+([一二三四五六七八九十百千万廿卅两]+)\s*(?:斤|米|块)?\s*$/);
+    if(m){ const v=cn(m[2])||parseCNNum(m[2]); if(v>0) return v; }
+  }
+  return 0;
+}
+
+function getList(txt){
+  const n=norm(txt);
+  const stripKw=s=>s.replace(/[\s个各号]+$/g,'').trim();
+  let m=n.match(new RegExp(`\\s*${KW}\\s*(?:[\\u4e00-\\u9fa5]+|\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(m) return expandDot(stripKw(n.slice(0,m.index)));
+  m=n.match(new RegExp(`\\s*${KW}\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(m) return expandDot(stripKw(n.slice(0,m.index)));
+  if(!/各/.test(n)){
+    m=n.match(/(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/);
+    if(m){ const b=n.slice(0,m.index).trim(); if(b.length>0) return expandDot(b); }
+    m=n.match(/^(.+?)([一二三四五六七八九十百千万廿卅两]+)\s*(?:斤|米|块)?\s*$/);
+    if(m) return expandDot(m[1].trim());
+    m=n.match(/^(.+?)\s+([一二三四五六七八九十百千万廿卅两]+)\s*(?:斤|米|块)?\s*$/);
+    if(m) return expandDot(m[1].trim());
+    m=n.match(/^(\d{1,2})\s+([一二三四五六七八九十百千万廿卅两]+)\s*(?:斤|米|块)?\s*$/);
+    if(m) return expandDot(m[1].trim());
+  }
+  return expandDot(n.trim());
+}
+
+function splitItems(lp){
+  const ex=expandDot(lp);
+  const items=ex.split(/[.\/、,\s，\-－—]+/).filter(i=>i!=='');
+  const fi=[];
+  items.forEach(item=>{
+    if(new RegExp(`^[${ZODIAC_CHARS}]+$`).test(item)){ for(let c of item) fi.push(c); }
+    else { const parts=item.match(new RegExp(`[${ZODIAC_CHARS}]|\\d{1,2}`,'g')); if(parts) parts.forEach(p=>fi.push(p)); else fi.push(item); }
+  });
+  return fi;
+}
+
+function getTargets(items){
+  const t=[];
+  items.forEach(item=>{
+    if(/^\d{1,2}$/.test(item)){ const n=parseInt(item); if(n>=1&&n<=49) t.push(n.toString().padStart(2,'0')); }
+    else if(ZODIAC_MAP[item]) ZODIAC_MAP[item].forEach(n=>t.push(n));
+  });
+  return t;
+}
+
+// ===== Core: process one rule =====
+function processRule(rawRule){
+  const rule=clean(rawRule); if(!rule) return null;
+  const hk=isHK(rule);
+  const txt=norm(stripHK(stripMacau(stripSender(rule))));
+  const txtNoHK=txt.replace(/香港|香|港/g,'').trim();
+
+  // Size/Parity
+  const spm=txtNoHK.match(new RegExp(`^(大|小|单|双)\\s*${KW}\\s*([\\d\\u4e00-\\u9fa5]+)\\s*(?:斤|米|块)?\\s*$`));
+  if(spm){
+    const v=/^\d/.test(spm[2])?parseFloat(spm[2]):cn(spm[2])||parseCNNum(spm[2]);
+    if(v){ const pool={大:BIG,小:SMALL,单:ODD,双:EVEN}; const nums=pool[spm[1]]||[];
+      nums.forEach(n=>{ numberBets[n]=(numberBets[n]||0)+v; });
+      return {display:`${hk?'香港':''}${spm[1]}各数${v}(${nums.length}码)`, bet:v*nums.length, type:'nums', targets:nums};
+    }
+  }
+
+  // Wave color + size/parity - 双组: "绿双蓝单各数5" → (绿∩双)∪(蓝∩单)
+  const wc2Re = new RegExp(
+    '^([红绿蓝]{1,3})([单双大小]+)([红绿蓝]{1,3})([单双大小]+)\\s*' + KW + '\\s*(\\d+(?:\\.\\d+)?)([A-Za-z])?\\s*(?:斤|米|块)?\\s*$'
+  );
+  const wc2m = txtNoHK.match(wc2Re);
+  if (wc2m) {
+    const val = parseFloat(wc2m[5]);
+    if (val) {
+      const waveSet = new Set();
+      // Group 1: color1 ∩ attr1
+      const ck1 = WAVE_COLORS[wc2m[1]];
+      if (ck1 && WAVE_COLOR_MAP[ck1]) {
+        const attrNums1 = SIZE_PARITY_MAP[wc2m[2]];
+        if (attrNums1) {
+          const attrSet1 = new Set(attrNums1);
+          WAVE_COLOR_MAP[ck1].forEach(function(n){ if(attrSet1.has(n)) waveSet.add(n); });
+        }
+      }
+      // Group 2: color2 ∩ attr2
+      const ck2 = WAVE_COLORS[wc2m[3]];
+      if (ck2 && WAVE_COLOR_MAP[ck2]) {
+        const attrNums2 = SIZE_PARITY_MAP[wc2m[4]];
+        if (attrNums2) {
+          const attrSet2 = new Set(attrNums2);
+          WAVE_COLOR_MAP[ck2].forEach(function(n){ if(attrSet2.has(n)) waveSet.add(n); });
+        }
+      }
+      const targets = [...waveSet].sort(function(a,b){ return parseInt(a)-parseInt(b); });
+      if (targets.length) {
+        targets.forEach(function(n){ numberBets[n] = (numberBets[n] || 0) + val; });
+        const hkPrefix = hk ? '香港' : '';
+        return {display: hkPrefix + wc2m[1]+wc2m[2]+wc2m[3]+wc2m[4]+'各数'+val+'('+targets.length+'码)', bet: val * targets.length, type: 'nums', targets: targets};
+      }
+    }
+  }
+
+  // Wave color + size/parity combined (波色+单双大小, 支持多属性组合)
+  // Examples: "红双各数8"→红∩双9码, "红蓝大双各数10"→(红∪蓝)∩大∩双8码
+  const wcRe = new RegExp(
+    '^([红绿蓝]{1,3})\\s*波?\\s*([单双大小]+)\\s*' + KW + '\\s*(\\d+(?:\\.\\d+)?)([A-Za-z])?\\s*(?:斤|米|块)?\\s*$'
+  );
+  const wcm = txtNoHK.match(wcRe);
+  if (wcm) {
+    const colors = wcm[1];       // e.g. "红蓝" or "红"
+    const attrs = wcm[2];        // e.g. "单" or "大双" or "小单"
+    const val = parseFloat(wcm[3]);
+    if (val) {
+      // Union all mentioned wave colors
+      let waveSet = new Set();
+      for (let c of colors) {
+        const ck = WAVE_COLORS[c];
+        if (ck && WAVE_COLOR_MAP[ck]) WAVE_COLOR_MAP[ck].forEach(n => waveSet.add(n));
+      }
+      // Intersect ALL mentioned size/parity attributes
+      for (let a of attrs) {
+        const attrNums = SIZE_PARITY_MAP[a];
+        if (!attrNums) continue;
+        const attrSet = new Set(attrNums);
+        waveSet = new Set([...waveSet].filter(n => attrSet.has(n)));
+      }
+      const targets = [...waveSet].sort((a,b)=>parseInt(a)-parseInt(b));
+      if (targets.length) {
+        targets.forEach(n => { numberBets[n] = (numberBets[n] || 0) + val; });
+        const hkPrefix = hk ? '香港' : '';
+        return {display: hkPrefix + colors + attrs + '各数' + val + '(' + targets.length + '码)', bet: val * targets.length, type: 'nums', targets: targets};
+      }
+    }
+  }
+
+  // 平特X尾: flat bet on tail position, total amount (not per-number)
+  var ptTailM = txtNoHK.match(new RegExp(`^平特\\s*(\\d)尾\\s*下?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(ptTailM){
+    var tailDigit = ptTailM[1];
+    var flatTotal = parseFloat(ptTailM[2]);
+    var tailNums = TAIL_MAP[tailDigit] || [];
+    if(tailNums.length){
+      tailNums.forEach(function(n){ numberBets[n] = (numberBets[n]||0) + flatTotal; });
+      return {display: '平特'+tailDigit+'尾 '+flatTotal+'('+tailNums.length+'码)', bet:flatTotal, type:'nums', targets:tailNums};
+    }
+  }
+
+  // Tail bet (尾) - maps tail digits to numbers: 7尾→07,17,27,37,47
+  if(txtNoHK.includes('尾')){
+    const tailList = getList(txtNoHK);
+    const tailVal = getVal(txtNoHK);
+    if(tailList && tailVal){
+      // 优先提取(\d)尾模式: "平特1尾下"→["1"], "2尾5尾各5"→["2","5"]
+      const tailDigitMatches = tailList.match(/(\d)尾/g);
+      let tailDigits = tailDigitMatches ? tailDigitMatches.map(function(m){ return m.replace('尾',''); }) : [];
+      // 如果\d尾模式没匹配到, 回退到原始按分隔符切分
+      if(!tailDigits.length){
+        tailDigits = tailList.replace(/尾/g,'').split(/[.\/、,\s，\-－—]+/).filter(i=>i!=='').map(i=>i.trim());
+      }
+      const tailTargets = [];
+      tailDigits.forEach(function(d){ if(TAIL_MAP[d]) tailTargets.push(...TAIL_MAP[d]); });
+      if(tailTargets.length){
+        tailTargets.forEach(function(n){ numberBets[n] = (numberBets[n]||0) + tailVal; });
+        return {display: tailDigits.join('-')+'尾各'+tailVal+'('+tailTargets.length+'码)', bet:tailVal*tailTargets.length, type:'nums', targets:tailTargets};
+      }
+    }
+  }
+
+  // Number combo (三中三/二中二)
+  if(txtNoHK.includes('三中三') || txtNoHK.includes('二中二')){
+    const ncm=txtNoHK.match(/([\d]{1,2}(?:[.\s,]+[\d]{1,2})*)\s*(?:[复復]试|[复復]式)?\s*(三中三|二中二)\s*(?:各组?\s*)?(.+)$/);
+    if(ncm){
+      const nums=[...new Set(ncm[1].split(/[.\s,]+/).filter(n=>/^\d{1,2}$/.test(n)).map(n=>n.padStart(2,'0')))];
+      const k=ncm[2]==='三中三'?3:2;
+      if(nums.length>=k){
+        let vs=ncm[3].replace(/^[个各]组?\s*/,'').replace(/\s*(?:斤|米|块)\s*$/,'').trim();
+        let val=/^\d+(?:\.\d+)?$/.test(vs)?parseFloat(vs):(cn(vs)||parseCNNum(vs)||0);
+        if(val>0){
+          const cc=C(nums.length,k);
+          const tb=cc*val;
+          const odds=k===3?ODDS_N3:ODDS_N2;
+          numComboBets.push({numbers:nums,perUnit:val,count:cc,k,type:k===3?'n3':'n2'});
+          nums.forEach(n=>{ numberBets[n]=(numberBets[n]||0)+val; });
+          return {display:`${hk?'香港':''}${ncm[1]}${k===3?'三中三':'二中二'} ${val}(${cc}组)`, bet:tb, type:k===3?'n3':'n2', numbers:nums, comboCount:cc, perUnit:val, k, odds};
+        }
+      }
+    }
+  }
+
+  // Combo
+  let cm=txtNoHK.match(new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*([${ZODIAC_CHARS}]+)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
+  if(!cm) cm=txtNoHK.match(new RegExp(`([${ZODIAC_CHARS}]+)(?:五连|四连|三连|二连)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
+  if(cm){
+    const zStr=cm[1], cv=parseFloat(cm[2]);
+    let ct='double';
+    if(txtNoHK.includes('五连')||(zStr.length===5&&!txtNoHK.includes('三连')&&!txtNoHK.includes('四连'))) ct='quintuple';
+    else if(txtNoHK.includes('四连')||(zStr.length===4&&!txtNoHK.includes('三连')&&!txtNoHK.includes('五连'))) ct='quadruple';
+    else if(txtNoHK.includes('三连')) ct='triple';
+    const zs=zStr.split('');
+    comboBets.push({zodiacs:zs,value:cv,type:ct,isHK:hk});
+    const typeName=ct==='quintuple'?'五连':ct==='quadruple'?'四连':ct==='triple'?'三连':'二连';
+    return {display:`${hk?'香港':''}${zStr}${typeName} ${cv}`, bet:cv, type:'combo', comboZodiacs:zStr, comboType:ct};
+  }
+
+  // Flat zodiac reverse: 虎平200 → 平特虎200
+  var frm = txtNoHK.match(new RegExp(`^([${ZODIAC_CHARS}])\\s*平\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(frm){
+    var zs=[frm[1]], v=parseFloat(frm[2]);
+    zs.forEach(function(z){ flatBets[z]=(flatBets[z]||0)+v; });
+    return {display:`${hk?'香港':''}平特${frm[1]} ${v}`, bet:v, type:'flat', targets:zs};
+  }
+
+  // Flat zodiac (平特)
+  let fm=txtNoHK.match(new RegExp(`^平特[，,\\s]*([${ZODIAC_CHARS}]+)\\s*[，,、]?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(!fm) fm=txtNoHK.match(new RegExp(`^平特[，,\\s]*([${ZODIAC_CHARS}]+)\\s*${KW}\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(!fm) fm=txtNoHK.match(new RegExp(`^平特[，,\\s]*([${ZODIAC_CHARS}]+)\\s+(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(fm){
+    const zs=[...fm[1]], v=parseFloat(fm[2]);
+    zs.forEach(z=>{ flatBets[z]=(flatBets[z]||0)+v; });
+    return {display:`${hk?'香港':''}平特${fm[1]} ${v}`, bet:v*zs.length, type:'flat', targets:zs};
+  }
+
+  // 特肖 (special zodiac): "特肖狗 45" → type='special_zodiac'
+  let txm = txtNoHK.match(new RegExp(`^特肖([${ZODIAC_CHARS}])\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
+  if(!txm) txm = txtNoHK.match(new RegExp(`^特肖\\s*([${ZODIAC_CHARS}](?:\\s*[${ZODIAC_CHARS}])*)\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
+  if(txm){
+    const zs = txm[1].replace(/\s+/g,'').split(''), v = txm[2] ? parseFloat(txm[2]) : getVal(txtNoHK);
+    if(!v) return null;
+    zs.forEach(z => { specialZodiacBets[z] = (specialZodiacBets[z] || 0) + v; });
+    const odds = zs.map(z => z === '马' ? ODDS_TX_MA : ODDS_TX_OTHER).join(',');
+    return {display: `特肖${zs.join('')}各${v}(赔率${odds})`, bet: v * zs.length, type: 'special_zodiac', targets: zs};
+  }
+
+  // Flat shorthand with 各: 平蛇虎各500 → 平特蛇500 + 平特虎500
+  let fgm=txtNoHK.match(new RegExp(`^平\\s*([${ZODIAC_CHARS}]+)\\s*[各/]\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(fgm){
+    var fgzs=[...fgm[1]], fgv=parseFloat(fgm[2]);
+    fgzs.forEach(function(z){ flatBets[z]=(flatBets[z]||0)+fgv; });
+    return {display:`${hk?'香港':''}平特${fgm[1]} ${fgv}`, bet:fgv*fgzs.length, type:'flat', targets:fgzs};
+  }
+
+  // Flat shorthand (平X and 平X Y)
+  let fms=txtNoHK.match(new RegExp(`^平([${ZODIAC_CHARS}])\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
+  if(!fms) fms=txtNoHK.match(new RegExp(`^平\\s*([${ZODIAC_CHARS}](?:\\s*[${ZODIAC_CHARS}])*)\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
+  if(fms){
+    const zs=fms[1].replace(/\s+/g,'').split(''), v=fms[2]?parseFloat(fms[2]):getVal(txtNoHK);
+    if(!v) return null;
+    zs.forEach(z=>{ flatBets[z]=(flatBets[z]||0)+v; });
+    return {display:`${hk?'香港':''}平${fms[1]}各${v}`, bet:v*zs.length, type:'flat', targets:zs};
+  }
+
+  // Implicit combo (2-5 zodiacs + number without keyword)
+  const icm=txtNoHK.match(new RegExp(`^([${ZODIAC_CHARS}]{2,5})\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(icm){
+    const zStr=icm[1], zv=parseFloat(icm[2]);
+    let ct='double';
+    if(zStr.length===5) ct='quintuple'; else if(zStr.length===4) ct='quadruple'; else if(zStr.length===3) ct='triple';
+    const zs=zStr.split('');
+    comboBets.push({zodiacs:zs,value:zv,type:ct,isHK:hk});
+    const typeName=ct==='quintuple'?'五连':ct==='quadruple'?'四连':ct==='triple'?'三连':'二连';
+    return {display:`${hk?'香港':''}${zStr}${typeName} ${zv}`, bet:zv, type:'combo', comboZodiacs:zStr, comboType:ct};
+  }
+
+  const value=getVal(txtNoHK); if(!value) return null;
+
+  if(txtNoHK.includes('平特')){
+    const zs=ALL_ZODIACS.filter(z=>txtNoHK.includes(z));
+    if(zs.length>0){ zs.forEach(z=>{ flatBets[z]=(flatBets[z]||0)+value; });
+    return {display:`${hk?'香港':''}平特${zs.join('')} ${value}`, bet:value*zs.length, type:'flat', targets:zs}; }
+    return null;
+  }
+
+  const lp=getList(txtNoHK), items=splitItems(lp), targets=getTargets(items);
+  if(!targets.length) return null;
+  targets.forEach(n=>{ numberBets[n]=(numberBets[n]||0)+value; });
+  return {display:`${hk?'香港':''}${targets.join('.')} 各${value}(${targets.length}码)`, bet:value*targets.length, type:'nums', targets};
+}
+
+// ===== Analyze =====
+function analyze(){
+  const input=document.getElementById('inputRule').value.trim();
+  if(!input){ alert('请输入投注规则！'); return; }
+
+  const text=input.replace(/\r\n/g,'\n').replace(/　/g,' ').replace(/[ \t]+/g,' ');
+  const rawLines=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+
+  betSummary=[]; hkBetSummary=[];
+  messageSummary=[];
+  numberBets={}; flatBets={}; specialZodiacBets={}; comboBets=[]; numComboBets=[];
+  hkNumberBets={}; hkFlatBets={}; hkSpecialZodiacBets={}; hkComboBets=[]; hkNumComboBets=[];
+  for(let i=1;i<=49;i++) { numberBets[i.toString().padStart(2,'0')]=0; hkNumberBets[i.toString().padStart(2,'0')]=0; }
+  ALL_ZODIACS.forEach(z=>{flatBets[z]=0; hkFlatBets[z]=0;});
+
+  rawLines.forEach(function(rawLine, lineIdx){
+    var msgBet = 0;
+    const subLines=rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
+    var curHKMode = false; // Default Macau, stateful within a line
+    subLines.forEach(function(sl){
+      // Strip sender prefix before mode check
+      var slNoSender = sl.replace(/^[^\d]{1,15}?[：:]\s*/,'').trim();
+      if(/^(?:香港|港|香)[\s，：:。、]/.test(slNoSender)) curHKMode = true;
+      else if(/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)[\s，：:。、]/.test(slNoSender)) curHKMode = false;
+      expandLine(sl).forEach(function(sr){
+        const r=processRule(sr);
+        if(r){
+          r.msgIndex = lineIdx;
+          r.hk = curHKMode;
+          msgBet += r.bet;
+          if(curHKMode){ hkBetSummary.push(r); }
+          else { betSummary.push(r); }
+          if(curHKMode){
+            if(r.type==='nums'&&r.targets) r.targets.forEach(function(t){ hkNumberBets[t]=(hkNumberBets[t]||0)+parseFloat((r.bet/r.targets.length).toFixed(2)); });
+            else if(r.type==='flat'&&r.targets) r.targets.forEach(function(z){ hkFlatBets[z]=(hkFlatBets[z]||0)+parseFloat((r.bet/r.targets.length).toFixed(2)); });
+            else if(r.type==='special_zodiac'&&r.targets) r.targets.forEach(function(z){ hkSpecialZodiacBets[z]=(hkSpecialZodiacBets[z]||0)+parseFloat((r.bet/r.targets.length).toFixed(2)); });
+            else if(r.type==='combo') hkComboBets.push(r);
+            else if(r.type==='n3'||r.type==='n2') hkNumComboBets.push(r);
+          }
+        }
+      });
+    });
+    messageSummary.push({
+      index: lineIdx + 1,
+      text: rawLine.length > 80 ? rawLine.substring(0, 80) + '...' : rawLine,
+      fullText: rawLine,
+      totalBet: Math.round(msgBet * 100) / 100
+    });
+  });
+
+  renderAll();
+  renderMsgSummary();
+  toast('已解析 ' + (betSummary.length+hkBetSummary.length) + ' 条投注 (澳'+betSummary.length+' + 港'+hkBetSummary.length+')，共 ' + messageSummary.length + ' 条消息');
+}
+
+// ===== Calculate win/loss =====
+function calcAll(){
+  if(!betSummary.length && !hkBetSummary.length){ alert('请先分析投注！'); return; }
+
+  // 澳门开奖数据 (实时API)
+  let winNums, teMa, winFlat;
+  if(liveResult && liveResult.numbers && (liveResult.validCount || liveResult.numbers.filter(function(n){ return n!==''; }).length) >= 7){
+    winNums = liveResult.numbers;
+    teMa = liveResult.teMa;
+    winFlat = liveResult.flatZodiacs;
+  }
+
+  // 香港开奖数据 (手动输入)
+  let hkWinNums = null, hkTeMa = null, hkWinFlat = null;
+  if(hkResult && hkResult.numbers && hkResult.numbers.filter(function(n){ return n!==''; }).length >= 7){
+    hkWinNums = hkResult.numbers;
+    hkTeMa = hkResult.teMa;
+    hkWinFlat = hkResult.flatZodiacs;
+  }
+
+  let canCalcMacau = winNums && teMa && betSummary.length > 0;
+  let canCalcHK = hkWinNums && hkTeMa && hkBetSummary.length > 0;
+
+  if(!canCalcMacau && !canCalcHK){ alert('无开奖数据！请先获取澳门开奖或手动输入香港开奖。'); return; }
+  if(!canCalcMacau && betSummary.length > 0){ alert('澳门开奖数据不完整！仅计算香港盘。'); }
+  if(!canCalcHK && hkBetSummary.length > 0){ alert('请先填写香港开奖号码！仅计算澳门盘。'); }
+
+  // 结算辅助函数
+  function settleRow(s, theWinNums, theTeMa, theWinFlat){
+    let win = 0, odds = 0, note = '', hitBet = 0;
+    if(s.type==='nums'){
+      odds = ODDS_TM;
+      const perBet = s.targets.length>0 ? s.bet/s.targets.length : s.bet;
+      let hitNums = [];
+      s.targets.forEach(t=>{
+        if(t === theTeMa){ win += perBet * ODDS_TM; hitBet += perBet; hitNums.push(t); }
+      });
+      if(hitNums.length){ note = `中${hitNums.join(',')} (特码)`; }
+    } else if(s.type==='flat'){
+      const perBet = s.targets.length>0 ? s.bet/s.targets.length : s.bet;
+      let hitZs = [];
+      s.targets.forEach(z=>{
+        if(theWinFlat.includes(z)){
+          odds = z==='马' ? ODDS_PT_MA : ODDS_PT_OTHER;
+          win += perBet * odds;
+          hitBet += perBet;
+          hitZs.push(z);
+        }
+      });
+      if(hitZs.length){ note = `中${hitZs.join(',')} (平特${odds})`; }
+    } else if(s.type==='special_zodiac'){
+      const perBet = s.targets.length>0 ? s.bet/s.targets.length : s.bet;
+      let hitZs = [];
+      s.targets.forEach(z=>{
+        if(theWinFlat.includes(z)){
+          odds = z==='马' ? ODDS_TX_MA : ODDS_TX_OTHER;
+          win += perBet * odds;
+          hitBet += perBet;
+          hitZs.push(z);
+        }
+      });
+      if(hitZs.length){ note = `中${hitZs.join(',')} (特肖${odds}倍)`; }
+    } else if(s.type==='n3' || s.type==='n2'){
+      const k = s.k;
+      odds = s.type==='n3' ? ODDS_N3 : ODDS_N2;
+      const regularNums = theWinNums.filter(function(n){ return n !== theTeMa; });
+      const matchedNums = s.numbers.filter(function(n){ return regularNums.includes(n); });
+      if(matchedNums.length >= k){
+        const winGroups = C(matchedNums.length, k);
+        win = winGroups * s.perUnit * odds;
+        hitBet = winGroups * s.perUnit;
+        note = `中${winGroups}组(${matchedNums.join(',')}) (${s.type==='n3'?'三中三':'二中二'}${odds}x)`;
+      }
+    } else if(s.type==='combo'){
+      if(s.comboType==='quintuple'){ odds = s.comboZodiacs.includes('马') ? 80 : 100; }
+      else if(s.comboType==='quadruple'){ odds = s.comboZodiacs.includes('马') ? 25 : 30; }
+      else if(s.comboType==='triple'){ odds = s.comboZodiacs.includes('马') ? 8 : 10; }
+      else { odds = s.comboZodiacs.includes('马') ? 3.5 : 4; }
+      const drawnZodiacs = new Set(theWinNums.map(function(n){ return NUM_TO_ZODIAC[n]; }).filter(Boolean));
+      const zs = s.comboZodiacs.split('');
+      const allHit = zs.every(function(z){ return drawnZodiacs.has(z); });
+      if(allHit){
+        win = s.bet * odds;
+        hitBet = s.bet;
+        const typeName=s.comboType==='quintuple'?'五连':s.comboType==='quadruple'?'四连':s.comboType==='triple'?'三连':'二连';
+        note = `中${zs.join('')}全中 (${typeName}${odds}x)`;
+      }
+    }
+    const net = win - s.bet;
+    return {...s, win:Math.round(win*100)/100, odds, net:Math.round(net*100)/100, note, hitBet:Math.round(hitBet*100)/100};
+  }
+
+  let totalBet = 0, totalPayout = 0, hitAmount = 0;
+  const macauRows = [], hkRows = [];
+
+  // 结算澳门盘
+  if(canCalcMacau){
+    betSummary.forEach(s=>{
+      const r = settleRow(s, winNums, teMa, winFlat);
+      totalBet += r.bet;
+      totalPayout += r.win;
+      if(r.note) hitAmount += r.hitBet;
+      macauRows.push(r);
+    });
+  }
+
+  // 结算香港盘
+  if(canCalcHK){
+    hkBetSummary.forEach(s=>{
+      const r = settleRow(s, hkWinNums, hkTeMa, hkWinFlat);
+      totalBet += r.bet;
+      totalPayout += r.win;
+      if(r.note) hitAmount += r.hitBet;
+      hkRows.push(r);
+    });
+  }
+
+  const netProfit = totalBet - totalPayout;
+  const waterAmount = totalBet * waterRate / 100;
+  const netAfterWater = netProfit - waterAmount;
+
+  // Update stat cards
+  document.getElementById('sumTotalBet').textContent = totalBet;
+  document.getElementById('sumTotalPayout').textContent = Math.round(totalPayout*100)/100;
+  document.getElementById('sumNetProfit').textContent = (netProfit>=0?'+':'')+Math.round(netProfit);
+  document.getElementById('sumNetProfit').style.color = netProfit>=0?'#22c55e':'#ef4444';
+  document.getElementById('sumNetAfterWater').textContent = (netAfterWater>=0?'+':'')+Math.round(netAfterWater);
+  document.getElementById('sumNetAfterWater').style.color = netAfterWater>=0?'#22c55e':'#ef4444';
+  document.getElementById('waterInfo').textContent = '抽水: '+Math.round(waterAmount);
+  document.getElementById('sumHitCount').textContent = Math.round(hitAmount*100)/100;
+  document.getElementById('sumWinAmount').textContent = Math.round(totalPayout*100)/100;
+
+  // Wave color bet stats
+  let waveBets = {红波:0, 绿波:0, 蓝波:0};
+  let waveHits = {红波:0, 绿波:0, 蓝波:0};
+  Object.entries(numberBets).forEach(function(e){
+    const n=e[0], v=e[1];
+    const w = NUM_TO_WAVE[n];
+    if (w && v > 0) waveBets[w] = (waveBets[w] || 0) + v;
+  });
+  if (winNums && winNums.length) {
+    winNums.forEach(function(n){
+      const w = NUM_TO_WAVE[n];
+      if (w) waveHits[w] = (waveHits[w] || 0) + 1;
+    });
+  }
+  document.getElementById('waveRedBet').textContent = Math.round(waveBets['红波'] * 100) / 100;
+  document.getElementById('waveGreenBet').textContent = Math.round(waveBets['绿波'] * 100) / 100;
+  document.getElementById('waveBlueBet').textContent = Math.round(waveBets['蓝波'] * 100) / 100;
+  document.getElementById('waveRedHit').textContent = waveHits['红波'] || 0;
+  document.getElementById('waveGreenHit').textContent = waveHits['绿波'] || 0;
+  document.getElementById('waveBlueHit').textContent = waveHits['蓝波'] || 0;
+  document.getElementById('waveStatRow').style.display = '';
+
+  // 澳门 + 香港合并结算表
+  const tbody = document.getElementById('settlementBody_tbody');
+  var allRows = macauRows.concat(hkRows);
+  tbody.innerHTML = allRows.map(function(r){
+    var typeName = r.type==='nums'?'特码':r.type==='flat'?'平特':r.type==='special_zodiac'?'特肖':r.type==='n3'?'三中三':r.type==='n2'?'二中二':r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
+    var hkTag = r.hk ? ' <span style="color:#f59e0b;font-size:.65rem;">HK</span>' : '';
+    return '<tr>'+
+      '<td>'+esc(r.display)+hkTag+(r.note?' <span style="color:#22c55e;font-size:.7rem;">'+r.note+'</span>':'')+'</td>'+
+      '<td class="td-r">'+r.bet+'</td>'+
+      '<td class="td-r" style="color:#64748b;">'+typeName+'</td>'+
+      '<td class="td-r" style="color:#fbbf24;">'+(r.odds||'-')+'</td>'+
+      '<td class="td-win">'+(r.win>0?r.win:'-')+'</td>'+
+      '<td class="td-net '+(r.net>=0?'net-pos':'net-neg')+'">'+(r.net>=0?'+':'')+r.net+'</td>'+
+      '</tr>';
+  }).join('');
+
+  document.getElementById('footBet').textContent = totalBet;
+  document.getElementById('footPayout').textContent = Math.round(totalPayout*100)/100;
+  document.getElementById('footNet').textContent = (netProfit>=0?'+':'')+Math.round(netProfit*100)/100;
+  document.getElementById('footNet').style.color = netProfit>=0?'#22c55e':'#ef4444';
+
+  // 澳门号码网格用澳门开奖
+  if(canCalcMacau){
+    renderNumGrid(winNums, teMa);
+    renderZodiacGrid(winFlat);
+    renderComboStats(winNums);
+    renderN3Stats(winNums, teMa);
+    renderN2Stats(winNums, teMa);
+  }
+  var hkNote = canCalcHK ? (' | 港收'+Math.round(hkRows.reduce(function(a,r){return a+r.bet;},0)*100)/100) : '';
+  toast('结算完成 | 收'+totalBet+' 派'+Math.round(totalPayout*100)/100+' | 庄家'+(netProfit>=0?'盈利':'亏损')+Math.abs(Math.round(netProfit*100)/100)+hkNote);
+
+  // 上报到后端
+  wsReportBets({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, waterRate: waterRate, hitAmount: Math.round(hitAmount*100)/100, itemCount: allRows.length });
+  wsReportSettlement({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100, rows: allRows.slice(0, 20) });
+}// ===== Rendering =====
+function renderNumGrid(winNums, teMa){
+  const grid=document.getElementById('numGrid'); if(!grid) return;
+  grid.innerHTML='';
+
+  // 计算投注额排名，找出Top 10
+  var ranked = [];
+  for(var i=1;i<=49;i++){
+    var n=i.toString().padStart(2,'0');
+    var v=numberBets[n]||0;
+    ranked.push({num:n, bet:v});
+  }
+  ranked.sort(function(a,b){ return b.bet - a.bet; });
+  var top10Set = new Set();
+  var top10Threshold = 0;
+  for(var r=0; r<10 && r<ranked.length; r++){
+    if(ranked[r].bet > 0){
+      top10Set.add(ranked[r].num);
+      top10Threshold = ranked[r].bet;
+    }
+  }
+
+  // 如果第10和11相等，也包含所有平齐的
+  for(var r=10; r<ranked.length; r++){
+    if(ranked[r].bet === top10Threshold && ranked[r].bet > 0){
+      top10Set.add(ranked[r].num);
+    }
+  }
+
+  for(var i=1;i<=49;i++){
+    var n=i.toString().padStart(2,'0'), v=numberBets[n]||0;
+    var isTop10 = top10Set.has(n);
+    var isTema = teMa && n===teMa;
+    var cls='num-cell';
+    if(isTop10 && isTema){
+      cls+=' alert-tema';
+    } else if(isTop10){
+      cls+=' alert-top10';
+    } else if(isTema){
+      cls+=' tema';
+    } else if(v>0){
+      cls+=' has-bet';
+    }
+    var cell=document.createElement('div'); cell.className=cls;
+    cell.innerHTML='<div class="n">'+n+'</div><div class="v">'+(v||'')+'</div>';
+    grid.appendChild(cell);
+  }
+}
+
+function renderZodiacGrid(winFlat){
+  const grid=document.getElementById('zodiacGrid'); if(!grid) return;
+  grid.innerHTML='';
+  ALL_ZODIACS.forEach(z=>{
+    const v=flatBets[z]||0;
+    const isWin=winFlat && winFlat.includes(z);
+    const cell=document.createElement('div');
+    cell.style.cssText=`background:#0f172a;border:1px solid ${isWin?'#22c55e':v>0?'#2563eb':'#1e293b'};border-radius:4px;padding:8px;text-align:center;`;
+    cell.innerHTML=`<div style="font-size:.85rem;color:${isWin?'#4ade80':'#94a3b8'};">${z}</div><div style="font-size:.75rem;color:${v>0?'#60a5fa':'#475569'};margin-top:2px;">${v||''}</div>`;
+    grid.appendChild(cell);
+  });
+}
+
+function getComboOdds(zodiacs){
+  const L=zodiacs.length;
+  const hasMa=zodiacs.includes('马');
+  if(L===5) return hasMa?80:100;
+  if(L===4) return hasMa?25:30;
+  if(L===3) return hasMa?8:10;
+  return hasMa?3.5:4;
+}
+function renderComboStats(winNums){
+  const doubleBody = document.getElementById('comboDoubleBody');
+  const tripleBody = document.getElementById('comboTripleBody');
+  const quadBody = document.getElementById('comboQuadBody');
+  const quintBody = document.getElementById('comboQuintBody');
+  if(!doubleBody || !tripleBody) return;
+  const doubles = comboBets.filter(c => c.type==='double');
+  const triples = comboBets.filter(c => c.type==='triple');
+  const quads = comboBets.filter(c => c.type==='quadruple');
+  const quints = comboBets.filter(c => c.type==='quintuple');
+  var renderGroup = function(combos, winNums){
+    if(!combos.length) return '<div style="color:#475569;">无</div>';
+    var agg = {};
+    combos.forEach(function(c){
+      var key = c.zodiacs.join('');
+      if(!agg[key]) agg[key] = {zodiacs:c.zodiacs, totalBet:0, isHK:c.isHK};
+      agg[key].totalBet += c.value;
+    });
+    var h = ''; var grandTotal = 0;
+    Object.values(agg).forEach(function(a){
+      grandTotal += a.totalBet;
+      var allHit = false;
+      if(winNums && winNums.length){
+        var drawnZodiacs = new Set(winNums.map(function(n){ return NUM_TO_ZODIAC[n]; }).filter(Boolean));
+        allHit = a.zodiacs.every(function(z){ return drawnZodiacs.has(z); });
+      }
+      var odds = getComboOdds(a.zodiacs);
+      var risk = a.totalBet * odds;
+      var hitColor = allHit ? '#4ade80' : '#64748b';
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #1e293b;">';
+      h += '<span>'+a.zodiacs.map(function(z){ return '<span style="color:#60a5fa;">'+z+'</span>'; }).join('')+(a.isHK?' <span style="color:#ef4444;font-size:.6rem;">HK</span>':'')+'</span>';
+      h += '<span style="text-align:right;">投'+a.totalBet+' <span style="color:#fbbf24;">赔'+odds+'</span> <span style="color:#ef4444;">险'+risk+'</span> <span style="color:'+hitColor+';">'+(winNums&&winNums.length?(allHit?'全中':'未中'):'')+'</span></span>';
+      h += '</div>';
+    });
+    h += '<div style="text-align:right;color:#e2e8f0;font-weight:600;padding-top:4px;">合计: '+grandTotal+' (组数:'+Object.keys(agg).length+')</div>';
+    return h;
+  };
+  doubleBody.innerHTML = renderGroup(doubles, winNums);
+  tripleBody.innerHTML = renderGroup(triples, winNums);
+  if(quadBody) quadBody.innerHTML = renderGroup(quads, winNums);
+  if(quintBody) quintBody.innerHTML = renderGroup(quints, winNums);
+}
+
+function renderN3Stats(winNums, teMa){
+  const body = document.getElementById('n3StatsBody');
+  if(!body) return;
+  const n3bets = numComboBets.filter(c => c.type==='n3');
+  if(!n3bets.length){ body.innerHTML='<div style="color:#475569;">无三中三投注</div>'; return; }
+  const regNums = winNums && teMa ? winNums.filter(n => n !== teMa) : [];
+  let html = ''; let grandTotal = 0;
+  n3bets.forEach(b => {
+    grandTotal += b.count * b.perUnit;
+    html += '<div style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px;margin-bottom:8px;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
+    html += '<span style="color:#60a5fa;font-weight:600;">'+b.numbers.join('.')+'</span>';
+    html += '<span style="color:#94a3b8;">'+b.count+'组 × '+b.perUnit+' = <span style="color:#fbbf24;">投'+(b.count*b.perUnit)+'</span></span>';
+    html += '</div>';
+    const combos = combinations(b.numbers, 3);
+    let hitGroups = 0;
+    if(regNums.length){
+      html += '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
+      combos.forEach(combo => {
+        const allHit = combo.every(n => regNums.includes(n));
+        if(allHit) hitGroups++;
+        html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#166534;color:#4ade80;border:1px solid #22c55e;':'background:#1e293b;color:#475569;border:1px solid #334155;')+'">'+combo.join('.')+'</span>';
+      });
+      html += '</div>';
+      if(hitGroups > 0){
+        html += '<div style="color:#4ade80;font-weight:600;margin-top:4px;">中'+hitGroups+'组 → 派彩 '+hitGroups+'×'+b.perUnit+'×600 = <span style="color:#fbbf24;">'+(hitGroups*b.perUnit*600)+'</span></div>';
+      }
+    } else {
+      html += '<div style="color:#475569;font-size:.68rem;">'+combos.length+'组 | 等待开奖</div>';
+    }
+    html += '</div>';
+  });
+  html += '<div style="text-align:right;color:#e2e8f0;font-weight:600;border-top:1px solid #334155;padding-top:8px;">三中三合计: '+grandTotal+'</div>';
+  body.innerHTML = html;
+}
+
+function renderN2Stats(winNums, teMa){
+  const body = document.getElementById('n2StatsBody');
+  if(!body) return;
+  const n2bets = numComboBets.filter(c => c.type==='n2');
+  if(!n2bets.length){ body.innerHTML='<div style="color:#475569;">无二中二投注</div>'; return; }
+  const regNums = winNums && teMa ? winNums.filter(n => n !== teMa) : [];
+  let html = ''; let grandTotal = 0;
+  n2bets.forEach(b => {
+    grandTotal += b.count * b.perUnit;
+    html += '<div style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px;margin-bottom:8px;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
+    html += '<span style="color:#60a5fa;font-weight:600;">'+b.numbers.join('.')+'</span>';
+    html += '<span style="color:#94a3b8;">'+b.count+'组 × '+b.perUnit+' = <span style="color:#fbbf24;">投'+(b.count*b.perUnit)+'</span></span>';
+    html += '</div>';
+    const combos = combinations(b.numbers, 2);
+    let hitGroups = 0;
+    if(regNums.length){
+      html += '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
+      combos.forEach(combo => {
+        const allHit = combo.every(n => regNums.includes(n));
+        if(allHit) hitGroups++;
+        html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#166534;color:#4ade80;border:1px solid #22c55e;':'background:#1e293b;color:#475569;border:1px solid #334155;')+'">'+combo.join('.')+'</span>';
+      });
+      html += '</div>';
+      if(hitGroups > 0){
+        html += '<div style="color:#4ade80;font-weight:600;margin-top:4px;">中'+hitGroups+'组 → 派彩 '+hitGroups+'×'+b.perUnit+'×60 = <span style="color:#fbbf24;">'+(hitGroups*b.perUnit*60)+'</span></div>';
+      }
+    } else {
+      html += '<div style="color:#475569;font-size:.68rem;">'+combos.length+'组 | 等待开奖</div>';
+    }
+    html += '</div>';
+  });
+  html += '<div style="text-align:right;color:#e2e8f0;font-weight:600;border-top:1px solid #334155;padding-top:8px;">二中二合计: '+grandTotal+'</div>';
+  body.innerHTML = html;
+}
+
+function renderAll(){
+  const wn=liveResult?liveResult.numbers:[];
+  const tm=liveResult?liveResult.teMa:null;
+  const wf=liveResult?liveResult.flatZodiacs:[];
+  renderNumGrid(wn, tm);
+  renderZodiacGrid(wf);
+  renderComboStats(wn);
+  renderN3Stats(wn, tm);
+  renderN2Stats(wn, tm);
+}
+
+function renderMsgSummary(){
+  var card = document.getElementById('msgSummaryCard');
+  var tbody = document.getElementById('msgSummaryTbody');
+  var countEl = document.getElementById('msgSummaryCount');
+  var grandEl = document.getElementById('msgSummaryGrandTotal');
+  if(!card || !tbody) return;
+
+  if(messageSummary.length === 0){
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = '';
+  countEl.textContent = '共 ' + messageSummary.length + ' 条';
+
+  var grandTotal = 0;
+  tbody.innerHTML = messageSummary.map(function(m){
+    grandTotal += m.totalBet;
+    return '<tr>' +
+      '<td class="td-r" style="color:#64748b;">' + m.index + '</td>' +
+      '<td style="font-size:.75rem;word-break:break-all;" title="' + esc(m.fullText) + '">' + esc(m.text) + '</td>' +
+      '<td class="td-r" style="color:#60a5fa;font-weight:600;">' + m.totalBet + '</td>' +
+      '</tr>';
+  }).join('');
+
+  grandEl.textContent = Math.round(grandTotal * 100) / 100;
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ===== Live Result Display =====
+function renderLiveBar(){
+  if(!liveResult || !liveResult.numbers){
+    document.getElementById('liveBalls').innerHTML='<span class="info">等待实时数据...</span>';
+    document.getElementById('liveFlatTags').innerHTML='';
+    document.getElementById('liveTime').textContent='--';
+    document.getElementById('liveDot').classList.remove('online');
+    document.getElementById('liveStatus').textContent='等待数据...';
+    return;
+  }
+
+  const r=liveResult;
+  const nums=r.numbers, tm=r.teMa, fz=r.flatZodiacs;
+
+  // Balls with wave color (全部按实际波色，特码加大)
+  const waveClassMap = {红波:'red', 绿波:'green', 蓝波:'blue'};
+  document.getElementById('liveBalls').innerHTML = nums.map((n,i)=>{
+    const isTe = i === 6;
+    if(!n){
+      return '<div class="ball" style="background:#334155;opacity:.5;">?</div>';
+    }
+    const w = NUM_TO_WAVE[n] || '';
+    const cls = 'ball ' + (waveClassMap[w] || '') + (isTe ? ' te' : '');
+    const z = NUM_TO_ZODIAC[n] || '';
+    return '<div class="' + cls + '">' + n + '<span class="zodiac-tag">' + z + '</span></div>';
+  }).join('');
+
+  // Flat tags
+  document.getElementById('liveFlatTags').innerHTML = fz.map(z=>{
+    const odds=z==='马'?ODDS_PT_MA:ODDS_PT_OTHER;
+    return `<span class="flat-tag">${z} (1:${odds})</span>`;
+  }).join('');
+
+  // Wave color summary (只统计有效号码)
+  const waveCount = {}; nums.forEach(n=>{ if(!n) return; const w=NUM_TO_WAVE[n]||''; waveCount[w]=(waveCount[w]||0)+1; });
+  const waveSummary = Object.entries(waveCount).map(([k,v])=>'<span style="color:'+(k==='红波'?'#ef4444':k==='绿波'?'#22c55e':'#3b82f6')+';">'+k+' x '+v+'</span>').join(' ');
+  const drawnCount = nums.filter(function(n){ return n !== ''; }).length;
+
+  document.getElementById('liveTime').innerHTML = (r.timestamp||'--') + ' | 已开 <b>' + drawnCount + '</b>/7 球 | 波色: ' + (waveSummary||'--');
+  document.getElementById('liveDot').classList.add('online');
+  document.getElementById('liveStatus').textContent = '在线';
+  document.getElementById('liveStatus').style.color = '#22c55e';
+}
+
+// ===== 实时数据获取：优先直接调用API，失败时回退到本地文件 =====
+const LOTTERY_API_URL = 'https://macaumarksix.com/api/live2';
+
+// API响应 → LOTTERY_DATA 格式转换
+function parseApiToResult(data){
+  const raw = data.openCode.split(',').map(function(s){ return s.trim(); });
+  const validNumbers = raw.filter(function(s){ return s !== ''; });
+  if(validNumbers.length === 0) return null;
+  // 7个球位，已开出的填号码，未开出的填空字符串供 UI 显示占位符
+  const seven = [];
+  for(var i = 0; i < 7; i++) { seven.push(raw[i] || ''); }
+  const teMa = seven[6] || '';
+  const validCount = validNumbers.length;
+
+  const rawZodiacs = data.zodiac ? data.zodiac.split(',').map(function(s){ return s.trim(); }) : [];
+  const T2S = { '龍':'龙', '馬':'马', '豬':'猪', '雞':'鸡', '鴨':'鸭' };
+  var seen = {};
+  const flatZodiacs = [];
+  rawZodiacs.forEach(function(z){
+    var zs = T2S[z] || z;
+    if(zs && !seen[zs]){ seen[zs]=true; flatZodiacs.push(zs); }
+  });
+  if(flatZodiacs.length === 0){
+    var seen2 = {};
+    seven.forEach(function(n){
+      var z = NUM_TO_ZODIAC[n];
+      if(z && !seen2[z]){ seen2[z]=true; flatZodiacs.push(z); }
+    });
+  }
+
+  return {
+    expect: data.expect,
+    numbers: seven,
+    validCount: validCount,
+    teMa: teMa,
+    zodiacRaw: rawZodiacs.join(','),
+    flatZodiacs: flatZodiacs,
+    openTime: data.openTime,
+    timestamp: new Date().toLocaleString('zh-CN', {hour12:false})
+  };
+}
+
+// 直接调用API（优先走服务端代理，解决CORS）
+async function fetchFromApi(){
+  try {
+    // 优先通过服务端代理请求（无CORS问题）
+    var apiUrl = (location.protocol === 'file:') ? LOTTERY_API_URL : '/api/live';
+    var resp = await fetch(apiUrl, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if(!resp.ok) return null;
+    var json = await resp.json();
+    var data = Array.isArray(json) ? json[0] : json;
+    if(!data || !data.openCode) return null;
+    return parseApiToResult(data);
+  } catch(e){
+    return null;
+  }
+}
+
+// 从本地文件加载 (回退方案)
+function loadResultFromJs(callback){
+  var script = document.createElement('script');
+  script.src = 'lottery_data.js?t=' + Date.now();
+  script.onload = function(){
+    if(typeof LOTTERY_DATA !== 'undefined' && LOTTERY_DATA && LOTTERY_DATA.numbers && LOTTERY_DATA.numbers.length>=7){
+      // 重新解析以修复旧数据中可能存在的空字符串
+      if(!LOTTERY_DATA.validCount){
+        var vc = 0;
+        for(var vi=0; vi<LOTTERY_DATA.numbers.length; vi++){ if(LOTTERY_DATA.numbers[vi]!=='') vc++; }
+        LOTTERY_DATA.validCount = vc;
+      }
+      var prevHash = liveResult ? liveResult.numbers.filter(function(n){ return n!==''; }).join('') : '';
+      var newHash = LOTTERY_DATA.numbers.filter(function(n){ return n!==''; }).join('');
+      if(newHash !== prevHash || !liveResult){
+        liveResult = LOTTERY_DATA;
+        renderLiveBar();
+        if(liveResult.validCount >= 7){ renderAll(); }
+        wsReportLottery(liveResult);
+        if(liveResult.flatZodiacs && liveResult.flatZodiacs.length){
+          document.getElementById('sumHitCount').textContent = liveResult.flatZodiacs.length+'肖';
+        }
+      }
+      if(callback) callback(true);
+    } else {
+      if(callback) callback(false);
+    }
+    document.body.removeChild(script);
+  };
+  script.onerror = function(){
+    document.body.removeChild(script);
+    if(callback) callback(false);
+  };
+  document.body.appendChild(script);
+}
+
+// 处理服务器推送的开奖数据
+function handleServerLottery(data){
+  if (!data || !data.numbers) return;
+  var validNumbers = data.numbers.filter(function(n){ return n !== ''; });
+  if (validNumbers.length === 0) return;
+
+  // 数据是否变化
+  var prevHash = liveResult ? liveResult.numbers.filter(function(n){ return n !== ''; }).join('') : '';
+  var newHash = validNumbers.join('');
+  if (newHash === prevHash && liveResult) return;
+
+  liveResult = {
+    expect: data.expect,
+    numbers: data.numbers,
+    validCount: data.validCount || validNumbers.length,
+    teMa: data.teMa || '',
+    flatZodiacs: data.flatZodiacs || [],
+    openTime: data.openTime,
+    timestamp: data.timestamp || new Date().toLocaleString('zh-CN', {hour12:false})
+  };
+
+  renderLiveBar();
+  if (liveResult.validCount >= 7) {
+    renderAll();
+    if (betSummary.length > 0) {
+      calcAll();
+    }
+  }
+
+  document.getElementById('liveDot').classList.add('online');
+  document.getElementById('liveStatus').textContent = '在线 (服务端推送)';
+  document.getElementById('liveStatus').style.color = '#22c55e';
+}
+
+// 统一入口：先API，后本地文件
+async function fetchLatestResult(){
+  document.getElementById('liveStatus').textContent = '获取中...';
+
+  // 优先直接调用API
+  var apiResult = await fetchFromApi();
+  if(apiResult){
+    var prevHash = liveResult ? liveResult.numbers.filter(function(n){ return n!==''; }).join('') : '';
+    var newHash = apiResult.numbers.filter(function(n){ return n!==''; }).join('');
+    if(newHash !== prevHash || !liveResult){
+      liveResult = apiResult;
+      renderLiveBar();
+      if(apiResult.validCount >= 7){ renderAll(); }
+      wsReportLottery(apiResult);
+    }
+    document.getElementById('liveDot').classList.add('online');
+    document.getElementById('liveStatus').textContent = '在线 (直连)';
+    document.getElementById('liveStatus').style.color = '#22c55e';
+    return true;
+  }
+
+  // API失败，回退到本地文件
+  return new Promise(function(resolve){
+    loadResultFromJs(function(ok){
+      if(ok){
+        document.getElementById('liveDot').classList.add('online');
+        document.getElementById('liveStatus').textContent = '在线 (本地)';
+        document.getElementById('liveStatus').style.color = '#f59e0b';
+      } else {
+        document.getElementById('liveDot').classList.remove('online');
+        document.getElementById('liveStatus').textContent = '无数据 (请运行 fetch_once.ps1)';
+        document.getElementById('liveStatus').style.color = '#ef4444';
+      }
+      resolve(ok);
+    });
+  });
+}
+
+
+function startAutoRefresh(){
+  if(autoRefreshTimer) return;
+  fetchLatestResult().then(function(){});
+  autoRefreshTimer = setInterval(async function(){
+    var ok = await fetchLatestResult();
+    if(ok) document.getElementById('liveDot').classList.add('online');
+  }, 10000);
+  var btn = document.getElementById('btnAuto');
+  if(btn){
+    btn.textContent = '自动刷新中';
+    btn.className = 'btn btn-success btn-sm';
+    btn.title = '停止自动刷新';
+    btn.onclick = stopAutoRefresh;
+  }
+}
+function stopAutoRefresh(){
+  if(autoRefreshTimer){
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+  var btn = document.getElementById('btnAuto');
+  if(btn){
+    btn.textContent = '开始自动刷新';
+    btn.className = 'btn btn-outline btn-sm';
+    btn.title = '开始自动刷新';
+    btn.onclick = startAutoRefresh;
+  }
+}
+function toggleAutoRefresh(){
+  if(autoRefreshTimer){ stopAutoRefresh(); }
+  else { startAutoRefresh(); }
+}
+async function manualFetch(){
+  document.getElementById('liveStatus').textContent = '刷新中...';
+  var ok = await fetchLatestResult();
+  if(ok){
+    toast('数据已更新');
+  } else {
+    toast('无法获取数据，请检查网络或运行 fetch_once.ps1');
+    document.getElementById('liveStatus').textContent = '无数据';
+  }
+}
+
+// ===== 香港开奖手动输入 =====
+function applyHKResult(){
+  var teMa = document.getElementById('hkTeMa').value.trim();
+  var nums = [
+    document.getElementById('hkNum1').value.trim(),
+    document.getElementById('hkNum2').value.trim(),
+    document.getElementById('hkNum3').value.trim(),
+    document.getElementById('hkNum4').value.trim(),
+    document.getElementById('hkNum5').value.trim(),
+    document.getElementById('hkNum6').value.trim()
+  ];
+  
+  // 验证
+  var errEl = document.getElementById('hkResultErr');
+  if(!teMa || nums.some(function(n){ return !n; })){
+    errEl.textContent = '请填写所有7个号码！';
+    errEl.style.display = '';
+    return;
+  }
+  
+  var allNums = nums.concat([teMa]);
+  for(var i=0; i<allNums.length; i++){
+    var n = parseInt(allNums[i]);
+    if(isNaN(n) || n<1 || n>49){
+      errEl.textContent = '号码必须在01-49之间！';
+      errEl.style.display = '';
+      return;
+    }
+    allNums[i] = n.toString().padStart(2,'0');
+  }
+  
+  // 去重检查
+  var seen = {};
+  for(var j=0; j<allNums.length; j++){
+    if(seen[allNums[j]]){
+      errEl.textContent = '号码不能重复！';
+      errEl.style.display = '';
+      return;
+    }
+    seen[allNums[j]] = true;
+  }
+  
+  errEl.style.display = 'none';
+  
+  // 构建HK result
+  var flatZodiacs = [];
+  var seenZ = {};
+  allNums.forEach(function(n){
+    var z = NUM_TO_ZODIAC[n];
+    if(z && !seenZ[z]){ seenZ[z]=true; flatZodiacs.push(z); }
+  });
+  
+  hkResult = {
+    numbers: nums.concat([teMa]),
+    teMa: teMa,
+    flatZodiacs: flatZodiacs,
+    timestamp: new Date().toLocaleString('zh-CN', {hour12:false})
+  };
+  
+  // 渲染香港开奖球
+  var waveClassMap = {红波:'red', 绿波:'green', 蓝波:'blue'};
+  var ballsHtml = hkResult.numbers.map(function(n,i){
+    var isTe = i === 6;
+    var w = NUM_TO_WAVE[n] || '';
+    var cls = 'ball ' + (waveClassMap[w] || '') + (isTe ? ' te' : '');
+    var z = NUM_TO_ZODIAC[n] || '';
+    return '<div class="'+cls+'" style="display:inline-flex;margin:2px;">'+n+'<span class="zodiac-tag">'+z+'</span></div>';
+  }).join('');
+  
+  var hkInfo = document.getElementById('hkResultInfo');
+  if(!hkInfo){
+    var bar = document.getElementById('hkInputBar');
+    var span = document.createElement('span');
+    span.id = 'hkResultInfo';
+    span.style.cssText = 'font-size:.75rem;color:#22c55e;';
+    bar.appendChild(span);
+    hkInfo = span;
+  }
+  hkInfo.innerHTML = '已设定 | 特码:'+teMa+' | 生肖:'+flatZodiacs.join(',')+' | <button class="btn btn-outline btn-sm" onclick="clearHKResult()" style="margin-left:4px;">清除</button>';
+  
+  toast('香港开奖已设定: '+teMa+' '+flatZodiacs.join(','));
+}
+
+function clearHKResult(){
+  hkResult = null;
+  var hkInfo = document.getElementById('hkResultInfo');
+  if(hkInfo) hkInfo.innerHTML = '';
+  document.getElementById('hkTeMa').value = '';
+  for(var i=1;i<=6;i++) document.getElementById('hkNum'+i).value = '';
+  toast('香港开奖已清除');
+}
+
+// ===== Tab switching =====
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    const tabs=['bets','detail','zodiac','picker','combo','n3','n2','admin'];
+    b.classList.toggle('active', tabs[i]===tab);
+  });
+  document.getElementById('tabBets').style.display = tab==='bets'?'':'none';
+  document.getElementById('msgSummaryCard').style.display = (tab==='bets' && messageSummary.length>0)?'':'none';
+  document.getElementById('tabDetail').style.display = tab==='detail'?'':'none';
+  document.getElementById('tabZodiac').style.display = tab==='zodiac'?'':'none';
+  document.getElementById('tabPicker').style.display = tab==='picker'?'':'none';
+  document.getElementById('tabCombo').style.display = tab==='combo'?'':'none';
+  document.getElementById('tabN3').style.display = tab==='n3'?'':'none';
+  document.getElementById('tabN2').style.display = tab==='n2'?'':'none';
+  document.getElementById('tabAdmin').style.display = tab==='admin'?'':'none';
+}
+
+// ===== UI helpers =====
+function toggleCollapse(id){
+  const body=document.getElementById(id);
+  const toggle=body.previousElementSibling;
+  body.classList.toggle('show');
+  toggle.classList.toggle('open');
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function updateWater(val){
+  waterRate = parseFloat(val);
+  document.getElementById('waterRateDisplay').textContent = waterRate+'%';
+  if(betSummary.length && document.getElementById('sumTotalBet').textContent !== '0'){
+    const totalBet = parseFloat(document.getElementById('sumTotalBet').textContent);
+    const waterAmount = totalBet * waterRate / 100;
+    document.getElementById('waterInfo').textContent = '抽水: '+Math.round(waterAmount*100)/100;
+    const netProfit = parseFloat(document.getElementById('sumNetProfit').textContent);
+    const netAfterWater = netProfit - waterAmount;
+    document.getElementById('sumNetAfterWater').textContent = (netAfterWater>=0?'+':'')+Math.round(netAfterWater);
+    document.getElementById('sumNetAfterWater').style.color = netAfterWater>=0?'#22c55e':'#ef4444';
+  } else {
+    document.getElementById('waterInfo').textContent = '抽水: 0';
+    document.getElementById('sumNetAfterWater').textContent = '0';
+    document.getElementById('sumNetAfterWater').style.color = '#22c55e';
+  }
+}
+
+function showReset(){ document.getElementById('resetModal').classList.add('show'); }
+
+function doReset(){
+  betSummary=[]; hkBetSummary=[]; messageSummary=[]; numberBets={}; flatBets={}; specialZodiacBets={}; comboBets=[]; numComboBets=[];
+  hkNumberBets={}; hkFlatBets={}; hkSpecialZodiacBets={}; hkComboBets=[]; hkNumComboBets=[]; hkResult=null;
+  for(let i=1;i<=49;i++) { numberBets[i.toString().padStart(2,'0')]=0; hkNumberBets[i.toString().padStart(2,'0')]=0; }
+  ALL_ZODIACS.forEach(z=>{flatBets[z]=0; hkFlatBets[z]=0;});
+  liveResult=null; hkResult=null;
+  document.getElementById('inputRule').value='';
+  document.getElementById('settlementBody_tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:#475569;">等待投注...</td></tr>';
+  document.getElementById('sumTotalBet').textContent='0';
+  document.getElementById('sumTotalPayout').textContent='0';
+  document.getElementById('sumNetProfit').textContent='0';
+  document.getElementById('sumNetProfit').style.color='#22c55e';
+  document.getElementById('sumHitCount').textContent='0';
+  document.getElementById('sumWinAmount').textContent='0';
+  document.getElementById('footBet').textContent='0';
+  document.getElementById('footPayout').textContent='0';
+  document.getElementById('footNet').textContent='0';
+  document.getElementById('waterSlider').value = 0;
+  document.getElementById('waterRateDisplay').textContent = '0%';
+  document.getElementById('waterInfo').textContent = '抽水: 0';
+  document.getElementById('sumNetAfterWater').textContent = '0';
+  document.getElementById('sumNetAfterWater').style.color = '#22c55e';
+  waterRate = 0;
+  document.getElementById('waveStatRow').style.display = 'none';
+  document.getElementById('waveRedBet').textContent = '0';
+  document.getElementById('waveGreenBet').textContent = '0';
+  document.getElementById('waveBlueBet').textContent = '0';
+  document.getElementById('waveRedHit').textContent = '0';
+  document.getElementById('waveGreenHit').textContent = '0';
+  document.getElementById('waveBlueHit').textContent = '0';
+  renderLiveBar();
+  renderAll();
+  renderMsgSummary();
+  document.getElementById('resetModal').classList.remove('show');
+  toast('已重置');
+}
+
+// ===== 远程管理 WebSocket 模块 =====
+var wsClient = null;
+var wsConnected = false;
+var clientId = '';
+var adminAuthed = false;
+
+function wsConnect(){
+  if(wsClient && wsClient.readyState === WebSocket.OPEN) return;
+  var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var wsUrl = protocol + '//' + location.host;
+  try {
+    wsClient = new WebSocket(wsUrl);
+  } catch(e){
+    console.log('[WS] 连接失败，独立模式运行');
+    return;
+  }
+  wsClient.onopen = function(){
+    wsConnected = true;
+    clientId = '';
+    wsSend({ type: 'register', userAgent: navigator.userAgent });
+    updateAdminStatus();
+  };
+  wsClient.onmessage = function(e){
+    try {
+      var msg = JSON.parse(e.data);
+      handleWsMessage(msg);
+    } catch(ex){}
+  };
+  wsClient.onclose = function(){
+    wsConnected = false;
+    updateAdminStatus();
+    // 5秒后重连
+    setTimeout(function(){ if(!wsConnected) wsConnect(); }, 5000);
+  };
+  wsClient.onerror = function(){
+    wsConnected = false;
+    updateAdminStatus();
+  };
+}
+
+function wsSend(data){
+  if(wsClient && wsClient.readyState === WebSocket.OPEN){
+    wsClient.send(JSON.stringify(data));
+  }
+}
+
+function handleWsMessage(msg){
+  switch(msg.type){
+    case 'registered':
+      clientId = msg.clientId;
+      updateAdminStatus();
+      // 如果当前有开奖数据，立即上报
+      if(liveResult) wsReportLottery(liveResult);
+      break;
+    case 'admin_authed':
+      adminAuthed = true;
+      renderAdminClients(msg.clients || []);
+      document.getElementById('adminAuthArea').style.display = 'none';
+      document.getElementById('adminMainArea').style.display = '';
+      updateAdminStatus();
+      break;
+    case 'admin_auth_failed':
+      document.getElementById('adminAuthErr').style.display = '';
+      document.getElementById('adminAuthErr').textContent = msg.error;
+      break;
+    case 'clients_update':
+      if(adminAuthed) renderAdminClients(msg.clients || []);
+      break;
+    case 'admin_command':
+      handleAdminCommand(msg.command, msg.params);
+      break;
+    case 'pong':
+      break;
+    case 'lottery_update':
+      handleServerLottery(msg.data);
+      break;
+  }
+}
+
+function handleAdminCommand(command, params){
+  switch(command){
+    case 'set_water':
+      if(params.value !== undefined){
+        updateWater(params.value);
+        document.getElementById('waterSlider').value = params.value;
+        document.getElementById('waterRateDisplay').textContent = params.value + '%';
+        toast('管理员已调整抽水率为 ' + params.value + '%');
+      }
+      break;
+    case 'set_odds':
+      if(params.type && params.value){
+        switch(params.type){
+          case 'pt_ma': ODDS_PT_MA = params.value; break;
+          case 'pt_other': ODDS_PT_OTHER = params.value; break;
+        }
+        toast('管理员已调整赔率: ' + params.type + ' → ' + params.value);
+        renderAll();
+      }
+      break;
+    case 'analyze':
+      analyze();
+      break;
+    case 'reset':
+      doReset();
+      break;
+    case 'refresh_lottery':
+      manualFetch();
+      break;
+  }
+}
+
+function wsReportBets(summary){
+  wsSend({ type: 'bet_update', data: summary });
+}
+
+function wsReportLottery(result){
+  wsSend({ type: 'lottery_update', data: {
+    expect: result.expect,
+    numbers: result.numbers,
+    validCount: result.validCount,
+    teMa: result.teMa,
+    flatZodiacs: result.flatZodiacs,
+    timestamp: result.timestamp
+  }});
+}
+
+function wsReportSettlement(results){
+  wsSend({ type: 'settlement_update', data: results });
+}
+
+function updateAdminStatus(){
+  var el = document.getElementById('adminConnStatus');
+  if(!el) return;
+  if(wsConnected && clientId){
+    el.textContent = '已连接 (' + clientId + ')';
+    el.style.color = '#4ade80';
+  } else if(wsConnected){
+    el.textContent = '连接中...';
+    el.style.color = '#f59e0b';
+  } else {
+    el.textContent = '未连接';
+    el.style.color = '#ef4444';
+  }
+}
+
+// ===== 管理面板前端逻辑 =====
+function adminLogin(){
+  var pw = document.getElementById('adminPasswordInput').value;
+  if(!pw) return;
+  wsSend({ type: 'admin_auth', password: pw });
+  document.getElementById('adminAuthErr').style.display = 'none';
+}
+
+function adminLogout(){
+  adminAuthed = false;
+  document.getElementById('adminAuthArea').style.display = '';
+  document.getElementById('adminMainArea').style.display = 'none';
+  document.getElementById('adminPasswordInput').value = '';
+  updateAdminStatus();
+}
+
+function adminRefreshClients(){
+  if(wsConnected){
+    wsSend({ type: 'admin_auth', password: document.getElementById('adminPasswordInput').value || '' });
+  }
+}
+
+function renderAdminClients(clients){
+  var countEl = document.getElementById('adminClientCount');
+  var listEl = document.getElementById('adminClientList');
+  if(!countEl || !listEl) return;
+
+  var regularClients = clients.filter(function(c){ return !c.isAdmin; });
+  countEl.textContent = regularClients.length;
+
+  if(regularClients.length === 0){
+    listEl.innerHTML = '<div style="color:#475569;text-align:center;padding:20px;">无在线设备</div>';
+    return;
+  }
+
+  listEl.innerHTML = regularClients.map(function(c){
+    var statusColor = c.online ? '#4ade80' : '#ef4444';
+    var statusText = c.online ? '在线' : '离线';
+    var betSummary = c.bets ? JSON.stringify(c.bets).substring(0, 80) : '暂无';
+    var settlement = c.settlement ? JSON.stringify(c.settlement).substring(0, 80) : '暂无';
+    var lottery = c.lottery ? c.lottery.expect + ' (' + (c.lottery.validCount||'?') + '/7)' : '--';
+
+    var html = '<div style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;margin-bottom:8px;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+    html += '<span style="font-weight:600;color:#e2e8f0;">' + esc(c.id) + '</span>';
+    html += '<span style="font-size:.75rem;color:' + statusColor + ';">' + statusText + '</span>';
+    html += '</div>';
+    html += '<div style="font-size:.7rem;color:#64748b;line-height:1.6;">';
+    html += 'IP: ' + esc(c.ip) + ' | UA: ' + esc(c.userAgent).substring(0, 50);
+    html += '<br>开奖: ' + esc(lottery) + ' | 最后活跃: ' + esc(c.lastSeen || '--');
+    html += '<br>投注: <span style="color:#94a3b8;">' + esc(betSummary) + '</span>';
+    html += '</div>';
+    html += '<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">';
+    html += '<button class="btn btn-primary btn-sm" onclick="adminSendCmd(\'' + c.id + '\', \'refresh_lottery\')">刷新开奖</button>';
+    html += '<button class="btn btn-outline btn-sm" onclick="adminSendCmd(\'' + c.id + '\', \'analyze\')">触发分析</button>';
+    html += '<button class="btn btn-outline btn-sm" onclick="adminSendCmd(\'' + c.id + '\', \'reset\')">重置</button>';
+    html += '</div></div>';
+    return html;
+  }).join('');
+}
+
+function adminSendCmd(cid, cmd, params){
+  if(!wsConnected) return;
+  wsSend({ type: 'admin_command', clientId: cid, command: cmd, params: params || {} });
+  toast('命令已发送: ' + cmd + ' → ' + cid);
+}
+
+// ===== Init =====
+(function init(){
+  for(let i=1;i<=49;i++) { numberBets[i.toString().padStart(2,'0')]=0; hkNumberBets[i.toString().padStart(2,'0')]=0; }
+  ALL_ZODIACS.forEach(z=>{flatBets[z]=0; hkFlatBets[z]=0;});
+  renderLiveBar();
+  renderAll();
+
+  // 启动 WebSocket 连接
+  wsConnect();
+
+  document.getElementById('inputRule').addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); analyze(); }
+  });
+
+  
+  // ===== Picker Integration =====
+  setupPickerImport();
+  
+  function setupPickerImport(){
+    const fi = document.getElementById('pickerFileInput');
+    if(!fi) return;
+    // Override the dummy handler
+    fi.onchange = null;
+    fi.addEventListener('change', function(e){
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        try {
+          const raw = JSON.parse(ev.target.result);
+          const ref = parsePickerData(raw);
+          document.getElementById('pickerStatus').textContent = '✓ 已加载';
+          document.getElementById('pickerStatus').style.color = '#4ade80';
+          renderPickerRefPanel(ref);
+          toast('挑码数据已导入');
+        } catch(err) {
+          document.getElementById('pickerStatus').textContent = '✗ 格式错误';
+          document.getElementById('pickerStatus').style.color = '#ef4444';
+          toast('数据格式错误');
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+  
+  function parsePickerData(raw){
+    const ref = {hot:[], cold:[], recommend:[], missing:[], zodiacHot:{}, frequency:{}};
+    // Scan all objects for relevant data
+    function scan(obj){
+      if(!obj || typeof obj !== 'object') return;
+      if(obj.hotNumbers && Array.isArray(obj.hotNumbers)) ref.hot = [...new Set([...ref.hot, ...normalizeNums(obj.hotNumbers)])];
+      if(obj.coldNumbers && Array.isArray(obj.coldNumbers)) ref.cold = [...new Set([...ref.cold, ...normalizeNums(obj.coldNumbers)])];
+      if(obj.recommend && Array.isArray(obj.recommend)) ref.recommend = [...new Set([...ref.recommend, ...normalizeNums(obj.recommend)])];
+      if(obj.missing && Array.isArray(obj.missing)) ref.missing = [...new Set([...ref.missing, ...normalizeNums(obj.missing)])];
+      if(obj.frequency && typeof obj.frequency === 'object') Object.entries(obj.frequency).forEach(([k,v])=>{ const n=normalizeNum(k); if(n) ref.frequency[n]=(ref.frequency[n]||0)+(parseInt(v)||0); });
+    }
+    scan(raw); if(raw.api) raw.api.forEach(scan);
+    if(raw.dom && raw.dom.numbers1to49) ref.domNumbers = raw.dom.numbers1to49;
+    return ref;
+  }
+  
+  function normalizeNum(n){
+    if(typeof n === 'number') return n>=1&&n<=49 ? n.toString().padStart(2,'0') : null;
+    if(typeof n === 'string'){ const m=n.match(/(\d{1,2})/); if(m){ const num=parseInt(m[1]); return num>=1&&num<=49 ? num.toString().padStart(2,'0') : null; }}
+    return null;
+  }
+  function normalizeNums(arr){ return arr.map(n=>normalizeNum(n)).filter(Boolean); }
+  
+  function renderPickerRefPanel(ref){
+    const panel = document.getElementById('pickerPanel');
+    if(!panel) return;
+    let h = '<div style="font-size:.75rem;">';
+    if(ref.hot.length) h += numRow('\u{1F525}热门', ref.hot, '#ef4444');
+    if(ref.cold.length) h += numRow('❄冷门', ref.cold, '#3b82f6');
+    if(ref.recommend.length) h += numRow('⭐推荐', ref.recommend, '#22c55e');
+    if(ref.missing.length) h += numRow('⏳遗漏', ref.missing, '#f59e0b');
+    if(ref.domNumbers && ref.domNumbers.length) h += numRow('📋页面号码', ref.domNumbers, '#a78bfa');
+    
+    // Compare with current bets
+    if(typeof numberBets !== 'undefined' && Object.keys(numberBets).some(k=>numberBets[k]>0)){
+      const betSet = new Set(Object.keys(numberBets).filter(k=>numberBets[k]>0));
+      const missedHot = ref.hot.filter(n=>!betSet.has(n));
+      const coveredHot = ref.hot.filter(n=>betSet.has(n));
+      if(missedHot.length){
+        h += '<div style="margin-top:6px;color:#fbbf24;font-size:.7rem;">⚠ 热门未覆盖: '+missedHot.map(n=>'<span style="background:#1e293b;border:1px solid #fbbf24;padding:1px 4px;border-radius:3px;margin:1px;">'+n+'</span>').join(' ')+'</div>';
+      }
+      if(coveredHot.length){
+        h += '<div style="margin-top:4px;color:#4ade80;font-size:.7rem;">✓ 热门已覆盖: '+coveredHot.join(', ')+'</div>';
+      }
+    }
+    
+    h += '</div>';
+    panel.innerHTML = h;
+  }
+  
+  function numRow(label, nums, color){
+    return '<div style="margin-bottom:6px;"><span style="color:'+color+';">'+label+':</span> '+nums.map(n=>'<span style="background:#1e293b;border:1px solid '+color+';padding:1px 5px;border-radius:3px;margin:1px;">'+n+'</span>').join(' ')+'</div>';
+  }
+  
+  // 页面加载后自动开始刷新（不再需要手动点击按钮）
+  setTimeout(function(){
+    fetchLatestResult().then(function(ok){
+      if (!ok) {
+        document.getElementById('liveStatus').textContent = '等待服务端推送...';
+        document.getElementById('liveStatus').style.color = '#f59e0b';
+      }
+    });
+    startAutoRefresh();
+  }, 800);
+})();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+

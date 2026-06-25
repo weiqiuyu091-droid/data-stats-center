@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>庄家管理后台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Microsoft YaHei',sans-serif;background:#0f172a;color:#cbd5e1;min-height:100vh}
+.header{background:#1e293b;border-bottom:1px solid #334155;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.header h1{font-size:1.1rem;color:#e2e8f0}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#ef4444}
+.status-dot.online{background:#22c55e}
+.container{max-width:1400px;margin:0 auto;padding:20px}
+.login-box{max-width:380px;margin:80px auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:32px;text-align:center}
+.login-box h2{color:#e2e8f0;margin-bottom:4px}
+.login-box .sub{color:#64748b;font-size:.8rem;margin-bottom:20px}
+.login-box input{padding:10px 16px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:.95rem;width:100%;text-align:center;margin-bottom:12px}
+.login-box input:focus{outline:none;border-color:#f59e0b}
+.login-box .err{color:#ef4444;font-size:.75rem;margin-top:8px;display:none}
+.btn{padding:8px 18px;border:none;border-radius:4px;cursor:pointer;font-size:.8rem;font-weight:600;transition:all .15s}
+.btn-primary{background:#2563eb;color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-warn{background:#d97706;color:#fff}
+.btn-warn:hover{background:#b45309}
+.btn-danger{background:#dc2626;color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.btn-outline{background:transparent;border:1px solid #475569;color:#94a3b8}
+.btn-outline:hover{border-color:#64748b;color:#e2e8f0}
+.btn-sm{padding:4px 10px;font-size:.7rem}
+
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:14px;text-align:center}
+.stat-card .sl{font-size:.7rem;color:#64748b}
+.stat-card .sv{font-size:1.3rem;font-weight:700;margin-top:4px}
+.sv-green{color:#22c55e}
+.sv-blue{color:#60a5fa}
+.sv-amber{color:#f59e0b}
+.sv-red{color:#ef4444}
+
+.client-card{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:14px;margin-bottom:10px}
+.client-card:hover{border-color:#475569}
+.client-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.client-id{font-weight:600;color:#e2e8f0}
+.client-status{font-size:.75rem;padding:2px 10px;border-radius:10px}
+.client-online{background:#166534;color:#4ade80}
+.client-offline{background:#450a0a;color:#fca5a5}
+.client-info{font-size:.72rem;color:#64748b;line-height:1.7;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+.client-info span{color:#94a3b8}
+.client-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.cmd-log{background:#0f172a;border:1px solid #1e293b;border-radius:4px;padding:8px;font-size:.68rem;color:#64748b;margin-top:10px;max-height:120px;overflow-y:auto;display:none}
+.cmd-log.show{display:block}
+.cmd-log .entry{color:#94a3b8;margin-bottom:2px}
+.cmd-log .entry .ts{color:#475569}
+
+.toast{position:fixed;top:16px;right:16px;background:#065f46;color:#d1fae5;padding:8px 16px;border-radius:6px;font-size:.8rem;z-index:200;opacity:0;transform:translateX(100%);transition:all .3s}
+.toast.show{opacity:1;transform:translateX(0)}
+
+@media(max-width:768px){
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .client-info{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="status-dot" id="wsDot"></div>
+  <h1>庄家管理后台</h1>
+  <span style="font-size:.75rem;color:#64748b;" id="wsStatus">未连接</span>
+  <span style="flex:1;"></span>
+  <button class="btn btn-outline btn-sm" onclick="doLogout()" id="btnLogout" style="display:none;">退出</button>
+</div>
+
+<!-- 登录界面 -->
+<div class="container" id="loginArea">
+  <div class="login-box">
+    <h2>&#x1f512; 管理认证</h2>
+    <div class="sub">输入管理密码以查看设备状态</div>
+    <input type="password" id="pwInput" placeholder="管理密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-warn" onclick="doLogin()" style="width:100%;">认证</button>
+    <div class="err" id="loginErr">密码错误</div>
+  </div>
+</div>
+
+<!-- 管理面板 -->
+<div class="container" id="mainArea" style="display:none;">
+  <div class="stat-row">
+    <div class="stat-card"><div class="sl">在线设备</div><div class="sv sv-green" id="statOnline">0</div></div>
+    <div class="stat-card"><div class="sl">总投注额</div><div class="sv sv-blue" id="statTotalBet">0</div></div>
+    <div class="stat-card"><div class="sl">总派彩</div><div class="sv sv-red" id="statTotalPayout">0</div></div>
+    <div class="stat-card"><div class="sl">庄家净收益</div><div class="sv sv-amber" id="statNetProfit">0</div></div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+    <span style="color:#94a3b8;font-size:.85rem;">设备列表</span>
+    <span style="flex:1;"></span>
+    <button class="btn btn-outline btn-sm" onclick="broadcastCmd('refresh_lottery')">全部刷新开奖</button>
+    <button class="btn btn-outline btn-sm" onclick="broadcastCmd('analyze')">全部触发分析</button>
+  </div>
+  <div id="clientList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var ws = null;
+var authed = false;
+var clients = [];
+
+function doLogin(){
+  var pw = document.getElementById('pwInput').value;
+  if(!pw) return;
+  connectWs(pw);
+}
+
+function doLogout(){
+  authed = false;
+  if(ws){ ws.close(); ws = null; }
+  document.getElementById('loginArea').style.display = '';
+  document.getElementById('mainArea').style.display = 'none';
+  document.getElementById('btnLogout').style.display = 'none';
+  document.getElementById('wsDot').classList.remove('online');
+  document.getElementById('wsStatus').textContent = '未连接';
+  document.getElementById('wsStatus').style.color = '#64748b';
+}
+
+function connectWs(pw){
+  if(ws){ try{ws.close()}catch(e){} }
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var url = proto + '//' + location.host;
+  ws = new WebSocket(url);
+
+  ws.onopen = function(){
+    document.getElementById('wsDot').classList.add('online');
+    document.getElementById('wsStatus').textContent = '已连接';
+    document.getElementById('wsStatus').style.color = '#4ade80';
+    ws.send(JSON.stringify({ type: 'admin_auth', password: pw }));
+  };
+
+  ws.onmessage = function(e){
+    try {
+      var msg = JSON.parse(e.data);
+      handleMsg(msg);
+    } catch(ex){}
+  };
+
+  ws.onclose = function(){
+    document.getElementById('wsDot').classList.remove('online');
+    document.getElementById('wsStatus').textContent = '断开，重连中...';
+    document.getElementById('wsStatus').style.color = '#ef4444';
+    if(authed) setTimeout(function(){ connectWs(pw); }, 3000);
+  };
+
+  ws.onerror = function(){
+    document.getElementById('wsStatus').textContent = '连接失败';
+    document.getElementById('wsStatus').style.color = '#ef4444';
+  };
+}
+
+function handleMsg(msg){
+  switch(msg.type){
+    case 'admin_authed':
+      authed = true;
+      document.getElementById('loginArea').style.display = 'none';
+      document.getElementById('mainArea').style.display = '';
+      document.getElementById('btnLogout').style.display = '';
+      clients = msg.clients || [];
+      renderAll();
+      break;
+    case 'admin_auth_failed':
+      document.getElementById('loginErr').style.display = '';
+      document.getElementById('loginErr').textContent = msg.error || '密码错误';
+      break;
+    case 'clients_update':
+      clients = msg.clients || [];
+      renderAll();
+      break;
+  }
+}
+
+function renderAll(){
+  var regularClients = clients.filter(function(c){ return !c.isAdmin && !c._isAdmin; });
+
+  // 汇总统计
+  var totalBet = 0, totalPayout = 0, totalNet = 0;
+  regularClients.forEach(function(c){
+    if(c.bets){ totalBet += c.bets.totalBet || 0; }
+    if(c.settlement){ totalPayout += c.settlement.totalPayout || 0; totalNet += c.settlement.netProfit || 0; }
+  });
+  document.getElementById('statOnline').textContent = regularClients.filter(function(c){ return c.online; }).length;
+  document.getElementById('statTotalBet').textContent = totalBet;
+  document.getElementById('statTotalPayout').textContent = Math.round(totalPayout*100)/100;
+  var netEl = document.getElementById('statNetProfit');
+  var netVal = Math.round(totalNet*100)/100;
+  netEl.textContent = netVal;
+  netEl.style.color = netVal >= 0 ? '#22c55e' : '#ef4444';
+
+  // 设备列表
+  var listEl = document.getElementById('clientList');
+  if(regularClients.length === 0){
+    listEl.innerHTML = '<div style="text-align:center;color:#475569;padding:40px;">暂无连接设备</div>';
+    return;
+  }
+
+  listEl.innerHTML = regularClients.map(function(c){
+    var online = c.online;
+    var lottery = c.lottery || {};
+    var bets = c.bets || {};
+    var settlement = c.settlement || {};
+
+    var html = '<div class="client-card">';
+    html += '<div class="client-header">';
+    html += '<span class="client-id">' + esc(c.id) + '</span>';
+    html += '<span class="client-status ' + (online ? 'client-online' : 'client-offline') + '">' + (online ? '在线' : '离线') + '</span>';
+    html += '</div>';
+
+    html += '<div class="client-info">';
+    html += '<div>IP: <span>' + esc(c.ip) + '</span></div>';
+    html += '<div>UA: <span>' + esc(c.userAgent).substring(0, 40) + '</span></div>';
+    html += '<div>期号: <span>' + (lottery.expect || '--') + '</span></div>';
+    html += '<div>开球: <span>' + (lottery.numbers ? lottery.numbers.filter(function(n){ return n!==''; }).join(' ') : '--') + '</span></div>';
+    html += '<div>投注额: <span style="color:#60a5fa;">' + (bets.totalBet || 0) + '</span></div>';
+    html += '<div>派彩: <span style="color:#ef4444;">' + (settlement.totalPayout || 0) + '</span></div>';
+    html += '<div>净收益: <span style="color:' + ((settlement.netProfit||0)>=0?'#22c55e':'#ef4444') + ';">' + (settlement.netProfit || 0) + '</span></div>';
+    html += '<div>连接时间: <span>' + (c.connectedAt || '--').substring(0, 19) + '</span></div>';
+    html += '</div>';
+
+    html += '<div class="client-actions">';
+    html += '<button class="btn btn-outline btn-sm" onclick="sendCmd(\'' + c.id + '\', \'refresh_lottery\')">刷新开奖</button>';
+    html += '<button class="btn btn-outline btn-sm" onclick="sendCmd(\'' + c.id + '\', \'analyze\')">触发结算</button>';
+    html += '<button class="btn btn-outline btn-sm" onclick="sendCmd(\'' + c.id + '\', \'set_water\', {value:0})">抽水归零</button>';
+    html += '<button class="btn btn-outline btn-sm" onclick="sendCmd(\'' + c.id + '\', \'reset\')">重置</button>';
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+  }).join('');
+}
+
+function sendCmd(cid, cmd, params){
+  if(!ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: 'admin_command', clientId: cid, command: cmd, params: params || {} }));
+  showToast('已发送: ' + cmd + ' → ' + cid);
+}
+
+function broadcastCmd(cmd, params){
+  var regularClients = clients.filter(function(c){ return !c.isAdmin && c.online; });
+  regularClients.forEach(function(c){ sendCmd(c.id, cmd, params); });
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2000);
+}
+</script>
+</body>
+</html>
