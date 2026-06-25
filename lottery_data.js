@@ -1,0 +1,1 @@
+﻿var LOTTERY_DATA = {"openTime":"2026-06-24 21:32:32","expect":"2026175","flatZodiacs":["鼠","牛","虎","兔","马","蛇"],"numbers":["07","19","30","29","28","25","26"],"zodiacRaw":"鼠,鼠,牛,虎,兔,馬,蛇","teMa":"26","timestamp":"2026-06-24 21:34:49","validCount":7};

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>挑码数据抓取 — macaulottery.com/picker</title>
+<style>
+body { font-family:'Microsoft YaHei',sans-serif; background:#0f172a; color:#e2e8f0; padding:20px; max-width:900px; margin:0 auto; }
+h1 { color:#60a5fa; font-size:1.2rem; }
+h2 { color:#93c5fd; font-size:1rem; margin-top:24px; border-bottom:1px solid #334155; padding-bottom:4px; }
+button { padding:6px 14px; background:#2563eb; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:.8rem; margin:4px; }
+button:hover { background:#1d4ed8; }
+button.green { background:#16a34a; }
+button.amber { background:#d97706; }
+.output { background:#0f172a; border:1px solid #334155; border-radius:6px; padding:12px; margin:8px 0; font-family:Consolas,monospace; font-size:.72rem; white-space:pre-wrap; max-height:500px; overflow-y:auto; }
+.section { background:#1e293b; border:1px solid #334155; border-radius:8px; padding:16px; margin:12px 0; }
+.note { font-size:.75rem; color:#94a3b8; }
+.success { color:#4ade80; }
+.warn { color:#fbbf24; }
+.step { color:#60a5fa; font-weight:600; font-size:.8rem; margin-top:12px; display:block; }
+.code { background:#0f172a; padding:2px 6px; border-radius:3px; font-family:Consolas,monospace; font-size:.75rem; }
+</style>
+</head>
+<body>
+
+<h1>🎯 macaulottery.com/picker 数据抓取工具</h1>
+<p class="note">此工具用于在浏览器中抓取挑码网站的完整数据，并导出为 fsaf.html 可用的格式。</p>
+
+<div class="section">
+<h2>📋 操作步骤</h2>
+<ol>
+<li>打开 <span class="code">https://macaulottery.com/picker/</span></li>
+<li>按 <b>F12</b> 打开开发者工具，切换到 <b>Console</b></li>
+<li>将本页 <b>所有 JS 代码</b> 粘贴到 Console 运行</li>
+<li>点击下方的各个按钮抓取不同类型的数据</li>
+<li>最后点击"导出数据"保存结果</li>
+</ol>
+</div>
+
+<div class="section">
+<button onclick="sniffAll()">🔍 1. 全面嗅探 (XHR+WS+DOM)</button>
+<button onclick="deepDOM()">📊 2. 深度DOM解析</button>
+<button onclick="sniffAPI()">🌐 3. API端点探测</button>
+<button onclick="extractStorage()">💾 4. 本地存储提取</button>
+<button onclick="extractVars()">📦 5. 全局变量提取</button>
+<button onclick="exportData()" class="green">📥 导出完整数据</button>
+<button onclick="downloadJSON()" class="amber">💿 下载JSON文件</button>
+</div>
+
+<div class="output" id="out">等待操作...</div>
+
+<script>
+let collected = {
+  url: location.href,
+  title: document.title,
+  timestamp: new Date().toISOString(),
+  api: [],
+  websocket: [],
+  dom: {},
+  storage: {},
+  globals: {},
+  pickerData: null,
+  rawHTML: ''
+};
+
+function log(msg, type) {
+  const div = document.getElementById('out');
+  const color = type==='ok'?'#4ade80':type==='warn'?'#fbbf24':type==='err'?'#ef4444':'#94a3b8';
+  div.innerHTML += `<div style="color:${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+  div.scrollTop = div.scrollHeight;
+}
+
+function sniffAll() {
+  collected = {url:location.href,title:document.title,timestamp:new Date().toISOString(),api:[],websocket:[],dom:{},storage:{},globals:{},pickerData:null,rawHTML:''};
+  document.getElementById('out').innerHTML = '';
+  log('=== 开始全面嗅探 ===', 'ok');
+
+  // 1. Sniff XHR/Fetch
+  const origFetch = window.fetch;
+  window.fetch = function(...args) {
+    const url = typeof args[0]==='string'?args[0]:args[0]?.url||'';
+    log(`[Fetch] ${url}`, 'warn');
+    return origFetch.apply(this, args).then(r => {
+      const clone = r.clone();
+      clone.text().then(t => {
+        try {
+          const j = JSON.parse(t);
+          collected.api.push({url, method:'FETCH', data:j, time:new Date().toISOString()});
+          log(`[Fetch RESP] ${url}: ${JSON.stringify(j).substring(0,300)}`, 'ok');
+        } catch(e) {
+          collected.api.push({url, method:'FETCH', raw:t.substring(0,2000), time:new Date().toISOString()});
+          log(`[Fetch RESP] ${url}: ${t.substring(0,200)}`, 'ok');
+        }
+      });
+      return r;
+    });
+  };
+
+  const origXHR = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this._url = url; this._method = method;
+    log(`[XHR] ${method} ${url}`, 'warn');
+    this.addEventListener('load', function() {
+      try {
+        const j = JSON.parse(this.responseText);
+        collected.api.push({url, method, data:j, time:new Date().toISOString()});
+        log(`[XHR RESP] ${url}: ${JSON.stringify(j).substring(0,300)}`, 'ok');
+      } catch(e) {
+        collected.api.push({url, method, raw:this.responseText?.substring(0,2000), time:new Date().toISOString()});
+        log(`[XHR RESP] ${url}: ${this.responseText?.substring(0,200)}`, 'ok');
+      }
+    });
+    return origXHR.apply(this, arguments);
+  };
+
+  // 2. Sniff WebSocket
+  const origWS = window.WebSocket;
+  window.WebSocket = function(...args) {
+    log(`[WebSocket] ${args[0]}`, 'warn');
+    const ws = new origWS(...args);
+    ws.addEventListener('message', function(e) {
+      try {
+        const j = JSON.parse(e.data);
+        collected.websocket.push({url:args[0], data:j, time:new Date().toISOString()});
+        log(`[WS MSG] ${JSON.stringify(j).substring(0,300)}`, 'ok');
+      } catch(x) {
+        collected.websocket.push({url:args[0], raw:e.data?.substring(0,1000), time:new Date().toISOString()});
+        log(`[WS MSG] ${e.data?.substring(0,200)}`, 'ok');
+      }
+    });
+    return ws;
+  };
+
+  log('嗅探器已安装 — XHR/Fetch/WebSocket 全部拦截中', 'ok');
+  log('请操作页面（点击挑码按钮、切换玩法等）以触发数据请求', 'warn');
+}
+
+function deepDOM() {
+  log('=== 深度DOM解析 ===', 'ok');
+
+  // 查找所有可能包含挑码数据的元素
+  collected.dom = {};
+
+  // 1. 查找表格数据
+  const tables = document.querySelectorAll('table');
+  collected.dom.tables = [];
+  tables.forEach((tbl, i) => {
+    const rows = [];
+    tbl.querySelectorAll('tr').forEach(tr => {
+      const cells = [];
+      tr.querySelectorAll('td,th').forEach(td => cells.push(td.textContent.trim()));
+      if(cells.length) rows.push(cells);
+    });
+    if(rows.length) collected.dom.tables.push({index:i, rows});
+    log(`[Table ${i}] ${rows.length}行 x ${rows[0]?.length||0}列`, 'ok');
+  });
+
+  // 2. 查找数字球/号码元素
+  const numSelectors = [
+    '.ball','.number','.num','.code','.pick','.selected',
+    '[class*="ball"]','[class*="number"]','[class*="num"]',
+    '[class*="pick"]','[class*="code"]','[class*="lottery"]'
+  ];
+  collected.dom.ballElements = [];
+  numSelectors.forEach(sel => {
+    try {
+      const els = document.querySelectorAll(sel);
+      if(els.length) {
+        const values = [...els].map(e => e.textContent.trim());
+        collected.dom.ballElements.push({selector:sel, count:els.length, values});
+        log(`[DOM] ${sel}: ${els.length}个 → ${values.join(', ').substring(0,200)}`, 'ok');
+      }
+    } catch(e) {}
+  });
+
+  // 3. 查找所有 1-49 的数字
+  const allDivs = document.querySelectorAll('div,span,li,td');
+  const found = new Set();
+  allDivs.forEach(el => {
+    const t = el.textContent.trim();
+    if(/^\d{1,2}$/.test(t)) {
+      const n = parseInt(t);
+      if(n>=1 && n<=49) found.add(t);
+    }
+  });
+  if(found.size) {
+    collected.dom.numbers1to49 = [...found].sort((a,b)=>parseInt(a)-parseInt(b));
+    log(`[DOM] 找到号码: ${[...found].sort((a,b)=>parseInt(a)-parseInt(b)).join(', ')}`, 'ok');
+  }
+
+  // 4. 查找统计/分析区域
+  const statPatterns = ['遗漏','冷热','频率','统计','走势','推荐','分析','规律','趋势'];
+  collected.dom.stats = {};
+  statPatterns.forEach(kw => {
+    const regex = new RegExp(kw, 'i');
+    document.querySelectorAll('*').forEach(el => {
+      if(el.children.length===0 && regex.test(el.textContent)) {
+        if(!collected.dom.stats[kw]) collected.dom.stats[kw] = [];
+        collected.dom.stats[kw].push(el.textContent.trim().substring(0,200));
+      }
+    });
+    if(collected.dom.stats[kw]) log(`[统计] "${kw}": ${collected.dom.stats[kw].length}处`, 'ok');
+  });
+
+  // 5. 查找Canvas/图表
+  collected.dom.canvases = document.querySelectorAll('canvas').length;
+  log(`[Canvas] ${collected.dom.canvases}个图表`, 'ok');
+
+  // 6. 查找按钮/操作元素
+  const btns = document.querySelectorAll('button,a.btn,.tab,.nav-item');
+  collected.dom.buttons = [...btns].map(b => b.textContent.trim()).filter(Boolean);
+  log(`[按钮] ${collected.dom.buttons.join(', ')}`, 'ok');
+
+  // 7. 原始HTML片段(前5000字符)
+  collected.rawHTML = document.body.innerHTML.substring(0, 5000);
+}
+
+function sniffAPI() {
+  log('=== API端点探测 ===', 'ok');
+  const commonPaths = [
+    '/api/live2', '/api/result', '/api/open', '/api/lottery',
+    '/api/getOpen', '/api/code', '/api/picker', '/api/stats',
+    '/api/hot', '/api/cold', '/api/missing', '/api/frequency',
+    '/api/recommend', '/api/analysis', '/api/trend',
+    '/api/zodiac', '/api/predict'
+  ];
+
+  const base = location.origin;
+  commonPaths.forEach(async path => {
+    try {
+      const r = await fetch(base + path, {method:'GET'});
+      if(r.ok) {
+        const t = await r.text();
+        log(`[API HIT] ${path}: ${t.substring(0,200)}`, 'ok');
+        collected.api.push({url:base+path, method:'PROBE', data:t.substring(0,1000), time:new Date().toISOString()});
+      }
+    } catch(e) {}
+  });
+
+  // 扫描页面中的 URL
+  const scripts = document.querySelectorAll('script');
+  scripts.forEach(s => {
+    const matches = s.textContent?.match(/https?:\/\/[^\s"'<>]+/g) || [];
+    matches.forEach(url => {
+      if(url.includes('api') || url.includes('lottery') || url.includes('data')) {
+        log(`[Script URL] ${url}`, 'warn');
+        collected.api.push({url, source:'script', time:new Date().toISOString()});
+      }
+    });
+  });
+  log('API探测完成', 'ok');
+}
+
+function extractStorage() {
+  log('=== 本地存储提取 ===', 'ok');
+  collected.storage = {local:{}, session:{}, cookies:document.cookie};
+
+  for(let i=0; i<localStorage.length; i++) {
+    const key = localStorage.key(i);
+    try {
+      collected.storage.local[key] = JSON.parse(localStorage.getItem(key));
+    } catch(e) {
+      collected.storage.local[key] = localStorage.getItem(key);
+    }
+    log(`[localStorage] ${key}: ${JSON.stringify(collected.storage.local[key]).substring(0,200)}`, 'ok');
+  }
+
+  for(let i=0; i<sessionStorage.length; i++) {
+    const key = sessionStorage.key(i);
+    try {
+      collected.storage.session[key] = JSON.parse(sessionStorage.getItem(key));
+    } catch(e) {
+      collected.storage.session[key] = sessionStorage.getItem(key);
+    }
+    log(`[sessionStorage] ${key}: ${JSON.stringify(collected.storage.session[key]).substring(0,200)}`, 'ok');
+  }
+
+  log(`[Cookies] ${document.cookie}`, 'ok');
+}
+
+function extractVars() {
+  log('=== 全局变量提取 ===', 'ok');
+  const targets = ['data','lottery','picker','result','code','stats','config','state','store'];
+  targets.forEach(name => {
+    if(window[name] !== undefined) {
+      try {
+        collected.globals[name] = JSON.parse(JSON.stringify(window[name]));
+        log(`[Global] window.${name}: ${JSON.stringify(collected.globals[name]).substring(0,300)}`, 'ok');
+      } catch(e) {
+        collected.globals[name] = String(window[name]).substring(0,500);
+        log(`[Global] window.${name}: ${String(window[name]).substring(0,200)}`, 'ok');
+      }
+    }
+  });
+}
+
+function exportData() {
+  log('=== 导出数据 ===', 'ok');
+
+  // 尝试提取挑码核心数据
+  collected.pickerData = tryExtractPickerData();
+
+  const json = JSON.stringify(collected, null, 2);
+  document.getElementById('out').innerHTML += `\n\n========== 完整JSON数据 ==========\n${json.substring(0, 5000)}\n... (共${json.length}字符)`;
+  log(`数据导出完成，共 ${json.length} 字符`, 'ok');
+  window._collectedData = json;
+}
+
+function downloadJSON() {
+  if(!window._collectedData) {
+    exportData();
+  }
+  const blob = new Blob([window._collectedData], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `picker_data_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+  a.click();
+  log('JSON文件已下载!', 'ok');
+}
+
+function tryExtractPickerData() {
+  const result = {};
+
+  // 尝试从常见数据结构中提取挑码数据
+  // 查找包含 "hot" "cold" "missing" "recommend" 等字段的对象
+  const keys = ['hotNumbers','coldNumbers','missingNumbers','recommendNumbers',
+                'hotCold','frequency','stats','analysis','predictions',
+                'zodiacAnalysis','patterns','trends'];
+
+  // 扫描所有全局变量
+  for(let key in window) {
+    try {
+      const val = window[key];
+      if(val && typeof val === 'object') {
+        keys.forEach(k => {
+          if(val[k] !== undefined) {
+            if(!result[key]) result[key] = {};
+            result[key][k] = val[k];
+          }
+        });
+      }
+    } catch(e) {}
+  }
+
+  return result;
+}
+
+log('工具就绪 — 请在 macaulottery.com/picker/ 页面使用', 'ok');
+</script>
+
+</body>
+</html>
