@@ -6,7 +6,7 @@
 <title>数据统计中心</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Microsoft YaHei',sans-serif; background:#0f172a; color:#cbd5e1; min-height:100vh; padding:16px; }
+body { font-family:'Microsoft YaHei',sans-serif; background:#0a0f18; color:#cbd5e1; min-height:100vh; padding:16px; }
 .container { max-width:1300px; margin:0 auto; }
 
 /* ===== 实时开奖区域 ===== */
@@ -54,7 +54,7 @@ body { font-family:'Microsoft YaHei',sans-serif; background:#0f172a; color:#cbd5
 .tab-btn.active { background:#1e3a5f; color:#60a5fa; border-bottom-color:#60a5fa; }
 
 /* Cards */
-.card { background:#1e293b; border:1px solid #334155; border-radius:0 0 8px 8px; padding:16px; margin-bottom:12px; }
+.card { background:#151d2a; border:1px solid #1e293b; border-radius:0 0 8px 8px; padding:16px; margin-bottom:12px; }
 .card-first { border-radius:8px; }
 .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 .card-title { font-size:.9rem; font-weight:600; color:#e2e8f0; }
@@ -63,23 +63,38 @@ body { font-family:'Microsoft YaHei',sans-serif; background:#0f172a; color:#cbd5
 textarea { width:100%; height:160px; padding:12px; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#e2e8f0; font-size:.8rem; resize:vertical; line-height:1.7; font-family:'Consolas','Microsoft YaHei',monospace; }
 textarea:focus { outline:none; border-color:#3b82f6; }
 
-/* Number grid 7 cols */
-.num-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
-.num-cell { background:#0f172a; border:1px solid #1e293b; border-radius:4px; padding:6px 2px; text-align:center; }
+/* Number grid — 按生肖分组，4列卡片 */
+.num-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.zodiac-group { background:#0f1720; border:1px solid #1a2533; border-radius:6px; padding:8px 6px 6px; }
+.zodiac-group:hover { border-color:#253449; }
+.zodiac-label { font-size:.85rem; font-weight:700; color:#fbbf24; margin-bottom:5px; text-align:center; letter-spacing:1px; }
+.zodiac-nums { display:flex; gap:3px; }
+.num-cell { border-radius:4px; padding:5px 3px; text-align:center; flex:1; }
 .num-cell .n { font-size:.85rem; color:#94a3b8; }
 .num-cell .v { font-size:.7rem; color:#475569; margin-top:1px; min-height:16px; }
-.num-cell.has-bet { border-color:#2563eb; background:#1e293b; }
+
+/* 波色底色 — 鲜明可辨 */
+.num-cell.wave-red { background:#4a1018; border:1px solid #dc2626; }
+.num-cell.wave-red .n { color:#fca5a5; }
+.num-cell.wave-red .v { color:#fca5a5; }
+.num-cell.wave-blue { background:#101d3a; border:1px solid #3b82f6; }
+.num-cell.wave-blue .n { color:#93c5fd; }
+.num-cell.wave-blue .v { color:#93c5fd; }
+.num-cell.wave-green { background:#0f311a; border:1px solid #22c55e; }
+.num-cell.wave-green .n { color:#86efac; }
+.num-cell.wave-green .v { color:#86efac; }
+
+/* 投注/特码高亮覆盖 */
+.num-cell.has-bet { border-color:#2563eb; }
 .num-cell.has-bet .n { color:#e2e8f0; }
 .num-cell.has-bet .v { color:#60a5fa; font-weight:600; }
-.num-cell.win { border-color:#22c55e; background:#052e16; box-shadow:0 0 4px rgba(34,197,94,.3); }
-.num-cell.win .n { color:#4ade80; font-weight:700; }
-.num-cell.win .v { color:#4ade80; }
-.num-cell.tema { border-color:#22c55e; background:#052e16; box-shadow:0 0 8px rgba(34,197,94,.5); }
+.num-cell.tema { border-color:#22c55e; background:#052e16; box-shadow:0 0 18px rgba(34,197,94,.65), 0 0 4px rgba(34,197,94,.35); }
 .num-cell.tema .n { color:#4ade80; font-weight:700; font-size:.95rem; }
+.num-cell.tema .v { color:#4ade80; }
 .num-cell.alert-top10 { border-color:#ef4444; background:#450a0a; box-shadow:0 0 6px rgba(239,68,68,.35); }
 .num-cell.alert-top10 .n { color:#f87171; font-weight:700; }
 .num-cell.alert-top10 .v { color:#fca5a5; }
-.num-cell.alert-tema { border-color:#f59e0b; background:linear-gradient(135deg, #7f1d1d 50%, #166534 50%); box-shadow:0 0 8px rgba(239,68,68,.35); }
+.num-cell.alert-tema { border-color:#f59e0b; background:linear-gradient(135deg, #7f1d1d 50%, #166534 50%); box-shadow:0 0 18px rgba(245,158,11,.6), 0 0 4px rgba(245,158,11,.3); }
 .num-cell.alert-tema .n { color:#fbbf24; font-weight:700; font-size:.95rem; }
 .num-cell.alert-tema .v { color:#fca5a5; }
 
@@ -332,7 +347,7 @@ textarea:focus { outline:none; border-color:#3b82f6; }
 
 <!-- 投注明细表 -->
 <div class="card card-first" id="tabDetail" style="display:none;">
-  <div class="card-header"><span class="card-title">号码分布 (01-49)</span></div>
+  <div class="card-header"><span class="card-title">号码分布 (按生肖)</span></div>
   <div class="num-grid" id="numGrid"></div>
 </div>
 
@@ -1292,24 +1307,48 @@ function renderNumGrid(winNums, teMa){
     }
   }
 
-  for(var i=1;i<=49;i++){
-    var n=i.toString().padStart(2,'0'), v=numberBets[n]||0;
-    var isTop10 = top10Set.has(n);
-    var isTema = teMa && n===teMa;
-    var cls='num-cell';
-    if(isTop10 && isTema){
-      cls+=' alert-tema';
-    } else if(isTop10){
-      cls+=' alert-top10';
-    } else if(isTema){
-      cls+=' tema';
-    } else if(v>0){
-      cls+=' has-bet';
-    }
-    var cell=document.createElement('div'); cell.className=cls;
-    cell.innerHTML='<div class="n">'+n+'</div><div class="v">'+(v||'')+'</div>';
-    grid.appendChild(cell);
-  }
+  // 按生肖分组渲染
+  ALL_ZODIACS.forEach(function(z){
+    var nums = ZODIAC_MAP[z];
+    var group = document.createElement('div');
+    group.className = 'zodiac-group';
+
+    var label = document.createElement('div');
+    label.className = 'zodiac-label';
+    label.textContent = z;
+    group.appendChild(label);
+
+    var numsDiv = document.createElement('div');
+    numsDiv.className = 'zodiac-nums';
+
+    nums.forEach(function(n){
+      var v = numberBets[n]||0;
+      var isTop10 = top10Set.has(n);
+      var isTema = teMa && n===teMa;
+      var cls = 'num-cell';
+      // 波色底色
+      var wave = NUM_TO_WAVE[n];
+      if(wave === '红波') cls += ' wave-red';
+      else if(wave === '蓝波') cls += ' wave-blue';
+      else if(wave === '绿波') cls += ' wave-green';
+      // 投注/特码覆盖
+      if(isTop10 && isTema){
+        cls += ' alert-tema';
+      } else if(isTop10){
+        cls += ' alert-top10';
+      } else if(isTema){
+        cls += ' tema';
+      } else if(v>0){
+        cls += ' has-bet';
+      }
+      var cell = document.createElement('div'); cell.className = cls;
+      cell.innerHTML = '<div class="n">'+n+'</div><div class="v">'+(v||'')+'</div>';
+      numsDiv.appendChild(cell);
+    });
+
+    group.appendChild(numsDiv);
+    grid.appendChild(group);
+  });
 }
 
 function renderZodiacGrid(winFlat){
