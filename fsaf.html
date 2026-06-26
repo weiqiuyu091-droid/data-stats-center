@@ -572,6 +572,9 @@ function norm(s){
     .replace(/(\d{1,2})\s*([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, (m,n1,n2,n3)=>n1+'各'+cn(n2)+n3)
     .replace(/(\d{1,2})\s*[-—－]+\s*(\d+(?:\.\d+)?)\s*(斤|米|块)/g,'$1各$2$3')
     .replace(/(\d{1,2})\s*[-—－]{2,}\s*(\d+(?:\.\d+)?)/g,'$1各$2').replace(/[*、]+/g,' ').replace(/[-—－]+/g,' ')
+    // 连码分隔符归一化: / . 各 阻断连码正则匹配
+    .replace(/(二连|三连|四连|五连)[.\/]/g,'$1 ').replace(/\/(二连|三连|四连|五连)/g,' $1')
+    .replace(/(二连|三连|四连|五连)各(\d)/g,'$1 $2')
     .replace(/(\d)([A-Za-z])?[，、](?=[红绿蓝单双大小平特特肖])/g,'$1$2 ').replace(/\s+(各)/g,'$1').replace(/(各)\s+/g,'$1').replace(/\s+/g,' ').trim();
   // "平特1尾下1200" → "平特1尾1200" (去掉数字前的下)
   t = t.replace(/(\d{1,2})\s*下\s*(\d+(?:\.\d+)?)/g,'$1各$2');
@@ -617,7 +620,7 @@ function splitBets(seg){
   const ps = [
     new RegExp(`\\s*${KW}\\s*(?:[\\u4e00-\\u9fa5]+|\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`,'gi'),
     new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*[${ZODIAC_CHARS}]+\\s*\\d+(?:\\.\\d+)?\\s*(?:斤|米|块)?`,'gi'),
-    new RegExp(`[${ZODIAC_CHARS}]+(?:二连|三连|四连|五连)\\s*\\d+(?:\\.\\d+)?\\s*(?:斤|米|块)?`,'g'),
+    new RegExp(`[${ZODIAC_CHARS}]+\\s*(?:二连|三连|四连|五连)\\s*\\d+(?:\\.\\d+)?\\s*(?:斤|米|块)?`,'g'),
     new RegExp(`(?:平特[，,\\s]*[${ZODIAC_CHARS}]+|平[${ZODIAC_CHARS}])\\s*[，,]?\\s*\\d+\\s*(?:斤|米|块)?`,'g'),
     new RegExp(`(?:特肖[，,\\s]*[${ZODIAC_CHARS}]+|特肖[${ZODIAC_CHARS}])\\s*[，,]?\\s*\\d+\\s*(?:斤|米|块)?`,'g'),
     new RegExp(`[\\d]{1,2}(?:\\.[\\d]{1,2})+[\\s\\S]*?(?:斤|米|块|\\d)(?=\\s|$)`,'gi'),
@@ -889,7 +892,7 @@ function processRule(rawRule){
 
   // Combo
   let cm=txtNoHK.match(new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*([${ZODIAC_CHARS}]+)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
-  if(!cm) cm=txtNoHK.match(new RegExp(`([${ZODIAC_CHARS}]+)(?:五连|四连|三连|二连)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
+  if(!cm) cm=txtNoHK.match(new RegExp(`([${ZODIAC_CHARS}]+)\\s*(?:五连|四连|三连|二连)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
   if(cm){
     const zStr=cm[1], cv=parseFloat(cm[2]);
     let ct='double';
