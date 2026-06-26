@@ -555,6 +555,7 @@ function norm(s){
     // 个数<中文>斤 → 各数<数字>斤
     .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
     .replace(/个字/g,'各数')  // "猴个字十"→"猴各数十"
+    .replace(/号个/g,'各数')  // "狗号个25米"→"狗各数25米"
     .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/=/g,'各')  // =各 → 各 (避免各各).replace(/数十/g,'10')
     .replace(/单数/g,'单').replace(/双数/g,'双')  // 单数→单, 双数→双 (用于大小单双匹配)
     .replace(/各\.(\d)/g,'各$1')  // "各.10" → "各10"
