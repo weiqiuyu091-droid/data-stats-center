@@ -339,7 +339,9 @@ textarea:focus { outline:none; border-color:#3b82f6; }
     <div id="msgSummaryStats" style="display:none; background:#0f172a; border:1px solid #334155; border-radius:6px; padding:10px 14px; margin-top:8px; font-size:.78rem;">
       <span style="margin-right:20px;">总收注: <b style="color:#60a5fa;" id="msgSumTotalBet">0</b></span>
       <span style="margin-right:20px;">特码中奖额: <b style="color:#ef4444;" id="msgSumNumsHit">0</b></span>
+      <span style="margin-right:20px;">平特中奖额: <b style="color:#22c55e;" id="msgSumFlatHit">0</b></span>
       <span style="margin-right:20px;">连肖中奖: <span style="color:#a78bfa;" id="msgSumComboHit">-</span></span>
+      <span style="margin-right:20px;">抽水率: <b style="color:#f59e0b;" id="msgSumWaterRate">0%</b></span>
       <span>抽水后净收益: <b style="color:#22c55e;" id="msgSumNetAfter">0</b></span>
     </div>
   </div>
@@ -547,10 +549,10 @@ function norm(s){
     .replace(/元/g,'块')  // 元→块 归一化
     .replace(/复试/g,'复式')  // 复试→复式 归一化
     .replace(/\d+期\s*/g,'')  // 去掉 "173期" 等期号前缀
-    .replace(/号各/g,'各数').replace(/名数/g,'各数')  // "09号各30" → "09各数30", 名数→各数
+    .replace(/号个/g,'号各').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/号\/(\d)/g,'号$1')  // "09号各30" → "09各数30", 名数→各数
     .replace(/蚊/g,'')  // 蚊→去掉 (粤语元)
     // 到 范围展开: 01到12 → 01 02 03 ... 12
-    .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); })
+    .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
     // 个数<中文>斤 → 各数<数字>斤
     .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
@@ -591,6 +593,8 @@ function norm(s){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return '各组' + (v || '');
   });
+  // 复式三连各组10 → 复式三连 10 (避免各组被分发)
+  t = t.replace(/复式(二连|三连|四连|五连)\s*各组(\d+(?:\.\d+)?)/g, '复式$1 $2');
   // 各+中文数字 → 各+阿拉伯数字: "各一百"→"各100"
   t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, cnVal){
     var v = cn(cnVal) || parseCNNum(cnVal);
@@ -603,7 +607,7 @@ function norm(s){
   });
   // 各组X → 分布式: "三连A 四连B 五连C各组50" → "三连A50 四连B50 五连C50"
   // 注意: norm中的\s+(各)可能已把各组前的空格吃掉, 所以这里用\s*而非\s+
-  t = t.replace(/^(?!.*(?:三中三|二中二))(.+)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/g, function(m, prefix, val){
+  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/g, function(m, prefix, val){
     return prefix.split(/\s+/).map(function(seg){ return seg + val; }).join(' ');
   });
   // 连肖前缀去除: "连肖 A复式B连肖C一组" → "A复式B连肖C一组"
@@ -896,8 +900,8 @@ function processRule(rawRule){
   }
 
   // Combo
-  let cm=txtNoHK.match(new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*([${ZODIAC_CHARS}]+)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
-  if(!cm) cm=txtNoHK.match(new RegExp(`([${ZODIAC_CHARS}]+)\\s*(?:五连|四连|三连|二连)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
+  let cm=txtNoHK.match(new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*([${ZODIAC_CHARS}]+)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
+  if(!cm) cm=txtNoHK.match(new RegExp(`([${ZODIAC_CHARS}]+)\\s*(?:五连|四连|三连|二连)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
   if(cm){
     const zStr=cm[1], cv=parseFloat(cm[2]);
     let ct='double';
@@ -1283,7 +1287,9 @@ function calcAll(){
     statsBar.style.display = '';
     document.getElementById('msgSumTotalBet').textContent = totalBet;
     document.getElementById('msgSumNumsHit').textContent = Math.round(numsHitAmount*100)/100;
+    document.getElementById('msgSumFlatHit').textContent = Math.round(flatHitAmount*100)/100;
     document.getElementById('msgSumComboHit').innerHTML = comboWinDetails.length > 0 ? comboWinDetails.join('; ') : '-';
+    document.getElementById('msgSumWaterRate').textContent = waterRate + '%';
     document.getElementById('msgSumNetAfter').textContent = (netAfterWater>=0?'+':'')+Math.round(netAfterWater);
   }
 }// ===== Rendering =====
@@ -1972,7 +1978,9 @@ function doReset(){
   if(statsBar){ statsBar.style.display = 'none'; }
   document.getElementById('msgSumTotalBet').textContent = '0';
   document.getElementById('msgSumNumsHit').textContent = '0';
+  document.getElementById('msgSumFlatHit').textContent = '0';
   document.getElementById('msgSumComboHit').textContent = '-';
+  document.getElementById('msgSumWaterRate').textContent = '0%';
   document.getElementById('msgSumNetAfter').textContent = '0';
   renderLiveBar();
   renderAll();

@@ -85,9 +85,10 @@ function norm(s){
     .replace(/元/g,'块')
     .replace(/复试/g,'复式')
     .replace(/\d+期\s*/g,'')
-    .replace(/号各/g,'各数').replace(/名数/g,'各数')
+    .replace(/号个/g,'号各').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/号\/(\d)/g,'号$1')
     .replace(/蚊/g,'')
     .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); })
+	    .replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
     .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
     .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/=/g,'各')
@@ -114,6 +115,7 @@ function norm(s){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return '各组' + (v || '');
   });
+	t = t.replace(/复式(二连|三连|四连|五连)\s*各组(\d+(?:\.\d+)?)/g, '复式$1 $2');
   t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, cnVal){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return '各' + (v || '');
@@ -122,7 +124,7 @@ function norm(s){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return (v || cnVal).toString();
   });
-  t = t.replace(/^(?!.*(?:三中三|二中二))(.+)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/g, function(m, prefix, val){
+  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/g, function(m, prefix, val){
     return prefix.split(/\s+/).map(function(seg){ return seg + val; }).join(' ');
   });
   t = t.replace(/^连肖\s*/g, '');
@@ -345,8 +347,8 @@ function processRule(rawRule){
   }
 
   // Combo
-  let cm=txtNoHK.match(new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*([${ZODIAC_CHARS}]+)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
-  if(!cm) cm=txtNoHK.match(new RegExp(`([${ZODIAC_CHARS}]+)(?:五连|四连|三连|二连)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
+  let cm=txtNoHK.match(new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*([${ZODIAC_CHARS}]+)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
+  if(!cm) cm=txtNoHK.match(new RegExp(`([${ZODIAC_CHARS}]+)(?:五连|四连|三连|二连)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
   if(cm){
     const zStr=cm[1], cv=parseFloat(cm[2]);
     let ct='double';
