@@ -401,6 +401,218 @@ app.post('/api/save-result', function(req, res) {
   }
 });
 
+// ===== XLSX 导出接口 =====
+const XLSX = require('xlsx');
+
+// 下载历史结算汇总 xlsx
+app.get('/api/export/xlsx', function(req, res) {
+  try {
+    // 读取所有结算文件
+    let saveDir = DATA_DIR;
+    try {
+      if (!fs.existsSync(saveDir)) saveDir = path.join(__dirname, 'shuju');
+    } catch(e) {
+      saveDir = path.join(__dirname, 'shuju');
+    }
+
+    if (!fs.existsSync(saveDir)) {
+      return res.status(404).json({ error: '数据目录不存在' });
+    }
+
+    const files = fs.readdirSync(saveDir)
+      .filter(f => f.startsWith('settlement_') && f.endsWith('.txt'))
+      .map(f => path.join(saveDir, f))
+      .sort();
+
+    if (files.length === 0) {
+      return res.status(404).json({ error: '没有结算数据' });
+    }
+
+    const allData = [];
+    for (const fp of files) {
+      try {
+        const content = fs.readFileSync(fp, 'utf-8');
+        const lines = content.split('\n');
+        const data = {};
+        for (const line of lines) {
+          const m1 = line.match(/^时间:\s*(.+)/); if (m1) data.time = m1[1].trim();
+          const m2 = line.match(/^来源:\s*(.+)/); if (m2) data.source = m2[1].trim();
+          const m3 = line.match(/^客户端:\s*(.+)/); if (m3) data.clientId = m3[1].trim();
+          const m4 = line.match(/^总收:\s*([\d.]+)/); if (m4) data.totalBet = parseFloat(m4[1]);
+          const m5 = line.match(/^总派:\s*([\d.]+)/); if (m5) data.totalPayout = parseFloat(m5[1]);
+          const m6 = line.match(/^盈利:\s*([-\d.]+)/); if (m6) data.netProfit = parseFloat(m6[1]);
+          const m7 = line.match(/^抽水率:\s*([\d.]+)/); if (m7) data.waterRate = parseFloat(m7[1]);
+          const m8 = line.match(/^中奖金额:\s*([\d.]+)/); if (m8) data.hitAmount = parseFloat(m8[1]);
+          const m9 = line.match(/^条目数:\s*([\d.]+)/); if (m9) data.itemCount = parseInt(m9[1]);
+          const m10 = line.match(/^抽水后盈利:\s*([-\d.]+)/); if (m10) data.netAfterWater = parseFloat(m10[1]);
+          const m11 = line.match(/^特码:\s*(.+)/); if (m11) data.teMa = m11[1].trim();
+          const m12 = line.match(/^开奖号码:\s*(.+)/);
+          if (m12) {
+            try {
+              const win = JSON.parse(m12[1]);
+              data.winNumbers = win.numbers ? win.numbers.join(',') : '';
+              data.winZodiacs = win.flatZodiacs ? win.flatZodiacs.join(',') : '';
+            } catch(e2) {}
+          }
+        }
+        const bn = path.basename(fp, '.txt');
+        const tsMatch = bn.match(/settlement_(.+)/);
+        if (tsMatch) data.fileTimestamp = tsMatch[1].replace(/_/g, ' ');
+        allData.push(data);
+      } catch(e3) {}
+    }
+
+    // 生成汇总 sheet
+    const headers = ['序号','结算时间','文件时间戳','客户端','总收注','总派彩','净收益','抽水率(%)','中奖金额','条目数','抽水后盈利','开奖号码','特码','开出生肖'];
+    const rows = [headers];
+    allData.forEach((d, i) => {
+      rows.push([
+        i + 1, d.time || '', d.fileTimestamp || '', d.clientId || '',
+        d.totalBet || 0, d.totalPayout || 0, d.netProfit || 0,
+        d.waterRate || 0, d.hitAmount || 0, d.itemCount || 0,
+        d.netAfterWater !== undefined ? d.netAfterWater : (d.netProfit || 0),
+        d.winNumbers || '', d.teMa || '', d.winZodiacs || ''
+      ]);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = headers.map(() => ({ wch: 14 }));
+    XLSX.utils.book_append_sheet(wb, ws, '结算汇总');
+
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="结算汇总_' + new Date().toISOString().slice(0,10) + '.xlsx"');
+    res.send(buf);
+  } catch(e) {
+    console.error('[导出] ' + e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 下载单个结算为 xlsx
+app.get('/api/export/xlsx/:filename', function(req, res) {
+  try {
+    let saveDir = DATA_DIR;
+    try {
+      if (!fs.existsSync(saveDir)) saveDir = path.join(__dirname, 'shuju');
+    } catch(e) {
+      saveDir = path.join(__dirname, 'shuju');
+    }
+
+    const filename = req.params.filename;
+    if (!filename.endsWith('.txt')) {
+      return res.status(400).json({ error: '仅支持 .txt 文件' });
+    }
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: '非法文件名' });
+    }
+
+    const filepath = path.join(saveDir, filename);
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ error: '文件不存在' });
+    }
+
+    const content = fs.readFileSync(filepath, 'utf-8');
+    const lines = content.split('\n');
+    const data = { rows: [] };
+
+    for (const line of lines) {
+      // 基本信息
+      const pairs = [
+        ['time', /^时间:\s*(.+)/],
+        ['source', /^来源:\s*(.+)/],
+        ['clientId', /^客户端:\s*(.+)/],
+        ['totalBet', /^总收:\s*([\d.]+)/],
+        ['totalPayout', /^总派:\s*([\d.]+)/],
+        ['netProfit', /^盈利:\s*([-\d.]+)/],
+        ['waterRate', /^抽水率:\s*([\d.]+)/],
+        ['hitAmount', /^中奖金额:\s*([\d.]+)/],
+        ['itemCount', /^条目数:\s*([\d.]+)/],
+        ['netAfterWater', /^抽水后盈利:\s*([-\d.]+)/],
+        ['teMa', /^特码:\s*(.+)/]
+      ];
+      for (const [key, re] of pairs) {
+        const m = line.match(re);
+        if (m) {
+          if (['totalBet','totalPayout','netProfit','waterRate','hitAmount','netAfterWater'].includes(key)) {
+            data[key] = parseFloat(m[1]);
+          } else if (key === 'itemCount') {
+            data[key] = parseInt(m[1]);
+          } else {
+            data[key] = m[1].trim();
+          }
+        }
+      }
+
+      const m12 = line.match(/^开奖号码:\s*(.+)/);
+      if (m12) {
+        try {
+          const win = JSON.parse(m12[1]);
+          data.winNumbers = win.numbers ? win.numbers.join(',') : '';
+          data.winZodiacs = win.flatZodiacs ? win.flatZodiacs.join(',') : '';
+        } catch(e2) {}
+      }
+
+      const m13 = line.match(/^(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*\|\s*([\d.\-]+)\s*\|\s*([\d.]+)\s*\|\s*([-\d.]+)\s*\|\s*(.*)$/);
+      if (m13) {
+        data.rows.push({
+          index: parseInt(m13[1]),
+          item: m13[2].trim(),
+          bet: parseFloat(m13[3]),
+          odds: m13[4].trim(),
+          win: parseFloat(m13[5]),
+          net: parseFloat(m13[6]),
+          note: m13[7].trim()
+        });
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: 概览
+    const infoRows = [
+      ['项目', '值'],
+      ['时间', data.time || ''],
+      ['客户端', data.clientId || ''],
+      ['开奖号码', data.winNumbers || ''],
+      ['特码', data.teMa || ''],
+      ['开出生肖', data.winZodiacs || ''],
+      ['总收注', data.totalBet || 0],
+      ['总派彩', data.totalPayout || 0],
+      ['净收益', data.netProfit || 0],
+      ['抽水率', (data.waterRate || 0) + '%'],
+      ['中奖金额', data.hitAmount || 0],
+      ['条目数', data.itemCount || 0],
+      ['抽水后盈利', data.netAfterWater !== undefined ? data.netAfterWater : (data.netProfit || 0)]
+    ];
+    const ws1 = XLSX.utils.aoa_to_sheet(infoRows);
+    ws1['!cols'] = [{wch: 14}, {wch: 30}];
+    XLSX.utils.book_append_sheet(wb, ws1, '结算概览');
+
+    // Sheet 2: 明细
+    if (data.rows.length > 0) {
+      const detailHeaders = ['序号', '投注项', '投注额', '赔率', '中奖额', '净额', '备注'];
+      const detailRows = [detailHeaders];
+      data.rows.forEach(r => {
+        detailRows.push([r.index, r.item, r.bet, r.odds, r.win, r.net, r.note]);
+      });
+      const ws2 = XLSX.utils.aoa_to_sheet(detailRows);
+      ws2['!cols'] = [detailHeaders.length].map(() => ({ wch: 20 }));
+      XLSX.utils.book_append_sheet(wb, ws2, '结算明细');
+    }
+
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const downloadName = filename.replace('.txt', '.xlsx');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + downloadName + '"');
+    res.send(buf);
+  } catch(e) {
+    console.error('[导出] ' + e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ===== 启动 =====
 server.listen(PORT, function() {
   console.log('');

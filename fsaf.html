@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>数据统计中心</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Microsoft YaHei',sans-serif; background:#0a0f18; color:#cbd5e1; min-height:100vh; padding:16px; }
@@ -144,12 +145,149 @@ textarea:focus { outline:none; border-color:#3b82f6; }
 .toast { position:fixed; top:16px; right:16px; background:#065f46; color:#d1fae5; padding:8px 16px; border-radius:6px; font-size:.8rem; z-index:200; opacity:0; transform:translateX(100%); transition:all .3s; }
 .toast.show { opacity:1; transform:translateX(0); }
 
+/* ===== 平板适配 (≤768px) ===== */
 @media (max-width:768px) {
-  .stat-row { grid-template-columns:repeat(2,1fr); }
+  body { padding:10px; }
+  .container { padding:0; }
+
+  /* 统计卡片 — 3列 */
+  .stat-row { grid-template-columns:repeat(3,1fr); gap:5px; }
+  .stat-card { padding:10px 6px; }
+  .stat-card .sl { font-size:.65rem; }
+  .stat-card .sv { font-size:1rem; }
+
+  /* 开奖号码球 */
   .balls { gap:5px; }
   .ball { width:36px; height:36px; font-size:.85rem; }
   .ball.te { width:44px; height:44px; font-size:1.05rem; }
-  .num-grid { grid-template-columns:repeat(7,1fr); gap:2px; }
+  .ball .zodiac-tag { bottom:-14px; font-size:.6rem; }
+
+  /* 号码网格 */
+  .num-grid { grid-template-columns:repeat(6,1fr); gap:2px; }
+
+  /* 生肖统计 */
+  #zodiacGrid { grid-template-columns:repeat(3,1fr) !important; }
+
+  /* 连码统计 — 改单列 */
+  #comboStatsGrid { grid-template-columns:1fr !important; }
+
+  /* Tabs — 允许横向滚动 */
+  .tabs { overflow-x:auto; -webkit-overflow-scrolling:touch; flex-wrap:nowrap; }
+  .tab-btn { padding:6px 12px; font-size:.72rem; white-space:nowrap; flex-shrink:0; }
+
+  /* 表格横向滚动 */
+  .collapse-body.show { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .tbl { min-width:520px; font-size:.72rem; }
+  .tbl th, .tbl td { padding:5px 8px; }
+
+  /* 赔率设置 */
+  .odds-bar { gap:6px; }
+  .odds-item { font-size:.68rem; padding:2px 6px; }
+
+  /* 按钮增大触控区 */
+  .btn { min-height:40px; }
+  .btn-sm { min-height:32px; padding:5px 12px; }
+
+  /* 弹窗 */
+  .modal-box { padding:20px; }
+
+  /* Toast */
+  .toast { top:auto; bottom:16px; right:8px; left:8px; text-align:center; }
+
+  /* 管理面板输入框 */
+  #adminPasswordInput { width:100% !important; max-width:260px; }
+}
+
+/* ===== 手机适配 (≤480px) ===== */
+@media (max-width:480px) {
+  body { padding:6px; }
+
+  /* 统计卡片 — 单列 */
+  .stat-row { grid-template-columns:1fr; gap:4px; }
+  .stat-card { padding:10px 8px; }
+  .stat-card .sl { font-size:.6rem; }
+  .stat-card .sv { font-size:.9rem; }
+
+  /* 开奖号码球 — 进一步缩小 */
+  .balls { gap:3px; flex-wrap:wrap; justify-content:center; }
+  .ball { width:28px; height:28px; font-size:.68rem; }
+  .ball.te { width:34px; height:34px; font-size:.8rem; }
+  .ball .zodiac-tag { bottom:-12px; font-size:.5rem; }
+
+  /* 实时开奖栏 — 垂直堆叠 */
+  #liveBar { flex-direction:column !important; align-items:stretch !important; gap:8px !important; padding:12px !important; }
+  #liveBar > div[style*="flex:1"] { display:none; }
+  #liveBar .refresh-row { justify-content:flex-end; flex-wrap:wrap; }
+
+  /* 香港开奖栏 — 换行 */
+  #hkInputBar { flex-wrap:wrap !important; gap:6px !important; padding:10px !important; }
+  #hkInputBar input { width:32px !important; height:32px !important; font-size:.75rem !important; }
+  #hkInputBar input#hkTeMa { width:38px !important; height:38px !important; font-size:.85rem !important; }
+
+  /* 号码网格 — 更少列 */
+  .num-grid { grid-template-columns:repeat(4,1fr); gap:2px; }
+  .zodiac-group { padding:3px 2px 2px; }
+  .num-cell { padding:3px 1px; }
+  .num-cell .n { font-size:.65rem; }
+  .num-cell .v { font-size:.55rem; min-height:14px; }
+  .zodiac-label { font-size:.7rem; margin-bottom:3px; }
+
+  /* 生肖统计 */
+  #zodiacGrid { grid-template-columns:repeat(2,1fr) !important; gap:4px !important; }
+
+  /* 连码统计 */
+  #comboStatsGrid { grid-template-columns:1fr !important; }
+
+  /* Tabs */
+  .tabs { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .tab-btn { padding:5px 8px; font-size:.65rem; white-space:nowrap; flex-shrink:0; }
+
+  /* Textarea */
+  textarea { height:100px; font-size:.72rem; padding:8px; }
+
+  /* 表格 */
+  .collapse-body.show { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .tbl { min-width:480px; font-size:.65rem; }
+  .tbl th, .tbl td { padding:3px 5px; }
+
+  /* 赔率设置 */
+  .odds-bar { gap:4px; }
+  .odds-item { font-size:.6rem; padding:2px 4px; }
+  #settingsCard .card-header + div > div:last-child { flex-direction:column; align-items:stretch; gap:8px; }
+
+  /* 按钮 — 全宽操作组 */
+  textarea + div { flex-wrap:wrap; }
+  textarea + div .btn { flex:1; min-width:0; font-size:.7rem; padding:6px 4px; }
+
+  /* 剪贴板粘贴按钮 — 手机端醒目 */
+  .clip-btn { min-height:36px; font-size:.75rem; border-color:#3b82f6; color:#60a5fa; }
+
+  /* 弹窗 */
+  .modal-box { padding:16px; max-width:95%; }
+  .modal-box h3 { font-size:1rem; }
+
+  /* 登录框 */
+  .login-box { padding:24px 16px; max-width:95%; }
+  .login-box h2 { font-size:1.1rem; }
+  .login-box input { padding:10px 12px; font-size:1rem; }
+
+  /* 挑码/管理面板表头 */
+  #tabPicker .card-header, #tabAdmin .card-header { flex-direction:column; align-items:flex-start; gap:6px; }
+
+  /* 管理面板 */
+  #adminClientList { max-height:300px; }
+  #adminPasswordInput { width:100% !important; max-width:100%; }
+
+  /* 消息汇总统计 */
+  #msgSummaryStats span { display:block; margin-right:0; margin-bottom:4px; }
+
+  /* Card padding */
+  .card { padding:10px; }
+  .card-header { margin-bottom:8px; }
+  .card-title { font-size:.8rem; }
+
+  /* 汇总统计折叠按钮 */
+  .collapse-toggle { font-size:.8rem; }
 }
 
 /* Highlight for matched flat zodiac in ball */
@@ -315,6 +453,7 @@ textarea:focus { outline:none; border-color:#3b82f6; }
   <div class="card-header">
     <span class="card-title">投注规则输入</span>
     <span style="font-size:.7rem;color:#64748b;">Ctrl+Enter 确认</span>
+    <button class="btn btn-outline btn-sm clip-btn" onclick="pasteFromClipboard()" title="从剪贴板粘贴">&#x1f4cb; 粘贴</button>
   </div>
   <textarea id="inputRule" placeholder="粘贴玩家投注消息...&#10;&#10;支持格式：&#10;马蛇个10 · 02/08各15 · 平特猪狗各300&#10;牛狗羊三连500 · 香港虎牛二连500 · 猴兔牛鼠四连50 · 牛蛇鼠鸡羊五连50 · 狗猴兔鸡虎复式三连肖20一组&#10;香港平狗200 · 大各数10 · 单各10&#10;09各五十斤 · 狗龙虎鼠猪各号45&#10;7-5-4-6-8-1-3尾各数十 · 2-8尾各5&#10;01.04.18三中三十斤 · 23.03.40.28.45复试三中三各组10&#10;01.04.18.09.03复试二中二各组十斤&#10;&#10;每行一条或分号分隔"></textarea>
   <div style="display:flex;gap:8px;margin-top:10px;">
@@ -409,9 +548,12 @@ textarea:focus { outline:none; border-color:#3b82f6; }
 
 <!-- 结算明细 -->
 <div class="card card-first" id="settlementCard">
-  <div class="card-header collapse-toggle open" onclick="toggleCollapse('settlementBody')">
-    <span class="card-title">结算明细</span>
-    <span style="font-size:.7rem;color:#64748b;">点击折叠</span>
+  <div class="card-header" style="justify-content:space-between;">
+    <span class="collapse-toggle open" onclick="toggleCollapse('settlementBody')" style="display:flex;align-items:center;gap:4px;">
+      <span class="card-title">结算明细</span>
+      <span style="font-size:.7rem;color:#64748b;">点击折叠</span>
+    </span>
+    <button class="btn btn-success btn-sm" onclick="showExportConfirm()" title="保存结算明细和消息投注汇总到 xlsx">保存成xlsx</button>
   </div>
   <div class="collapse-body show" id="settlementBody">
     <table class="tbl">
@@ -423,6 +565,18 @@ textarea:focus { outline:none; border-color:#3b82f6; }
 </div>
 
 </div><!-- /container -->
+
+<!-- XLSX 导出确认弹窗 -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal-box">
+    <h3>保存为 xlsx</h3>
+    <p id="exportModalInfo" style="font-size:.8rem;">将导出「消息投注汇总」和「结算明细」两个工作表。</p>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="document.getElementById('exportModal').classList.remove('show')">取消</button>
+      <button class="btn btn-success" onclick="doExportXlsx()">确认保存</button>
+    </div>
+  </div>
+</div>
 
 <!-- Reset Modal -->
 <div class="modal-overlay" id="resetModal">
@@ -510,6 +664,7 @@ let autoRefreshTimer = null;
 let autoRefreshOn = false;
 let currentTab = 'bets';
 let waterRate = 0;  // 抽水率 0-30%
+let settlementAllRows = [];  // 缓存结算明细数据用于导出 xlsx
 
 // ===== 中文数字 =====
 const CN = {
@@ -1213,6 +1368,7 @@ function calcAll(){
   // 澳门 + 香港合并结算表
   const tbody = document.getElementById('settlementBody_tbody');
   var allRows = macauRows.concat(hkRows);
+  settlementAllRows = allRows;  // 缓存用于 xlsx 导出
   tbody.innerHTML = allRows.map(function(r){
     var typeName = r.type==='nums'?'特码':r.type==='flat'?'平特':r.type==='special_zodiac'?'特肖':r.type==='n3'?'三中三':r.type==='n2'?'二中二':r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
     var hkTag = r.hk ? ' <span style="color:#f59e0b;font-size:.65rem;">HK</span>' : '';
@@ -1924,6 +2080,23 @@ function toast(msg){
   setTimeout(()=>t.classList.remove('show'),2500);
 }
 
+// 从剪贴板粘贴（手机端友好）
+async function pasteFromClipboard(){
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()) { toast('剪贴板为空'); return; }
+    const ta = document.getElementById('inputRule');
+    ta.value = text;
+    toast('已粘贴 ' + text.split(/[\n;；]/).filter(s=>s.trim()).length + ' 条记录');
+  } catch(e) {
+    // 降级方案：聚焦 textarea 提示手动粘贴
+    const ta = document.getElementById('inputRule');
+    ta.focus();
+    ta.select();
+    toast('请长按此处手动粘贴');
+  }
+}
+
 function updateWater(val){
   waterRate = parseFloat(val);
   document.getElementById('waterRateDisplay').textContent = waterRate+'%';
@@ -1944,8 +2117,153 @@ function updateWater(val){
 
 function showReset(){ document.getElementById('resetModal').classList.add('show'); }
 
+// ===== XLSX 导出 =====
+function showExportConfirm(){
+  if(settlementAllRows.length === 0){
+    toast('暂无结算数据，请先点击"计算输赢"');
+    return;
+  }
+  var totalBet = settlementAllRows.reduce(function(s,r){ return s + (r.bet||0); }, 0);
+  document.getElementById('exportModalInfo').innerHTML =
+    '将导出「结算明细」和「消息汇总」两个工作表，共 ' + messageSummary.length + ' 条消息，总投注额 ' + Math.round(totalBet*100)/100;
+  document.getElementById('exportModal').classList.add('show');
+}
+
+function doExportXlsx(){
+  document.getElementById('exportModal').classList.remove('show');
+  try {
+    var wb = XLSX.utils.book_new();
+
+    // ===== Sheet 1: 消息明细 (用户指定格式) =====
+    // 汇总每条消息的中奖金额
+    var msgWinMap = {};   // msgIndex -> { total:0, flat:0, nums:0, combo:0, special:0, n2:0, n3:0 }
+    settlementAllRows.forEach(function(r){
+      if(r.msgIndex !== undefined && r.win > 0){
+        if(!msgWinMap[r.msgIndex]) msgWinMap[r.msgIndex] = { total:0, flat:0, nums:0, combo:0, special:0, n2:0, n3:0 };
+        msgWinMap[r.msgIndex].total += r.win;
+        if(r.type==='flat') msgWinMap[r.msgIndex].flat += r.win;
+        else if(r.type==='nums') msgWinMap[r.msgIndex].nums += r.win;
+        else if(r.type==='combo') msgWinMap[r.msgIndex].combo += r.win;
+        else if(r.type==='special_zodiac') msgWinMap[r.msgIndex].special += r.win;
+        else if(r.type==='n2') msgWinMap[r.msgIndex].n2 += r.win;
+        else if(r.type==='n3') msgWinMap[r.msgIndex].n3 += r.win;
+      }
+    });
+
+    // 构建"中"列文本
+    function formatWin(mi){
+      var w = msgWinMap[mi];
+      if(!w || w.total === 0) return '';
+      var parts = [];
+      if(w.flat > 0) parts.push('平' + Math.round(w.flat*100)/100);
+      if(w.nums > 0) parts.push('' + Math.round(w.nums*100)/100);
+      if(w.combo > 0) parts.push('连' + Math.round(w.combo*100)/100);
+      if(w.special > 0) parts.push('肖' + Math.round(w.special*100)/100);
+      if(w.n2 > 0) parts.push('二' + Math.round(w.n2*100)/100);
+      if(w.n3 > 0) parts.push('三' + Math.round(w.n3*100)/100);
+      return parts.join(' ');
+    }
+
+    var grandTotal = 0;
+    var totalNumsWin = 0, totalFlatWin = 0, totalComboWin = 0, totalSpecialWin = 0, totalN2Win = 0, totalN3Win = 0;
+
+    // 数据行
+    var s1Rows = [['序号', '各条总数', '中']];
+    messageSummary.forEach(function(m){
+      var bet = Math.round((m.totalBet||0)*100)/100;
+      var mi = m.index - 1;  // messageSummary.index 是 1-based, msgIndex 是 0-based
+      var winText = formatWin(mi);
+      s1Rows.push([m.index, bet, winText]);
+      grandTotal += m.totalBet || 0;
+
+      var w = msgWinMap[mi];
+      if(w){
+        totalNumsWin += w.nums;
+        totalFlatWin += w.flat;
+        totalComboWin += w.combo;
+        totalSpecialWin += w.special;
+        totalN2Win += w.n2;
+        totalN3Win += w.n3;
+      }
+    });
+
+    grandTotal = Math.round(grandTotal*100)/100;
+    totalNumsWin = Math.round(totalNumsWin*100)/100;
+    totalFlatWin = Math.round(totalFlatWin*100)/100;
+    totalComboWin = Math.round(totalComboWin*100)/100;
+    totalSpecialWin = Math.round(totalSpecialWin*100)/100;
+    totalN2Win = Math.round(totalN2Win*100)/100;
+    totalN3Win = Math.round(totalN3Win*100)/100;
+
+    // 汇总总投注额
+    var totalAllBet = settlementAllRows.reduce(function(s,r){ return s+(r.bet||0); }, 0);
+    var totalAllWin = settlementAllRows.reduce(function(s,r){ return s+(r.win||0); }, 0);
+    var netProfit = totalAllBet - totalAllWin;
+    var waterAmount = Math.round(netProfit * waterRate / 100 * 100) / 100;
+    var netAfterWater = Math.round((netProfit * (1 - waterRate/100)) * 100) / 100;
+
+    // 构建中奖类型汇总文本 (匹配用户格式)
+    var winTypeSummary = '';
+    if(totalNumsWin > 0) winTypeSummary += '特码中奖额' + totalNumsWin;
+    if(totalFlatWin > 0) winTypeSummary += (winTypeSummary?' ':'') + '平特中奖额' + totalFlatWin;
+    if(totalComboWin > 0) winTypeSummary += (winTypeSummary?' ':'') + '连肖中奖额' + totalComboWin;
+    if(totalSpecialWin > 0) winTypeSummary += (winTypeSummary?' ':'') + '特肖中奖额' + totalSpecialWin;
+    if(totalN2Win > 0) winTypeSummary += (winTypeSummary?' ':'') + '二中二中奖额' + totalN2Win;
+    if(totalN3Win > 0) winTypeSummary += (winTypeSummary?' ':'') + '三中三中奖额' + totalN3Win;
+
+    // 汇总行
+    s1Rows.push(['', Math.round(totalAllBet*100)/100, winTypeSummary]);
+    s1Rows.push(['', '', '抽水后净收益' + (netAfterWater >= 0 ? '+' : '') + netAfterWater]);
+    s1Rows.push(['', '', '水' + waterAmount]);
+
+    // 添加空行占位
+    s1Rows.push(['', '', '']);
+    s1Rows.push(['', '', '']);
+    s1Rows.push(['', '', '']);
+
+    var ws1 = XLSX.utils.aoa_to_sheet(s1Rows);
+    ws1['!cols'] = [{wch:8},{wch:14},{wch:42}];
+    XLSX.utils.book_append_sheet(wb, ws1, '消息汇总');
+
+    // ===== Sheet 2: 结算明细 (投注项级别) =====
+    var sHeaders = ['来源', '投注内容', '投注额', '类型', '赔率', '中奖额', '净结果', '备注'];
+    var sRows = [sHeaders];
+    settlementAllRows.forEach(function(r){
+      var typeName = r.type==='nums'?'特码':r.type==='flat'?'平特':r.type==='special_zodiac'?'特肖':r.type==='n3'?'三中三':r.type==='n2'?'二中二':r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
+      sRows.push([
+        r.hk ? '香港' : '澳门',
+        r.display || '',
+        r.bet || 0,
+        typeName,
+        r.odds || '-',
+        r.win || 0,
+        r.net || 0,
+        (r.note || '').replace(/<[^>]*>/g, '')
+      ]);
+    });
+    var sBetTotal = Math.round(settlementAllRows.reduce(function(s,r){ return s+(r.bet||0); }, 0)*100)/100;
+    var sWinTotal = Math.round(totalAllWin*100)/100;
+    var sNetTotal = Math.round((sBetTotal - sWinTotal)*100)/100;
+    sRows.push(['', '合计', sBetTotal, '', '', sWinTotal, sNetTotal, '']);
+
+    var ws2 = XLSX.utils.aoa_to_sheet(sRows);
+    ws2['!cols'] = [{wch:6},{wch:38},{wch:10},{wch:8},{wch:8},{wch:10},{wch:10},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, ws2, '结算明细');
+
+    // 生成文件名
+    var now = new Date();
+    var ts = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')
+      +'_'+String(now.getHours()).padStart(2,'0')+'-'+String(now.getMinutes()).padStart(2,'0')+'-'+String(now.getSeconds()).padStart(2,'0');
+    XLSX.writeFile(wb, '结算数据_' + ts + '.xlsx');
+    toast('已保存: 结算数据_' + ts + '.xlsx');
+  } catch(e){
+    console.error(e);
+    toast('导出失败: ' + e.message);
+  }
+}
+
 function doReset(){
-  betSummary=[]; hkBetSummary=[]; messageSummary=[]; numberBets={}; flatBets={}; specialZodiacBets={}; comboBets=[]; numComboBets=[];
+  betSummary=[]; hkBetSummary=[]; messageSummary=[]; settlementAllRows=[]; numberBets={}; flatBets={}; specialZodiacBets={}; comboBets=[]; numComboBets=[];
   hkNumberBets={}; hkFlatBets={}; hkSpecialZodiacBets={}; hkComboBets=[]; hkNumComboBets=[]; hkResult=null;
   for(let i=1;i<=49;i++) { numberBets[i.toString().padStart(2,'0')]=0; hkNumberBets[i.toString().padStart(2,'0')]=0; }
   ALL_ZODIACS.forEach(z=>{flatBets[z]=0; hkFlatBets[z]=0;});
