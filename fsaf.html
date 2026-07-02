@@ -812,7 +812,7 @@ function norm(s){
     .replace(/元/g,'块')  // 元→块 归一化
     .replace(/复试/g,'复式')  // 复试→复式 归一化
     .replace(/\d+期\s*/g,'')  // 去掉 "173期" 等期号前缀
-    .replace(/号个/g,'号各').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/号\/(\d)/g,'号$1')  // "09号各30" → "09各数30", 名数→各数
+    .replace(/号个/g,'号各').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1')  // "09号各30" → "09各数30", 名数→各数, 每个号→各数
     .replace(/蚊/g,'')  // 蚊→去掉 (粤语元)
     // 到 范围展开: 01到12 → 01 02 03 ... 12
     .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
