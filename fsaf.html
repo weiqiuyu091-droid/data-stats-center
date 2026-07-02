@@ -349,6 +349,8 @@ textarea:focus { outline:none; border-color:#3b82f6; }
   <input type="text" id="hkNum5" placeholder="5" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
   <input type="text" id="hkNum6" placeholder="6" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
   <button class="btn btn-amber btn-sm" onclick="applyHKResult()" style="margin-left:4px;">确认香港开奖</button>
+  <button class="btn btn-outline btn-sm" onclick="fetchHKLatest()" style="margin-left:4px;" id="hkFetchBtn">&#x1f504; 获取</button>
+  <span style="font-size:.65rem;color:#64748b;" id="hkFetchStatus"></span>
   <span style="font-size:.7rem;color:#ef4444;display:none;" id="hkResultErr"></span>
 </div>
 
@@ -2047,6 +2049,63 @@ function clearHKResult(){
   for(var i=1;i<=6;i++) document.getElementById('hkNum'+i).value = '';
   toast('香港开奖已清除');
 }
+
+// ===== 香港开奖自动获取 =====
+var hkFetchTimer = null;
+var hkLastExpect = '';  // 记录上次获取的期数，避免重复填充
+
+async function fetchHKLatest(silent){
+  var btn = document.getElementById('hkFetchBtn');
+  var statusEl = document.getElementById('hkFetchStatus');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ 获取中...'; }
+  try {
+    var resp = await fetch('/api/hk-latest');
+    if(!resp.ok) throw new Error('API error');
+    var data = await resp.json();
+    if(!data.one || !data.seven){ throw new Error('数据不完整'); }
+    // 如果期数没变且已经填充过，跳过
+    if(data.expect === hkLastExpect && hkResult){
+      if(statusEl) statusEl.textContent = '已是最新 ' + data.expect + '期';
+      if(btn){ btn.disabled = false; btn.textContent = '🔄 获取'; }
+      return;
+    }
+    // 填充到输入框
+    var nums = [data.one, data.two, data.three, data.four, data.five, data.six];
+    for(var i=0; i<6; i++){
+      var el = document.getElementById('hkNum'+(i+1));
+      if(el) el.value = nums[i];
+    }
+    var teEl = document.getElementById('hkTeMa');
+    if(teEl) teEl.value = data.seven;
+    // 自动确认
+    applyHKResult();
+    hkLastExpect = data.expect;
+    if(statusEl) statusEl.textContent = '✓ ' + data.expect + '期 ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
+    if(!silent) toast('已获取香港第'+data.expect+'期开奖');
+  } catch(e){
+    if(statusEl) statusEl.textContent = '获取失败';
+    if(!silent) toast('香港开奖获取失败: '+e.message);
+  }
+  if(btn){ btn.disabled = false; btn.textContent = '🔄 获取'; }
+}
+
+function startHKPolling(){
+  if(hkFetchTimer) return;
+  function check(){
+    var now = new Date();
+    var h = now.getHours();
+    var m = now.getMinutes();
+    // 21:31-21:35 窗口内每15秒拉一次
+    if(h === 21 && m >= 31 && m <= 35){
+      fetchHKLatest(true);
+    }
+  }
+  check();  // 立即检查一次
+  hkFetchTimer = setInterval(check, 15000);
+}
+
+// 页面加载时启动定时检查
+startHKPolling();
 
 // ===== Tab switching =====
 function switchTab(tab){

@@ -261,6 +261,20 @@ app.get('/api/live', async function(req, res) {
   }
 });
 
+// 香港六合彩开奖代理
+app.get('/api/hk-latest', async function(req, res) {
+  try {
+    const resp = await fetch('https://0oe0t6wiqqjs.lhc888.im/prod-api/system/hk/latest', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    });
+    if (!resp.ok) return res.status(502).json({ error: 'API unavailable' });
+    const json = await resp.json();
+    res.json(json);
+  } catch(e) {
+    res.status(502).json({ error: 'API unreachable' });
+  }
+});
+
 // 管理认证
 app.post('/api/admin/auth', function(req, res) {
   if (req.body.password === ADMIN_PASSWORD) {
