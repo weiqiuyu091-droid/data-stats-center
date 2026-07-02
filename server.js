@@ -4,6 +4,7 @@ const PORT = process.env.PORT || 3456;
 const ADMIN_PASSWORD = process.env.ADMIN_PW || '686868';
 
 const express = require('express');
+const https = require('https');
 const http = require('http');
 const { WebSocketServer } = require('ws');
 const path = require('path');
@@ -261,18 +262,24 @@ app.get('/api/live', async function(req, res) {
   }
 });
 
-// 香港六合彩开奖代理
-app.get('/api/hk-latest', async function(req, res) {
-  try {
-    const resp = await fetch('https://0oe0t6wiqqjs.lhc888.im/prod-api/system/hk/latest', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+// 香港六合彩开奖代理 (用https模块绕过证书验证问题)
+app.get('/api/hk-latest', function(req, res) {
+  https.get('https://0oe0t6wiqqjs.lhc888.im/prod-api/system/hk/latest', {
+    rejectUnauthorized: false,
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+  }, function(resp) {
+    var body = '';
+    resp.on('data', function(c) { body += c; });
+    resp.on('end', function() {
+      try {
+        res.json(JSON.parse(body));
+      } catch(e) {
+        res.status(502).json({ error: 'Invalid JSON' });
+      }
     });
-    if (!resp.ok) return res.status(502).json({ error: 'API unavailable' });
-    const json = await resp.json();
-    res.json(json);
-  } catch(e) {
+  }).on('error', function(e) {
     res.status(502).json({ error: 'API unreachable' });
-  }
+  });
 });
 
 // 管理认证

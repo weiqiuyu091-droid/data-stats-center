@@ -348,8 +348,7 @@ textarea:focus { outline:none; border-color:#3b82f6; }
   <input type="text" id="hkNum4" placeholder="4" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
   <input type="text" id="hkNum5" placeholder="5" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
   <input type="text" id="hkNum6" placeholder="6" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
-  <button class="btn btn-amber btn-sm" onclick="applyHKResult()" style="margin-left:4px;">确认香港开奖</button>
-  <button class="btn btn-outline btn-sm" onclick="fetchHKLatest()" style="margin-left:4px;" id="hkFetchBtn">&#x1f504; 获取</button>
+  <button class="btn btn-amber btn-sm" id="hkFetchBtn" onclick="fetchHKLatest()" style="margin-left:4px;">&#x1f504; 获取开奖</button>
   <span style="font-size:.65rem;color:#64748b;" id="hkFetchStatus"></span>
   <span style="font-size:.7rem;color:#ef4444;display:none;" id="hkResultErr"></span>
 </div>
@@ -2066,7 +2065,7 @@ async function fetchHKLatest(silent){
     // 如果期数没变且已经填充过，跳过
     if(data.expect === hkLastExpect && hkResult){
       if(statusEl) statusEl.textContent = '已是最新 ' + data.expect + '期';
-      if(btn){ btn.disabled = false; btn.textContent = '🔄 获取'; }
+      if(btn){ btn.disabled = false; btn.textContent = '🔄 获取开奖'; }
       return;
     }
     // 填充到输入框
@@ -2086,8 +2085,24 @@ async function fetchHKLatest(silent){
     if(statusEl) statusEl.textContent = '获取失败';
     if(!silent) toast('香港开奖获取失败: '+e.message);
   }
-  if(btn){ btn.disabled = false; btn.textContent = '🔄 获取'; }
+  if(btn){ btn.disabled = false; btn.textContent = '🔄 获取开奖'; }
 }
+
+// 手动输入时自动确认：7个框都填满后自动apply
+function checkHKFieldsAuto(){
+  var allFilled = true;
+  var teMa = document.getElementById('hkTeMa');
+  if(!teMa || !teMa.value.trim()) allFilled = false;
+  for(var i=1; i<=6; i++){
+    var el = document.getElementById('hkNum'+i);
+    if(!el || !el.value.trim()) allFilled = false;
+  }
+  if(allFilled && !hkResult) applyHKResult();
+}
+['hkTeMa','hkNum1','hkNum2','hkNum3','hkNum4','hkNum5','hkNum6'].forEach(function(id){
+  var el = document.getElementById(id);
+  if(el) el.addEventListener('input', checkHKFieldsAuto);
+});
 
 function startHKPolling(){
   if(hkFetchTimer) return;
@@ -2095,16 +2110,14 @@ function startHKPolling(){
     var now = new Date();
     var h = now.getHours();
     var m = now.getMinutes();
-    // 21:31-21:35 窗口内每15秒拉一次
     if(h === 21 && m >= 31 && m <= 35){
       fetchHKLatest(true);
     }
   }
-  check();  // 立即检查一次
+  check();
   hkFetchTimer = setInterval(check, 15000);
 }
 
-// 页面加载时启动定时检查
 startHKPolling();
 
 // ===== Tab switching =====
