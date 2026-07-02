@@ -321,7 +321,9 @@ function processRule(rawRule){
     if(tailList && tailVal){
       const tailDigitMatches = tailList.match(/(\d)尾/g);
       let tailDigits = tailDigitMatches ? tailDigitMatches.map(function(m){ return m.replace('尾',''); }) : [];
-      if(!tailDigits.length){ tailDigits = tailList.replace(/尾/g,'').split(/[.\/、,\s，\-－—]+/).filter(i=>i!=='').map(i=>i.trim()); }
+      const remaining = tailList.replace(/(\d)尾/g,'').replace(/尾/g,'');
+      const extraDigits = remaining.match(/\d/g) || [];
+      tailDigits = [...new Set([...tailDigits, ...extraDigits])];
       const tailTargets = [];
       tailDigits.forEach(function(d){ if(TAIL_MAP[d]) tailTargets.push(...TAIL_MAP[d]); });
       if(tailTargets.length){ return {display: tailDigits.join('-')+'尾各'+tailVal, bet:tailVal*tailTargets.length, type:'nums', targets:tailTargets}; }

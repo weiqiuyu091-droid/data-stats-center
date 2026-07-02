@@ -1020,10 +1020,10 @@ function processRule(rawRule){
       // 优先提取(\d)尾模式: "平特1尾下"→["1"], "2尾5尾各5"→["2","5"]
       const tailDigitMatches = tailList.match(/(\d)尾/g);
       let tailDigits = tailDigitMatches ? tailDigitMatches.map(function(m){ return m.replace('尾',''); }) : [];
-      // 如果\d尾模式没匹配到, 回退到原始按分隔符切分
-      if(!tailDigits.length){
-        tailDigits = tailList.replace(/尾/g,'').split(/[.\/、,\s，\-－—]+/).filter(i=>i!=='').map(i=>i.trim());
-      }
+      // 补抓"尾"前不紧邻和连写的数字: "3.6尾"的3, "1856尾"的1/8/5
+      const remaining = tailList.replace(/(\d)尾/g,'').replace(/尾/g,'');
+      const extraDigits = (remaining.match(/\d/g) || []);
+      tailDigits = [...new Set([...tailDigits, ...extraDigits])];
       const tailTargets = [];
       tailDigits.forEach(function(d){ if(TAIL_MAP[d]) tailTargets.push(...TAIL_MAP[d]); });
       if(tailTargets.length){

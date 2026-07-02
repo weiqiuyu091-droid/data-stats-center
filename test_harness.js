@@ -382,9 +382,9 @@ function processRule(rawRule){
     if(tailList && tailVal){
       var tailDigitMatches = tailList.match(/(\d)尾/g);
       var tailDigits = tailDigitMatches ? tailDigitMatches.map(function(m){ return m.replace('尾',''); }) : [];
-      if(!tailDigits.length){
-        tailDigits = tailList.replace(/尾/g,'').split(/[.\/、,\s，\-－—]+/).filter(function(i){ return i!==''; }).map(function(i){ return i.trim(); });
-      }
+      var remaining = tailList.replace(/(\d)尾/g,'').replace(/尾/g,'');
+      var extraDigits = remaining.match(/\d/g) || [];
+      tailDigits = [...new Set([...tailDigits, ...extraDigits])];
       var tailTargets = [];
       tailDigits.forEach(function(d){ if(TAIL_MAP[d]){ for(var ti=0;ti<TAIL_MAP[d].length;ti++) tailTargets.push(TAIL_MAP[d][ti]); } });
       if(tailTargets.length){
