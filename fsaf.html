@@ -220,9 +220,9 @@ textarea:focus { outline:none; border-color:#3b82f6; }
   #liveBar .refresh-row { justify-content:flex-end; flex-wrap:wrap; }
 
   /* 香港开奖栏 — 换行 */
-  #hkInputBar { flex-wrap:wrap !important; gap:6px !important; padding:10px !important; }
-  #hkInputBar input { width:32px !important; height:32px !important; font-size:.75rem !important; }
-  #hkInputBar input#hkTeMa { width:38px !important; height:38px !important; font-size:.85rem !important; }
+  #hkLiveBar { flex-wrap:wrap !important; gap:6px !important; padding:10px !important; }
+  #hkLiveBar .balls .ball { width:34px !important; height:34px !important; font-size:.65rem !important; }
+  #hkLiveBar .balls .ball.te { width:42px !important; height:42px !important; font-size:.8rem !important; }
 
   /* 号码网格 — 更少列 */
   .num-grid { grid-template-columns:repeat(4,1fr); gap:2px; }
@@ -335,22 +335,22 @@ textarea:focus { outline:none; border-color:#3b82f6; }
   </div>
 </div>
 
-<!-- ===== 香港开奖手动输入 ===== -->
-<div class="live-bar" id="hkInputBar" style="padding:14px 20px; gap:12px; border-color:#f59e0b; background:#1e1b1a;">
-  <span class="label" style="font-size:.85rem; color:#fbbf24; font-weight:600;">香港开奖</span>
-  <span style="font-size:.7rem;color:#64748b;">特码</span>
-  <input type="text" id="hkTeMa" placeholder="特码" maxlength="2"
-    style="width:52px;height:52px;border-radius:50%;text-align:center;font-weight:700;font-size:1.2rem;background:#1e293b;border:2px solid #f59e0b;color:#fbbf24;">
-  <span style="font-size:.7rem;color:#64748b;">正码</span>
-  <input type="text" id="hkNum1" placeholder="1" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
-  <input type="text" id="hkNum2" placeholder="2" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
-  <input type="text" id="hkNum3" placeholder="3" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
-  <input type="text" id="hkNum4" placeholder="4" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
-  <input type="text" id="hkNum5" placeholder="5" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
-  <input type="text" id="hkNum6" placeholder="6" maxlength="2" style="width:38px;height:38px;text-align:center;background:#0f172a;border:1px solid #475569;color:#e2e8f0;font-size:.85rem;border-radius:4px;">
-  <button class="btn btn-amber btn-sm" id="hkFetchBtn" onclick="fetchHKLatest()" style="margin-left:4px;">&#x1f504; 获取开奖</button>
-  <span style="font-size:.65rem;color:#64748b;" id="hkFetchStatus"></span>
-  <span style="font-size:.7rem;color:#ef4444;display:none;" id="hkResultErr"></span>
+<!-- ===== 香港开奖显示 ===== -->
+<div class="live-bar" id="hkLiveBar" style="padding:18px 24px; gap:20px; border-color:#f59e0b; background:#1e1b1a;">
+  <div class="status">
+    <div class="live-dot" id="hkLiveDot"></div>
+    <span class="label" id="hkLiveStatus" style="font-size:1rem; font-weight:600; color:#fbbf24;">香港开奖</span>
+  </div>
+  <div class="balls" id="hkLiveBalls">
+    <span class="info">点击"获取开奖"填号</span>
+  </div>
+  <div style="flex:1;"></div>
+  <div class="flat-tags" id="hkLiveFlatTags"></div>
+  <div class="refresh-row">
+    <span class="info" id="hkLiveTime" style="font-size:.9rem;">--</span>
+    <button class="btn btn-amber btn-sm" onclick="fetchHKLatest()" id="hkFetchBtn">&#x1f504; 获取开奖</button>
+    <button class="btn btn-outline btn-sm" onclick="clearHKResult()" style="margin-left:4px;">清除</button>
+  </div>
 </div>
 
 <!-- ===== 汇总统计 (默认折叠) ===== -->
@@ -1957,152 +1957,101 @@ async function manualFetch(){
   }
 }
 
-// ===== 香港开奖手动输入 =====
-function applyHKResult(){
-  var teMa = document.getElementById('hkTeMa').value.trim();
-  var nums = [
-    document.getElementById('hkNum1').value.trim(),
-    document.getElementById('hkNum2').value.trim(),
-    document.getElementById('hkNum3').value.trim(),
-    document.getElementById('hkNum4').value.trim(),
-    document.getElementById('hkNum5').value.trim(),
-    document.getElementById('hkNum6').value.trim()
-  ];
-  
-  // 验证
-  var errEl = document.getElementById('hkResultErr');
-  if(!teMa || nums.some(function(n){ return !n; })){
-    errEl.textContent = '请填写所有7个号码！';
-    errEl.style.display = '';
+// ===== 香港开奖显示 (模板同澳门) =====
+function renderHKLiveBar(){
+  var dot = document.getElementById('hkLiveDot');
+  var status = document.getElementById('hkLiveStatus');
+  var balls = document.getElementById('hkLiveBalls');
+  var flatTags = document.getElementById('hkLiveFlatTags');
+  var time = document.getElementById('hkLiveTime');
+
+  if(!hkResult || !hkResult.numbers || !hkResult.numbers[0]){
+    balls.innerHTML = '<span class="info">点击"获取开奖"填号</span>';
+    flatTags.innerHTML = '';
+    time.textContent = '--';
+    dot.classList.remove('online');
+    status.textContent = '香港开奖';
     return;
   }
-  
-  var allNums = nums.concat([teMa]);
-  for(var i=0; i<allNums.length; i++){
-    var n = parseInt(allNums[i]);
-    if(isNaN(n) || n<1 || n>49){
-      errEl.textContent = '号码必须在01-49之间！';
-      errEl.style.display = '';
-      return;
-    }
-    allNums[i] = n.toString().padStart(2,'0');
-  }
-  
-  // 去重检查
-  var seen = {};
-  for(var j=0; j<allNums.length; j++){
-    if(seen[allNums[j]]){
-      errEl.textContent = '号码不能重复！';
-      errEl.style.display = '';
-      return;
-    }
-    seen[allNums[j]] = true;
-  }
-  
-  errEl.style.display = 'none';
-  
-  // 构建HK result
-  var flatZodiacs = [];
-  var seenZ = {};
-  allNums.forEach(function(n){
-    var z = NUM_TO_ZODIAC[n];
-    if(z && !seenZ[z]){ seenZ[z]=true; flatZodiacs.push(z); }
-  });
-  
-  hkResult = {
-    numbers: nums.concat([teMa]),
-    teMa: teMa,
-    flatZodiacs: flatZodiacs,
-    timestamp: new Date().toLocaleString('zh-CN', {hour12:false})
-  };
-  
-  // 渲染香港开奖球
+
+  var r = hkResult;
   var waveClassMap = {红波:'red', 绿波:'green', 蓝波:'blue'};
-  var ballsHtml = hkResult.numbers.map(function(n,i){
+  balls.innerHTML = r.numbers.map(function(n,i){
     var isTe = i === 6;
     var w = NUM_TO_WAVE[n] || '';
     var cls = 'ball ' + (waveClassMap[w] || '') + (isTe ? ' te' : '');
     var z = NUM_TO_ZODIAC[n] || '';
-    return '<div class="'+cls+'" style="display:inline-flex;margin:2px;">'+n+'<span class="zodiac-tag">'+z+'</span></div>';
+    return '<div class="' + cls + '">' + n + '<span class="zodiac-tag">' + z + '</span></div>';
   }).join('');
-  
-  var hkInfo = document.getElementById('hkResultInfo');
-  if(!hkInfo){
-    var bar = document.getElementById('hkInputBar');
-    var span = document.createElement('span');
-    span.id = 'hkResultInfo';
-    span.style.cssText = 'font-size:.75rem;color:#22c55e;';
-    bar.appendChild(span);
-    hkInfo = span;
-  }
-  hkInfo.innerHTML = '已设定 | 特码:'+teMa+' | 生肖:'+flatZodiacs.join(',')+' | <button class="btn btn-outline btn-sm" onclick="clearHKResult()" style="margin-left:4px;">清除</button>';
-  
-  toast('香港开奖已设定: '+teMa+' '+flatZodiacs.join(','));
+
+  flatTags.innerHTML = r.flatZodiacs.map(function(z){
+    var odds = z === '马' ? ODDS_PT_MA : ODDS_PT_OTHER;
+    return '<span class="flat-tag">' + z + ' (1:' + odds + ')</span>';
+  }).join('');
+
+  var waveCount = {};
+  r.numbers.forEach(function(n){
+    var w = NUM_TO_WAVE[n] || '';
+    waveCount[w] = (waveCount[w] || 0) + 1;
+  });
+  var waveSummary = Object.entries(waveCount).map(function(e){
+    return '<span style="color:' + (e[0]==='红波'?'#ef4444':e[0]==='绿波'?'#22c55e':'#3b82f6') + ';">' + e[0] + ' x ' + e[1] + '</span>';
+  }).join(' ');
+
+  time.innerHTML = (r.timestamp || '--') + ' | 波色: ' + (waveSummary || '--');
+  dot.classList.add('online');
+  status.textContent = '第' + (hkLastExpect || '--') + '期';
+  status.style.color = '#22c55e';
 }
 
 function clearHKResult(){
   hkResult = null;
-  var hkInfo = document.getElementById('hkResultInfo');
-  if(hkInfo) hkInfo.innerHTML = '';
-  document.getElementById('hkTeMa').value = '';
-  for(var i=1;i<=6;i++) document.getElementById('hkNum'+i).value = '';
+  hkLastExpect = '';
+  renderHKLiveBar();
   toast('香港开奖已清除');
 }
 
 // ===== 香港开奖自动获取 =====
 var hkFetchTimer = null;
-var hkLastExpect = '';  // 记录上次获取的期数，避免重复填充
+var hkLastExpect = '';
 
 async function fetchHKLatest(silent){
   var btn = document.getElementById('hkFetchBtn');
-  var statusEl = document.getElementById('hkFetchStatus');
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 获取中...'; }
   try {
     var resp = await fetch('/api/hk-latest');
     if(!resp.ok) throw new Error('API error');
     var data = await resp.json();
-    if(!data.one || !data.seven){ throw new Error('数据不完整'); }
-    // 如果期数没变且已经填充过，跳过
+    if(!data.one || !data.seven) throw new Error('数据不完整');
     if(data.expect === hkLastExpect && hkResult){
-      if(statusEl) statusEl.textContent = '已是最新 ' + data.expect + '期';
       if(btn){ btn.disabled = false; btn.textContent = '🔄 获取开奖'; }
       return;
     }
-    // 填充到输入框
     var nums = [data.one, data.two, data.three, data.four, data.five, data.six];
-    for(var i=0; i<6; i++){
-      var el = document.getElementById('hkNum'+(i+1));
-      if(el) el.value = nums[i];
-    }
-    var teEl = document.getElementById('hkTeMa');
-    if(teEl) teEl.value = data.seven;
-    // 自动确认
-    applyHKResult();
+    var teMa = data.seven;
+    var allNums = nums.concat([teMa]);
+
+    var flatZodiacs = [];
+    var seenZ = {};
+    allNums.forEach(function(n){
+      var z = NUM_TO_ZODIAC[n];
+      if(z && !seenZ[z]){ seenZ[z] = true; flatZodiacs.push(z); }
+    });
+
+    hkResult = {
+      numbers: allNums,
+      teMa: teMa,
+      flatZodiacs: flatZodiacs,
+      timestamp: new Date().toLocaleString('zh-CN', {hour12:false})
+    };
     hkLastExpect = data.expect;
-    if(statusEl) statusEl.textContent = '✓ ' + data.expect + '期 ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
-    if(!silent) toast('已获取香港第'+data.expect+'期开奖');
+    renderHKLiveBar();
+    if(!silent) toast('已获取香港第' + data.expect + '期开奖');
   } catch(e){
-    if(statusEl) statusEl.textContent = '获取失败';
-    if(!silent) toast('香港开奖获取失败: '+e.message);
+    if(!silent) toast('香港开奖获取失败: ' + e.message);
   }
   if(btn){ btn.disabled = false; btn.textContent = '🔄 获取开奖'; }
 }
-
-// 手动输入时自动确认：7个框都填满后自动apply
-function checkHKFieldsAuto(){
-  var allFilled = true;
-  var teMa = document.getElementById('hkTeMa');
-  if(!teMa || !teMa.value.trim()) allFilled = false;
-  for(var i=1; i<=6; i++){
-    var el = document.getElementById('hkNum'+i);
-    if(!el || !el.value.trim()) allFilled = false;
-  }
-  if(allFilled && !hkResult) applyHKResult();
-}
-['hkTeMa','hkNum1','hkNum2','hkNum3','hkNum4','hkNum5','hkNum6'].forEach(function(id){
-  var el = document.getElementById(id);
-  if(el) el.addEventListener('input', checkHKFieldsAuto);
-});
 
 function startHKPolling(){
   if(hkFetchTimer) return;
