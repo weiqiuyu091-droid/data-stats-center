@@ -304,6 +304,36 @@ app.get('/api/pc6-list', function(req, res) {
   });
 });
 
+// 源站资源代理 (解决TLS/地区限制)
+app.get('/api/proxy', function(req, res) {
+  var target = req.query.url;
+  if(!target || !target.startsWith('https://0oe0t6wiqqjs.lhc888.im/')){
+    return res.status(400).json({ error: '无效URL' });
+  }
+  https.get(target, {
+    rejectUnauthorized: false,
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+  }, function(resp) {
+    var contentType = resp.headers['content-type'] || 'text/plain';
+    res.set('Content-Type', contentType);
+    if(resp.statusCode >= 300 && resp.statusCode < 400){
+      // Follow redirect
+      var loc = resp.headers.location;
+      if(loc){
+        https.get(loc, {rejectUnauthorized:false, headers:{'User-Agent':'Mozilla/5.0'}}, function(r2){
+          res.status(r2.statusCode);
+          r2.pipe(res);
+        }).on('error', function(){ res.status(502).json({error:'redirect failed'}); });
+        return;
+      }
+    }
+    res.status(resp.statusCode);
+    resp.pipe(res);
+  }).on('error', function(e) {
+    res.status(502).json({ error: 'Proxy unreachable: ' + e.message });
+  });
+});
+
 // 管理认证
 app.post('/api/admin/auth', function(req, res) {
   if (req.body.password === ADMIN_PASSWORD) {
