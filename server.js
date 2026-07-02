@@ -282,6 +282,28 @@ app.get('/api/hk-latest', function(req, res) {
   });
 });
 
+// PC蛋蛋(加拿大28)开奖列表代理
+app.get('/api/pc6-list', function(req, res) {
+  var pageNum = req.query.pageNum || 1;
+  var pageSize = Math.min(req.query.pageSize || 50, 200);
+  https.get('https://0oe0t6wiqqjs.lhc888.im/prod-api/system/pc6/pc6List?pageNum=' + pageNum + '&pageSize=' + pageSize, {
+    rejectUnauthorized: false,
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+  }, function(resp) {
+    var body = '';
+    resp.on('data', function(c) { body += c; });
+    resp.on('end', function() {
+      try {
+        res.json(JSON.parse(body));
+      } catch(e) {
+        res.status(502).json({ error: 'Invalid JSON' });
+      }
+    });
+  }).on('error', function(e) {
+    res.status(502).json({ error: 'API unreachable' });
+  });
+});
+
 // 管理认证
 app.post('/api/admin/auth', function(req, res) {
   if (req.body.password === ADMIN_PASSWORD) {

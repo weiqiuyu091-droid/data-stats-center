@@ -495,14 +495,18 @@ textarea:focus { outline:none; border-color:#3b82f6; }
 
 <div class="card card-first" id="tabPicker" style="display:none;">
   <div class="card-header">
-    <span class="card-title">挑码数据参考 (macaulottery.com/picker)</span>
+    <span class="card-title">挑码参考 — PC蛋蛋走势</span>
     <span style="display:flex;gap:8px;align-items:center;">
-      <input type="file" id="pickerFileInput" accept=".json" style="display:none;" onchange="window._pickerFileChange(this)">
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('pickerFileInput').click()">导入JSON</button>
-      <span style="font-size:.7rem;color:#64748b;" id="pickerStatus">未加载</span>
+      <select id="pc6PageSize" onchange="fetchPC6Data()" style="background:#1e293b;border:1px solid #475569;color:#e2e8f0;padding:4px 8px;border-radius:4px;font-size:.75rem;">
+        <option value="30">近30期</option>
+        <option value="50" selected>近50期</option>
+        <option value="100">近100期</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="fetchPC6Data()">🔄 刷新</button>
+      <span style="font-size:.7rem;color:#64748b;" id="pc6Status">等待加载</span>
     </span>
   </div>
-  <div id="pickerPanel"><div style="color:#64748b;font-size:.75rem;text-align:center;padding:20px;">暂无挑码数据<br>请使用 <b>picker_scraper.html</b> 在 macaulottery.com/picker 页面抓取数据后导入</div></div>
+  <div id="pickerPanel"><div style="color:#64748b;font-size:.75rem;text-align:center;padding:20px;">点击"刷新"加载PC蛋蛋开奖数据</div></div>
 </div>
 <div class="card card-first" id="tabCombo" style="display:none;">
   <div class="card-header">
@@ -2578,89 +2582,137 @@ function adminSendCmd(cid, cmd, params){
   });
 
   
-  // ===== Picker Integration =====
-  setupPickerImport();
-  
-  function setupPickerImport(){
-    const fi = document.getElementById('pickerFileInput');
-    if(!fi) return;
-    // Override the dummy handler
-    fi.onchange = null;
-    fi.addEventListener('change', function(e){
-      const file = e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = function(ev){
-        try {
-          const raw = JSON.parse(ev.target.result);
-          const ref = parsePickerData(raw);
-          document.getElementById('pickerStatus').textContent = '✓ 已加载';
-          document.getElementById('pickerStatus').style.color = '#4ade80';
-          renderPickerRefPanel(ref);
-          toast('挑码数据已导入');
-        } catch(err) {
-          document.getElementById('pickerStatus').textContent = '✗ 格式错误';
-          document.getElementById('pickerStatus').style.color = '#ef4444';
-          toast('数据格式错误');
-        }
-      };
-      reader.readAsText(file);
+  // ===== PC蛋蛋挑码参考 =====
+  var pc6Data = [];
+  var pc6Timer = null;
+
+  async function fetchPC6Data(){
+    var sel = document.getElementById('pc6PageSize');
+    var size = sel ? parseInt(sel.value) : 50;
+    var statusEl = document.getElementById('pc6Status');
+    if(statusEl){ statusEl.textContent = '加载中...'; statusEl.style.color = '#f59e0b'; }
+    try {
+      var resp = await fetch('/api/pc6-list?pageNum=1&pageSize=' + size);
+      if(!resp.ok) throw new Error('API error');
+      var json = await resp.json();
+      if(json.code !== 200 || !json.rows) throw new Error('数据异常');
+      pc6Data = json.rows;
+      renderPC6Panel();
+      if(statusEl){ statusEl.textContent = '✓ ' + pc6Data.length + '期 ' + new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); statusEl.style.color = '#4ade80'; }
+    } catch(e){
+      if(statusEl){ statusEl.textContent = '加载失败'; statusEl.style.color = '#ef4444'; }
+    }
+  }
+
+  function renderPC6Panel(){
+    var panel = document.getElementById('pickerPanel');
+    if(!panel || !pc6Data.length) return;
+
+    // 统计特码频率
+    var teCount = {};
+    var zodiacCount = {};
+    var waveCount = {};
+    var dsCount = {};  // 单双
+    var dxCount = {};  // 大小
+    pc6Data.forEach(function(r){
+      var t = r.te;
+      teCount[t] = (teCount[t] || 0) + 1;
+      var z = r.teshengxiao;
+      if(z) zodiacCount[z] = (zodiacCount[z] || 0) + 1;
+      var w = r.bose;
+      if(w) waveCount[w] = (waveCount[w] || 0) + 1;
+      var ds = r.danshuang;
+      if(ds) dsCount[ds] = (dsCount[ds] || 0) + 1;
+      var dx = r.daxiao;
+      if(dx) dxCount[dx] = (dxCount[dx] || 0) + 1;
     });
-  }
-  
-  function parsePickerData(raw){
-    const ref = {hot:[], cold:[], recommend:[], missing:[], zodiacHot:{}, frequency:{}};
-    // Scan all objects for relevant data
-    function scan(obj){
-      if(!obj || typeof obj !== 'object') return;
-      if(obj.hotNumbers && Array.isArray(obj.hotNumbers)) ref.hot = [...new Set([...ref.hot, ...normalizeNums(obj.hotNumbers)])];
-      if(obj.coldNumbers && Array.isArray(obj.coldNumbers)) ref.cold = [...new Set([...ref.cold, ...normalizeNums(obj.coldNumbers)])];
-      if(obj.recommend && Array.isArray(obj.recommend)) ref.recommend = [...new Set([...ref.recommend, ...normalizeNums(obj.recommend)])];
-      if(obj.missing && Array.isArray(obj.missing)) ref.missing = [...new Set([...ref.missing, ...normalizeNums(obj.missing)])];
-      if(obj.frequency && typeof obj.frequency === 'object') Object.entries(obj.frequency).forEach(([k,v])=>{ const n=normalizeNum(k); if(n) ref.frequency[n]=(ref.frequency[n]||0)+(parseInt(v)||0); });
-    }
-    scan(raw); if(raw.api) raw.api.forEach(scan);
-    if(raw.dom && raw.dom.numbers1to49) ref.domNumbers = raw.dom.numbers1to49;
-    return ref;
-  }
-  
-  function normalizeNum(n){
-    if(typeof n === 'number') return n>=1&&n<=49 ? n.toString().padStart(2,'0') : null;
-    if(typeof n === 'string'){ const m=n.match(/(\d{1,2})/); if(m){ const num=parseInt(m[1]); return num>=1&&num<=49 ? num.toString().padStart(2,'0') : null; }}
-    return null;
-  }
-  function normalizeNums(arr){ return arr.map(n=>normalizeNum(n)).filter(Boolean); }
-  
-  function renderPickerRefPanel(ref){
-    const panel = document.getElementById('pickerPanel');
-    if(!panel) return;
-    let h = '<div style="font-size:.75rem;">';
-    if(ref.hot.length) h += numRow('\u{1F525}热门', ref.hot, '#ef4444');
-    if(ref.cold.length) h += numRow('❄冷门', ref.cold, '#3b82f6');
-    if(ref.recommend.length) h += numRow('⭐推荐', ref.recommend, '#22c55e');
-    if(ref.missing.length) h += numRow('⏳遗漏', ref.missing, '#f59e0b');
-    if(ref.domNumbers && ref.domNumbers.length) h += numRow('📋页面号码', ref.domNumbers, '#a78bfa');
-    
-    // Compare with current bets
-    if(typeof numberBets !== 'undefined' && Object.keys(numberBets).some(k=>numberBets[k]>0)){
-      const betSet = new Set(Object.keys(numberBets).filter(k=>numberBets[k]>0));
-      const missedHot = ref.hot.filter(n=>!betSet.has(n));
-      const coveredHot = ref.hot.filter(n=>betSet.has(n));
-      if(missedHot.length){
-        h += '<div style="margin-top:6px;color:#fbbf24;font-size:.7rem;">⚠ 热门未覆盖: '+missedHot.map(n=>'<span style="background:#1e293b;border:1px solid #fbbf24;padding:1px 4px;border-radius:3px;margin:1px;">'+n+'</span>').join(' ')+'</div>';
-      }
-      if(coveredHot.length){
-        h += '<div style="margin-top:4px;color:#4ade80;font-size:.7rem;">✓ 热门已覆盖: '+coveredHot.join(', ')+'</div>';
-      }
-    }
-    
+
+    // 特码冷热排序
+    var teSorted = Object.entries(teCount).sort(function(a,b){ return b[1] - a[1]; });
+    var topN = teSorted.slice(0, 8);     // 最热8个
+    var bottomN = teSorted.slice(-8);     // 最冷8个
+
+    var h = '';
+
+    // 特码冷热分析
+    h += '<div style="margin-bottom:10px;font-size:.75rem;">';
+    h += '<div style="color:#ef4444;margin-bottom:4px;">🔥 热号 ' + topN.map(function(e){ return '<span style="background:#1e293b;border:1px solid #ef4444;padding:1px 5px;border-radius:3px;margin:1px;">' + e[0] + '(' + e[1] + ')</span>'; }).join(' ') + '</div>';
+    h += '<div style="color:#3b82f6;">❄ 冷号 ' + bottomN.map(function(e){ return '<span style="background:#1e293b;border:1px solid #3b82f6;padding:1px 5px;border-radius:3px;margin:1px;">' + e[0] + '(' + e[1] + ')</span>'; }).join(' ') + '</div>';
     h += '</div>';
+
+    // 生肖分布
+    var zodiacOrder = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
+    h += '<div style="margin-bottom:10px;font-size:.75rem;color:#fbbf24;">🐉 生肖: ';
+    h += zodiacOrder.map(function(z){
+      var c = zodiacCount[z] || 0;
+      var pct = pc6Data.length ? (c/pc6Data.length*100).toFixed(0) : 0;
+      return '<span style="margin:0 2px;">' + z + ' <b>' + c + '</b>(' + pct + '%)</span>';
+    }).join('');
+    h += '</div>';
+
+    // 波色 + 单双大小
+    h += '<div style="margin-bottom:10px;font-size:.75rem;">';
+    h += '<span style="color:#ef4444;">红 ' + (waveCount['红']||0) + '</span> ';
+    h += '<span style="color:#22c55e;">绿 ' + (waveCount['绿']||0) + '</span> ';
+    h += '<span style="color:#3b82f6;">蓝 ' + (waveCount['蓝']||0) + '</span> | ';
+    h += '单 ' + (dsCount['单']||0) + ' 双 ' + (dsCount['双']||0) + ' | ';
+    h += '大 ' + (dxCount['大']||0) + ' 小 ' + (dxCount['小']||0);
+    h += '</div>';
+
+    // 最近开奖记录表
+    var showRows = Math.min(pc6Data.length, 20);
+    h += '<table class="tbl" style="font-size:.7rem;"><thead><tr>';
+    h += '<th>期号</th><th>开奖号</th><th>和值</th><th>特码</th><th>生肖</th><th>波色</th><th>单双</th><th>大小</th><th>时间</th>';
+    h += '</tr></thead><tbody>';
+    for(var i = 0; i < showRows; i++){
+      var r = pc6Data[i];
+      var waveClr = r.bose === '红' ? '#ef4444' : r.bose === '绿' ? '#22c55e' : '#3b82f6';
+      h += '<tr>';
+      h += '<td>' + r.expect + '</td>';
+      h += '<td><b>' + r.opencode + '</b></td>';
+      h += '<td>' + r.he + '</td>';
+      h += '<td style="color:' + waveClr + ';font-weight:700;">' + r.te + '</td>';
+      h += '<td>' + r.teshengxiao + '</td>';
+      h += '<td style="color:' + waveClr + ';">' + r.bose + '</td>';
+      h += '<td>' + r.danshuang + '</td>';
+      h += '<td>' + r.daxiao + '</td>';
+      h += '<td>' + r.opentime + '</td>';
+      h += '</tr>';
+    }
+    h += '</tbody></table>';
+
+    // 投注对比
+    if(typeof numberBets !== 'undefined' && Object.keys(numberBets).some(function(k){ return numberBets[k] > 0; })){
+      var betSet = new Set(Object.keys(numberBets).filter(function(k){ return numberBets[k] > 0; }));
+      var hotNums = topN.map(function(e){ return e[0]; });
+      var missedHot = hotNums.filter(function(n){ return !betSet.has(n); });
+      var coveredHot = hotNums.filter(function(n){ return betSet.has(n); });
+      h += '<div style="margin-top:8px;font-size:.7rem;">';
+      if(coveredHot.length){
+        h += '<div style="color:#4ade80;">✓ 热号已覆盖: ' + coveredHot.join(', ') + '</div>';
+      }
+      if(missedHot.length){
+        h += '<div style="color:#fbbf24;">⚠ 热号未覆盖: ' + missedHot.map(function(n){ return '<span style="background:#1e293b;border:1px solid #fbbf24;padding:1px 4px;border-radius:3px;margin:1px;">' + n + '</span>'; }).join(' ') + '</div>';
+      }
+      h += '</div>';
+    }
+
     panel.innerHTML = h;
   }
-  
-  function numRow(label, nums, color){
-    return '<div style="margin-bottom:6px;"><span style="color:'+color+';">'+label+':</span> '+nums.map(n=>'<span style="background:#1e293b;border:1px solid '+color+';padding:1px 5px;border-radius:3px;margin:1px;">'+n+'</span>').join(' ')+'</div>';
-  }
+
+  // 切换到挑码Tab时自动加载
+  var origSwitchTab = switchTab;
+  switchTab = function(tab){
+    origSwitchTab(tab);
+    if(tab === 'picker' && !pc6Data.length) fetchPC6Data();
+  };
+
+  // 每3分钟自动刷新
+  pc6Timer = setInterval(function(){
+    if(document.getElementById('tabPicker').style.display !== 'none' && pc6Data.length){
+      fetchPC6Data();
+    }
+  }, 180000);
   
   // 页面加载后自动开始刷新（不再需要手动点击按钮）
   setTimeout(function(){
