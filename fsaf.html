@@ -1273,8 +1273,8 @@ function analyze(){
     subLines.forEach(function(sl){
       // Strip sender prefix before mode check
       var slNoSender = sl.replace(/^[^\d]{1,15}?[：:]\s*/,'').trim();
-      if(/^(?:香港|港|香)[\s，：:。、]/.test(slNoSender)) curHKMode = true;
-      else if(/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)[\s，：:。、]/.test(slNoSender)) curHKMode = false;
+      if(/^(?:香港|港|香)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender)) curHKMode = true;
+      else if(/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender)) curHKMode = false;
       expandLine(sl).forEach(function(sr){
         const r=processRule(sr);
         if(r){
