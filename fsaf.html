@@ -1690,9 +1690,12 @@ function renderNumGrid(winNums, teMa){
   const grid=document.getElementById('numGrid'); if(!grid) return;
   grid.innerHTML='';
 
-  // 读取扣除文本（仅影响号码明细显示，不影响投注分析）
-  var subInput = document.getElementById('subtractInput');
-  var subMap = subInput ? parseSubtractMap(subInput.value) : {};
+  // 从扣除记录累计计算扣除映射（仅影响号码明细显示，不影响投注分析）
+  var subMap = {};
+  subtractHistory.forEach(function(rec){
+    var m = parseSubtractMap(rec.text);
+    for(var k in m){ subMap[k] = (subMap[k]||0) + m[k]; }
+  });
 
   // 计算投注额排名，找出Top 10（基于扣除后净值）
   var ranked = [];
