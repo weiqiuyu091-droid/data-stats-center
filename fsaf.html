@@ -1653,7 +1653,7 @@ function parseSubtractMap(text){
     if(!items.length) continue;
     var targets = getTargets(items);
     targets.forEach(function(n){
-      map[n] = (map[n]||0) + parseFloat((amount/targets.length).toFixed(2));
+      map[n] = (map[n]||0) + amount;
     });
   }
   return map;
