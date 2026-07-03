@@ -171,7 +171,8 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 .zodiac-group:hover { border-color:rgba(0,0,0,.10); transform:translateY(-1px); }
 .zodiac-label { font-size:.85rem; font-weight:700; color:#fbbf24; margin-bottom:5px; text-align:center; letter-spacing:1px; }
 .zodiac-nums { display:flex; gap:3px; }
-.num-cell { border-radius:5px; padding:5px 3px; text-align:center; flex:1; transition:transform .15s; }
+.num-cell { border-radius:5px; padding:5px 3px; text-align:center; flex:1; transition:transform .15s; position:relative; }
+.num-cell .top10-badge { position:absolute; top:1px; right:1px; font-size:.5rem; background:#ef4444; color:#fff; padding:0 2px; border-radius:2px; line-height:1.3; font-weight:700; }
 .num-cell .n { font-size:.85rem; color:#52575e; }
 .num-cell .v { font-size:.7rem; color:#7a7f87; margin-top:1px; min-height:16px; }
 
@@ -190,13 +191,13 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 .num-cell.has-bet { border-color:#2563eb; }
 .num-cell.has-bet .n { color:#1e3a5f; font-weight:700; }
 .num-cell.has-bet .v { color:#2563eb; font-weight:600; }
-.num-cell.tema { border-color:#22c55e; background:#052e16; box-shadow:0 0 18px rgba(34,197,94,.65),0 0 4px rgba(34,197,94,.35); }
+.num-cell.tema { border-color:#22c55e; box-shadow:0 0 18px rgba(34,197,94,.65),0 0 4px rgba(34,197,94,.35); }
 .num-cell.tema .n { color:#4ade80; font-weight:700; font-size:.95rem; }
 .num-cell.tema .v { color:#4ade80; }
-.num-cell.alert-top10 { border-color:#ef4444; background:#450a0a; box-shadow:0 0 6px rgba(239,68,68,.35); }
+.num-cell.alert-top10 { border-color:#ef4444; box-shadow:0 0 6px rgba(239,68,68,.35); }
 .num-cell.alert-top10 .n { color:#f87171; font-weight:700; }
 .num-cell.alert-top10 .v { color:#fca5a5; }
-.num-cell.alert-tema { border-color:#f59e0b; background:linear-gradient(135deg,#7f1d1d 50%,#166534 50%); box-shadow:0 0 18px rgba(245,158,11,.6),0 0 4px rgba(245,158,11,.3); }
+.num-cell.alert-tema { border-color:#f59e0b; box-shadow:0 0 18px rgba(245,158,11,.6),0 0 4px rgba(245,158,11,.3); }
 .num-cell.alert-tema .n { color:#fbbf24; font-weight:700; font-size:.95rem; }
 .num-cell.alert-tema .v { color:#fca5a5; }
 
@@ -1672,7 +1673,7 @@ function renderNumGrid(winNums, teMa){
         cls += ' has-bet';
       }
       var cell = document.createElement('div'); cell.className = cls;
-      cell.innerHTML = '<div class="n">'+n+'</div><div class="v">'+(v||'')+'</div>';
+      cell.innerHTML = '<div class="n">'+n+'</div><div class="v">'+(v||'')+'</div>' + (isTop10 ? '<span class="top10-badge">top10</span>' : '');
       numsDiv.appendChild(cell);
     });
 
