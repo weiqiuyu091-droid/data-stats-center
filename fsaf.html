@@ -1626,14 +1626,14 @@ function parseSubtractMap(text){
   if(!text || !text.trim()) return map;
   text = stripSender(text);
   text = stripMacau(text);
-  var tokens = norm(text).split(/\s+/).filter(Boolean);
-  tokens.forEach(function(token){
-    var re = /^(.+?)各数(\d+(?:\.\d+)?)/;
-    var m = token.match(re);
-    if(!m) return;
-    var itemsStr = m[1];
+  var normalized = norm(text);
+  // 全文匹配：items各/各数amount，兼容点号展开后的空格
+  var re = /([^各]+?)各(?:数)?\s*(\d+(?:\.\d+)?)\s*(?:斤|米|块)?/g;
+  var m;
+  while((m = re.exec(normalized)) !== null){
+    var itemsStr = m[1].trim();
     var amount = parseFloat(m[2]);
-    if(!amount || isNaN(amount)) return;
+    if(!amount || isNaN(amount) || !itemsStr) continue;
     var items = [];
     var parts = itemsStr.split(/\s+/).filter(Boolean);
     parts.forEach(function(part){
@@ -1647,12 +1647,12 @@ function parseSubtractMap(text){
         if(!hasZod && /^\d{1,2}$/.test(part)) items.push(part);
       }
     });
-    if(!items.length) return;
+    if(!items.length) continue;
     var targets = getTargets(items);
     targets.forEach(function(n){
       map[n] = (map[n]||0) + parseFloat((amount/targets.length).toFixed(2));
     });
-  });
+  }
   return map;
 }
 
