@@ -1670,12 +1670,12 @@ function renderNumGrid(winNums, teMa){
   var subInput = document.getElementById('subtractInput');
   var subMap = subInput ? parseSubtractMap(subInput.value) : {};
 
-  // 计算投注额排名，找出Top 10（基于原始numberBets）
+  // 计算投注额排名，找出Top 10（基于扣除后净值）
   var ranked = [];
   for(var i=1;i<=49;i++){
     var n=i.toString().padStart(2,'0');
-    var rawV=numberBets[n]||0;
-    ranked.push({num:n, bet:rawV});
+    var netV = Math.max(0, (numberBets[n]||0) - (subMap[n]||0));
+    ranked.push({num:n, bet:netV});
   }
   ranked.sort(function(a,b){ return b.bet - a.bet; });
   var top10Set = new Set();
