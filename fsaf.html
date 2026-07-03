@@ -1623,6 +1623,7 @@ function renderNumGrid(winNums, teMa){
   }
   ranked.sort(function(a,b){ return b.bet - a.bet; });
   var top10Set = new Set();
+  var rankMap = {};
   var top10Threshold = 0;
   for(var r=0; r<10 && r<ranked.length; r++){
     if(ranked[r].bet > 0){
@@ -1636,6 +1637,14 @@ function renderNumGrid(winNums, teMa){
     if(ranked[r].bet === top10Threshold && ranked[r].bet > 0){
       top10Set.add(ranked[r].num);
     }
+  }
+
+  // 排名映射（同金额同排名）
+  var rk = 1;
+  for(var r=0; r<ranked.length; r++){
+    if(!top10Set.has(ranked[r].num)) continue;
+    if(r>0 && ranked[r].bet < ranked[r-1].bet) rk = r+1;
+    rankMap[ranked[r].num] = rk;
   }
 
   // 按生肖分组渲染
@@ -1673,7 +1682,8 @@ function renderNumGrid(winNums, teMa){
         cls += ' has-bet';
       }
       var cell = document.createElement('div'); cell.className = cls;
-      cell.innerHTML = '<div class="n">'+n+'</div><div class="v">'+(v||'')+'</div>' + (isTop10 ? '<span class="top10-badge">top10</span>' : '');
+      var rkBadge = rankMap[n] ? '<span class="top10-badge">'+rankMap[n]+'</span>' : '';
+      cell.innerHTML = '<div class="n">'+n+'</div><div class="v">'+(v||'')+'</div>' + rkBadge;
       numsDiv.appendChild(cell);
     });
 
