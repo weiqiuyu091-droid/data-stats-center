@@ -1252,6 +1252,32 @@ function processRule(rawRule){
 }
 
 // ===== Analyze =====
+function splitByModeMarkers(sl){
+  // Split sub-line at inline mode markers, returning [{text, isHK}] segments
+  // Handles: "澳门内容  香港内容" or "内容香港 内容"
+  var re = /(?:^|[\s，：:。、\d])(香港|澳门|澳門)(?=[\s，：:。、]|[一-鿿\d]|$)/g;
+  var matches = [];
+  var m;
+  while ((m = re.exec(sl)) !== null) {
+    matches.push({ marker: m[1], idx: m.index + m[0].indexOf(m[1]) });
+  }
+  if (matches.length === 0) return null; // no inline mode switch
+
+  var segs = [];
+  var prev = 0;
+  // First segment (before any marker) = default Macau
+  for (var i = 0; i < matches.length; i++) {
+    var before = sl.substring(prev, matches[i].idx).trim();
+    if (before) segs.push({ text: before, isHK: i > 0 ? isHKMarker(matches[i-1].marker) : false });
+    prev = matches[i].idx;
+  }
+  // Last segment
+  var after = sl.substring(prev).trim();
+  if (after) segs.push({ text: after, isHK: isHKMarker(matches[matches.length-1].marker) });
+  return segs.length > 1 ? segs : null;
+}
+function isHKMarker(m){ return /香港|港|香/.test(m); }
+
 function analyze(){
   const input=document.getElementById('inputRule').value.trim();
   if(!input){ alert('请输入投注规则！'); return; }
@@ -1271,27 +1297,53 @@ function analyze(){
     const subLines=rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
     var curHKMode = false; // Default Macau, stateful within a line
     subLines.forEach(function(sl){
-      // Strip sender prefix before mode check
-      var slNoSender = sl.replace(/^[^\d]{1,15}?[：:]\s*/,'').trim();
-      if(/^(?:香港|港|香)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /香港/.test(slNoSender) || /(?:[\s\d]|^)(?:港|香)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = true;
-      else if(/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /澳门|澳門/.test(slNoSender) || /(?:[\s\d]|^)(?:澳特|利来|门特|新澳|新奥)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = false;
+      // Try inline mode switching first (e.g. "澳门内容  香港内容")
+      var segs = splitByModeMarkers(sl);
+      if (segs) {
+        segs.forEach(function(seg) {
+          var mode = seg.isHK;
+          expandLine(seg.text).forEach(function(sr){
+            var r = processRule(sr);
+            if (r) {
+              r.msgIndex = lineIdx;
+              r.hk = mode;
+              msgBet += r.bet;
+              if (mode) { hkBetSummary.push(r); }
+              else { betSummary.push(r); }
+              if (mode) {
+                if (r.type === 'nums' && r.targets) r.targets.forEach(function(t) { hkNumberBets[t] = (hkNumberBets[t] || 0) + parseFloat((r.bet / r.targets.length).toFixed(2)); });
+                else if (r.type === 'flat' && r.targets) r.targets.forEach(function(z) { hkFlatBets[z] = (hkFlatBets[z] || 0) + parseFloat((r.bet / r.targets.length).toFixed(2)); });
+                else if (r.type === 'special_zodiac' && r.targets) r.targets.forEach(function(z) { hkSpecialZodiacBets[z] = (hkSpecialZodiacBets[z] || 0) + parseFloat((r.bet / r.targets.length).toFixed(2)); });
+                else if (r.type === 'combo') hkComboBets.push(r);
+                else if (r.type === 'n3' || r.type === 'n2') hkNumComboBets.push(r);
+              }
+            }
+          });
+        });
+        return; // skip default processing
+      }
+      // Default: prefix-based mode detection
+      var slNoSender = sl.replace(/^[^\d]{1,15}?[：:]\s*/, '').trim();
+      if (/^(?:香港|港|香)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /香港/.test(slNoSender) || /(?:[\s\d]|^)(?:港|香)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = true;
+      else if (/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /澳门|澳門/.test(slNoSender) || /(?:[\s\d]|^)(?:澳特|利来|门特|新澳|新奥)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = false;
       expandLine(sl).forEach(function(sr){
-        const r=processRule(sr);
-        if(r){
+        var r = processRule(sr);
+        if (r) {
           r.msgIndex = lineIdx;
           r.hk = curHKMode;
           msgBet += r.bet;
-          if(curHKMode){ hkBetSummary.push(r); }
+          if (curHKMode) { hkBetSummary.push(r); }
           else { betSummary.push(r); }
-          if(curHKMode){
-            if(r.type==='nums'&&r.targets) r.targets.forEach(function(t){ hkNumberBets[t]=(hkNumberBets[t]||0)+parseFloat((r.bet/r.targets.length).toFixed(2)); });
-            else if(r.type==='flat'&&r.targets) r.targets.forEach(function(z){ hkFlatBets[z]=(hkFlatBets[z]||0)+parseFloat((r.bet/r.targets.length).toFixed(2)); });
-            else if(r.type==='special_zodiac'&&r.targets) r.targets.forEach(function(z){ hkSpecialZodiacBets[z]=(hkSpecialZodiacBets[z]||0)+parseFloat((r.bet/r.targets.length).toFixed(2)); });
-            else if(r.type==='combo') hkComboBets.push(r);
-            else if(r.type==='n3'||r.type==='n2') hkNumComboBets.push(r);
+          if (curHKMode) {
+            if (r.type === 'nums' && r.targets) r.targets.forEach(function(t) { hkNumberBets[t] = (hkNumberBets[t] || 0) + parseFloat((r.bet / r.targets.length).toFixed(2)); });
+            else if (r.type === 'flat' && r.targets) r.targets.forEach(function(z) { hkFlatBets[z] = (hkFlatBets[z] || 0) + parseFloat((r.bet / r.targets.length).toFixed(2)); });
+            else if (r.type === 'special_zodiac' && r.targets) r.targets.forEach(function(z) { hkSpecialZodiacBets[z] = (hkSpecialZodiacBets[z] || 0) + parseFloat((r.bet / r.targets.length).toFixed(2)); });
+            else if (r.type === 'combo') hkComboBets.push(r);
+            else if (r.type === 'n3' || r.type === 'n2') hkNumComboBets.push(r);
           }
         }
       });
+    });
     });
     messageSummary.push({
       index: lineIdx + 1,
