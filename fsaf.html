@@ -1018,6 +1018,7 @@ function getTargets(items){
   items.forEach(item=>{
     if(/^\d{1,2}$/.test(item)){ const n=parseInt(item); if(n>=1&&n<=49) t.push(n.toString().padStart(2,'0')); }
     else if(ZODIAC_MAP[item]) ZODIAC_MAP[item].forEach(n=>t.push(n));
+    else if(WAVE_COLOR_MAP[item]) WAVE_COLOR_MAP[item].forEach(n=>t.push(n));
   });
   return t;
 }
