@@ -611,12 +611,13 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 
 <!-- 投注明细表 -->
 <div class="card card-first" id="tabDetail" style="display:none;">
-  <div class="card-header"><span class="card-title">号码分布 (按生肖)</span></div>
+  <div class="card-header"><span class="card-title">号码分布 (按生肖)</span><span id="numGridTotal" style="font-size:.8rem;color:#2563eb;font-weight:700;margin-left:auto;"></span></div>
   <div class="detail-layout" style="display:flex;gap:12px;align-items:flex-start;">
     <div class="num-grid" id="numGrid" style="flex:1;min-width:0;"></div>
     <div class="subtract-panel" style="width:180px;flex-shrink:0;">
       <textarea id="subtractInput" placeholder="利来扣除&#10;例：猴牛各数三十斤&#10;    鸡各数五十斤" style="width:100%;height:160px;font-size:.75rem;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:8px;resize:vertical;background:rgba(255,255,255,.60);color:#5a5f67;font-family:inherit;box-sizing:border-box;"></textarea>
       <button onclick="refreshNumGrid()" style="margin-top:6px;width:100%;padding:7px;font-size:.75rem;border:1px solid #ef4444;border-radius:5px;background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-weight:600;">确定扣除</button>
+      <div id="subtractHistory" style="margin-top:8px;"></div>
       <div style="font-size:.65rem;color:#9ca3af;margin-top:4px;">扣除仅在号码明细生效，不影响投注分析</div>
     </div>
   </div>
@@ -769,6 +770,7 @@ let flatBets = {};          // zodiac -> total bet amount
 let specialZodiacBets = {}; // 特肖 -> {bet, zodiac}
 let comboBets = [];         // combo entries (zodiac-based)
 let numComboBets = [];      // number combo entries (三中三/二中二)
+let subtractHistory = [];   // 扣除记录: [{text, total}]
 
 let liveResult = null;      // {numbers:[7], teMa, flatZodiacs:[], timestamp}
 let hkResult = null;        // {numbers:[7], teMa, flatZodiacs:[]} — 手动输入香港开奖
@@ -1298,6 +1300,7 @@ function analyze(){
 
   betSummary=[]; hkBetSummary=[];
   messageSummary=[];
+  subtractHistory=[]; renderSubtractHistory();
   numberBets={}; flatBets={}; specialZodiacBets={}; comboBets=[]; numComboBets=[];
   hkNumberBets={}; hkFlatBets={}; hkSpecialZodiacBets={}; hkComboBets=[]; hkNumComboBets=[];
   for(let i=1;i<=49;i++) { numberBets[i.toString().padStart(2,'0')]=0; hkNumberBets[i.toString().padStart(2,'0')]=0; }
@@ -1657,9 +1660,30 @@ function parseSubtractMap(text){
 }
 
 function refreshNumGrid(){
+  var subInput = document.getElementById('subtractInput');
+  var text = subInput ? subInput.value.trim() : '';
+  if(text){
+    var subMap = parseSubtractMap(text);
+    var total = 0; for(var k in subMap){ total += subMap[k]; }
+    subtractHistory.push({text: text, total: Math.round(total*100)/100});
+    subInput.value = '';
+    renderSubtractHistory();
+  }
   var wn = liveResult ? liveResult.numbers : [];
   var tm = liveResult ? liveResult.teMa : null;
   renderNumGrid(wn, tm);
+}
+
+function renderSubtractHistory(){
+  var container = document.getElementById('subtractHistory');
+  if(!container || !subtractHistory.length){ if(container) container.innerHTML=''; return; }
+  var html = '<div style="font-size:.68rem;color:#5a5f67;font-weight:600;margin-bottom:4px;">扣除记录</div>';
+  for(var i=0;i<subtractHistory.length;i++){
+    var rec = subtractHistory[i];
+    var label = rec.text.length>18 ? rec.text.substring(0,18)+'...' : rec.text;
+    html += '<div style="font-size:.62rem;color:#ef4444;padding:2px 4px;margin-bottom:2px;background:rgba(239,68,68,.06);border-radius:3px;display:flex;justify-content:space-between;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+rec.text.replace(/</g,'&lt;')+'">'+(i+1)+'. '+label.replace(/</g,'&lt;')+'</span><span style="flex-shrink:0;margin-left:4px;font-weight:600;">-'+rec.total+'</span></div>';
+  }
+  container.innerHTML = html;
 }
 
 function renderNumGrid(winNums, teMa){
@@ -1672,11 +1696,15 @@ function renderNumGrid(winNums, teMa){
 
   // 计算投注额排名，找出Top 10（基于扣除后净值）
   var ranked = [];
+  var totalNet = 0;
   for(var i=1;i<=49;i++){
     var n=i.toString().padStart(2,'0');
     var netV = Math.max(0, (numberBets[n]||0) - (subMap[n]||0));
+    totalNet += netV;
     ranked.push({num:n, bet:netV});
   }
+  var totalEl = document.getElementById('numGridTotal');
+  if(totalEl) totalEl.textContent = '总额 ' + (Math.round(totalNet*100)/100);
   ranked.sort(function(a,b){ return b.bet - a.bet; });
   var top10Set = new Set();
   var rankMap = {};
