@@ -262,9 +262,9 @@ app.get('/api/live', async function(req, res) {
   }
 });
 
-// 香港六合彩开奖代理 (原子域名已挂，改用根域名)
+// 香港六合彩开奖代理
 app.get('/api/hk-latest', function(req, res) {
-  https.get('https://lhc888.im/prod-api/system/hk/latest', {
+  https.get('https://0oe0t6wiqqjs.lhc888.im/prod-api/system/hk/latest', {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
   }, function(resp) {
     var body = '';
