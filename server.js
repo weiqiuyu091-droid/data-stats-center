@@ -263,8 +263,11 @@ app.get('/api/live', async function(req, res) {
 });
 
 // 香港六合彩开奖代理
-app.get('/api/hk-latest', function(req, res) {
-  https.get('https://0oe0t6wiqqjs.lhc888.im/prod-api/system/hk/latest', {
+const HK_API_URL = 'https://0oe0t6wiqqjs.lhc888.im/prod-api/system/hk/latest';
+const HK_RELAY_URL = 'https://data-stats-center.onrender.com/api/hk-latest?direct=1';
+
+function fetchHKApi(url, res, allowRetry) {
+  https.get(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
   }, function(resp) {
     var body = '';
@@ -277,8 +280,24 @@ app.get('/api/hk-latest', function(req, res) {
       }
     });
   }).on('error', function(e) {
-    res.status(502).json({ error: 'API unreachable' });
+    if (allowRetry) {
+      console.log('[HK] 直连失败，通过 onrender 中继...');
+      fetchHKApi(HK_RELAY_URL, res, false);
+    } else {
+      console.log('[HK] 请求失败: ' + e.message);
+      res.status(502).json({ error: 'API unreachable' });
+    }
   });
+}
+
+app.get('/api/hk-latest', function(req, res) {
+  if (req.query.direct === '1') {
+    // onrender 被中继调用，直接访问 API，不重试
+    fetchHKApi(HK_API_URL, res, false);
+  } else {
+    // 本地：先直连，失败则通过 onrender 中继
+    fetchHKApi(HK_API_URL, res, true);
+  }
 });
 
 // 管理认证
