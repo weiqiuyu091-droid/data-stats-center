@@ -1719,8 +1719,8 @@ function parseSubtractMap(text){
   text = stripSender(text);
   text = stripMacau(text);
   var normalized = norm(text);
-  // 全文匹配：items各/各数amount，兼容点号展开后的空格
-  var re = /([^各]+?)各(?:数)?\s*(\d+(?:\.\d+)?)\s*(?:斤|米|块)?/g;
+  // 全文匹配：items各/各数/个/个数amount，兼容点号展开后的空格
+  var re = /([^各]+?)(?:各数|个数|各|个)\s*(\d+(?:\.\d+)?)\s*(?:斤|米|块)?/g;
   var m;
   while((m = re.exec(normalized)) !== null){
     var itemsStr = m[1].trim();
