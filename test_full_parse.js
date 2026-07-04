@@ -132,6 +132,14 @@ function norm(s){
     return '复式' + lx + ' ' + v + '各' + (cnt || '?') + '组';
   });
   t = t.replace(/(\d+(?:\.\d+)?)\s*一组共(\d+)组/g, '$1各$2组');
+  // 前置三中三/二中二: "三中三12-23-21，16-47-37各11米" → "12.23.21三中三11；16.47.37三中三11"
+  t = t.replace(/^(三中三|二中二)\s*([\d\s\.\-\－\—，,、]+?)各(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, type, groups, val, unit) {
+    var groupList = groups.split(/[，,、]/).filter(Boolean);
+    return groupList.map(function(g) {
+      var nums = g.trim().replace(/[-\－\—\s]+/g, '.').replace(/\.+/g, '.').replace(/^\.|\.$/g, '');
+      return nums + type + val + (unit || '');
+    }).join('；');
+  });
   return t;
 }
 
@@ -232,6 +240,11 @@ function expandDashGe(l){
 
 function expandLine(l){
   const s=norm(stripHK(stripMacau(stripSender(l))));
+  if(s.includes('；')||s.includes(';')){
+    const parts=s.split(/[；;]/).filter(Boolean);
+    const all=[]; parts.forEach(function(p){ expandLine(p).forEach(function(sr){ all.push(sr); }); });
+    return all;
+  }
   const dr=expandDashGe(s);
   if(dr){ return dr.map(d=>{ const c=clean(d); return c||null; }).filter(Boolean); }
   const fuRe = new RegExp(`^([${ZODIAC_CHARS}]+)复式(二连|三连|四连|五连)\\s+(\\d+(?:\\.\\d+)?)\\s*各(\\d+)组`);
