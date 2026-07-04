@@ -57,7 +57,7 @@ function parseCNNum(s){
   }
   return total+tmp;
 }
-function stripSender(s){ return s.replace(/^[^\d]{1,15}?[：:]\s*/,'').trim(); }
+function stripSender(s){ return s.replace(/^([^:：]+)[：:]\s*/,function(m,p){ if(/[\d\.。,，、\-\—\－]/.test(p))return m; if(p.length>5)return m; var zc=(p.match(/[猴鸡狗猪鼠牛虎兔龙蛇马羊]/g)||[]).length; return zc>2?m:''; }).trim(); }
 function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|澳特|澳|利来|门特|门|新)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function stripHK(s){ return s.replace(/^(?:香港|港|香)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 
@@ -137,8 +137,18 @@ function norm(s){
   });
   t = t.replace(/(\d+(?:\.\d+)?)\s*一组共(\d+)组/g, '$1各$2组');
   // 前置三中三/二中二: "三中三12-23-21，16-47-37各11米" → "12.23.21三中三11；16.47.37三中三11"
-  t = t.replace(/^(三中三|二中二)\s*([\d\s\.\-\－\—，,、]+?)各(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, type, groups, val, unit) {
+  // 也支持"组"替代"各": "三中三...组11米"
+  t = t.replace(/^(三中三|二中二)\s*([\d\s\.\-\－\—，,、]+?)[各组](\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, type, groups, val, unit) {
     var groupList = groups.split(/[，,、]/).filter(Boolean);
+    // 如果逗号分隔后只有一组但含空格，说明逗号已被提前替换为空格，按k个号码一组切分
+    if (groupList.length === 1 && /\s/.test(groupList[0])) {
+      var flatNums = groupList[0].trim().split(/\s+/);
+      var k = type === '三中三' ? 3 : 2;
+      groupList = [];
+      for (var i = 0; i < flatNums.length; i += k) {
+        groupList.push(flatNums.slice(i, i + k).join('.'));
+      }
+    }
     return groupList.map(function(g) {
       var nums = g.trim().replace(/[-\－\—\s]+/g, '.').replace(/\.+/g, '.').replace(/^\.|\.$/g, '');
       return nums + type + val + (unit || '');
