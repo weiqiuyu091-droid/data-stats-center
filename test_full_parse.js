@@ -110,6 +110,10 @@ function norm(s){
     .replace(/(\d)([A-Za-z])?[，、](?=[红绿蓝单双大小平特特肖])/g,'$1$2 ').replace(/\s+(各)/g,'$1').replace(/(各)\s+/g,'$1').replace(/\s+/g,' ').trim();
   t = t.replace(/(\d{1,2})\s*下\s*(\d+(?:\.\d+)?)/g,'$1各$2');
   t = t.replace(/下(\d+(?:\.\d+)?)/g,'$1');
+  t = t.replace(/(三中三|二中二)([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, type, cnVal, unit) {
+    var v = cn(cnVal) || parseCNNum(cnVal);
+    return type + (v || '') + unit;
+  });
   t = t.replace(/([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return (v||'')+n2; });
   t = t.replace(/各组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, cnVal){
     var v = cn(cnVal) || parseCNNum(cnVal);
