@@ -177,15 +177,15 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 .num-cell .v { font-size:.7rem; color:#858a93; margin-top:1px; min-height:16px; }
 
 /* ---- 波色底色 (浅色页面对应亮色，清晰可辨) ---- */
-.num-cell.wave-red { background:#fecaca; border:1px solid #ef4444; }
-.num-cell.wave-red .n { color:#991b1b; font-weight:600; }
-.num-cell.wave-red .v { color:#b91c1c; }
-.num-cell.wave-blue { background:#bfdbfe; border:1px solid #3b82f6; }
-.num-cell.wave-blue .n { color:#1e40af; font-weight:600; }
-.num-cell.wave-blue .v { color:#2563eb; }
-.num-cell.wave-green { background:#bbf7d0; border:1px solid #22c55e; }
-.num-cell.wave-green .n { color:#166534; font-weight:600; }
-.num-cell.wave-green .v { color:#16a34a; }
+.num-cell.wave-red { background:linear-gradient(135deg,#ef4444,#b91c1c); border:1px solid #ef4444; box-shadow:0 2px 6px rgba(239,68,68,.25); }
+.num-cell.wave-red .n { color:#fff; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.3); }
+.num-cell.wave-red .v { color:rgba(255,255,255,.80); }
+.num-cell.wave-blue { background:linear-gradient(135deg,#3b82f6,#1d4ed8); border:1px solid #3b82f6; box-shadow:0 2px 6px rgba(59,130,246,.25); }
+.num-cell.wave-blue .n { color:#fff; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.3); }
+.num-cell.wave-blue .v { color:rgba(255,255,255,.80); }
+.num-cell.wave-green { background:linear-gradient(135deg,#22c55e,#15803d); border:1px solid #22c55e; box-shadow:0 2px 6px rgba(34,197,94,.25); }
+.num-cell.wave-green .n { color:#fff; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.3); }
+.num-cell.wave-green .v { color:rgba(255,255,255,.80); }
 
 /* ---- 投注/特码高亮覆盖 ---- */
 .num-cell.has-bet { border-color:#2563eb; }
