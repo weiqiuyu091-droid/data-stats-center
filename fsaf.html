@@ -1291,12 +1291,69 @@ function splitByModeMarkers(sl){
 }
 function isHKMarker(m){ return /香港|港|香/.test(m); }
 
+// 检测新格式日期行（如 "2026年07月04日 21:16"）
+function isMsgDateLine(s){
+  return /^\d{4}年\d{2}月\d{2}日\s+\d{2}:\d{2}$/.test(s.trim());
+}
+
+// 将新格式（带发送者+日期头部）的多行消息合并为逻辑消息
+// 新格式示例：
+//   利来
+//   2026年07月04日 21:16
+//   08.32.09.21.11.47各20
+// 返回: [{content:"08.32.09.21.11.47各20", displayText:"08.32.09.21.11.47各20"}, ...]
+function groupNewFormatMessages(lines){
+  var dateCount = 0;
+  for(var i=0;i<lines.length;i++){ if(isMsgDateLine(lines[i])) dateCount++; }
+  if(dateCount===0) return null; // 旧格式，无需分组
+
+  var messages = [];
+  var current = [];
+  var collecting = false;
+
+  for(var i=0;i<lines.length;i++){
+    var line = lines[i].trim();
+    if(!line) continue;
+
+    if(isMsgDateLine(line)){
+      if(current.length>0){
+        messages.push({content:current.join('；'), displayText:current.join('\n')});
+        current=[];
+      }
+      collecting=true;
+      continue;
+    }
+
+    if(!collecting) continue;
+
+    // 跳过发送者名称行（纯文字、短、不带冒号、后跟日期行）
+    if(i+1<lines.length && isMsgDateLine(lines[i+1].trim()) && !/[:：]/.test(line) && !/\d/.test(line)){
+      continue;
+    }
+
+    current.push(line);
+  }
+
+  if(current.length>0){
+    messages.push({content:current.join('；'), displayText:current.join('\n')});
+  }
+
+  return messages.length>0 ? messages : null;
+}
+
 function analyze(){
   const input=document.getElementById('inputRule').value.trim();
   if(!input){ alert('请输入投注规则！'); return; }
 
   const text=input.replace(/\r\n/g,'\n').replace(/　/g,' ').replace(/[ \t]+/g,' ');
-  const rawLines=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  var rawLines=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+
+  // 检测并处理新格式（带发送者+日期头部）
+  var groupedMessages = groupNewFormatMessages(rawLines);
+  var useNewFormat = groupedMessages !== null;
+  if(useNewFormat){
+    rawLines = groupedMessages.map(function(m){ return m.content; });
+  }
 
   betSummary=[]; hkBetSummary=[];
   messageSummary=[];
@@ -1358,17 +1415,19 @@ function analyze(){
         }
       });
     });
+    var displayText = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
+    var fullText = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
     messageSummary.push({
       index: lineIdx + 1,
-      text: rawLine.length > 80 ? rawLine.substring(0, 80) + '...' : rawLine,
-      fullText: rawLine,
+      text: displayText.length > 80 ? displayText.substring(0, 80) + '...' : displayText,
+      fullText: fullText,
       totalBet: Math.round(msgBet * 100) / 100
     });
   });
 
   renderAll();
   renderMsgSummary();
-  toast('已解析 ' + (betSummary.length+hkBetSummary.length) + ' 条投注 (澳'+betSummary.length+' + 港'+hkBetSummary.length+')，共 ' + messageSummary.length + ' 条消息');
+  toast('已解析 ' + (betSummary.length+hkBetSummary.length) + ' 条投注 (澳'+betSummary.length+' + 港'+hkBetSummary.length+')，共 ' + messageSummary.length + ' 条消息' + (useNewFormat ? ' (新格式)' : ''));
 }
 
 // ===== Calculate win/loss =====
