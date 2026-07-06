@@ -85,6 +85,7 @@ function norm(s){
     .replace(/元/g,'块')
     .replace(/复试/g,'复式')
     .replace(/\d+期\s*/g,'')
+    .replace(/每个号码/g, '各数')
     .replace(/号个/g,'号各').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/号\/(\d)/g,'号$1')
     .replace(/蚊/g,'')
     .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); })
@@ -109,6 +110,7 @@ function norm(s){
     .replace(/(\d{1,2})\s*([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, (m,n1,n2,n3)=>n1+'各'+cn(n2)+n3)
     .replace(/(\d{1,2})\s*[-—－]+\s*(\d+(?:\.\d+)?)\s*(斤|米|块)/g,'$1各$2$3')
     .replace(/(\d{1,2})\s*[-—－]{2,}\s*(\d+(?:\.\d+)?)/g,'$1各$2').replace(/[*、]+/g,' ').replace(/[-—－]+/g,' ')
+    .replace(/([斤米块])\s*，/g, '$1；')
     .replace(/(\d)([A-Za-z])?[，、](?=[红绿蓝单双大小平特特肖])/g,'$1$2 ').replace(/\s+(各)/g,'$1').replace(/(各)\s+/g,'$1').replace(/\s+/g,' ').trim();
   t = t.replace(/(\d{1,2})\s*下\s*(\d+(?:\.\d+)?)/g,'$1各$2');
   t = t.replace(/下(\d+(?:\.\d+)?)/g,'$1');
@@ -122,6 +124,11 @@ function norm(s){
     return '各组' + (v || '');
   });
 	t = t.replace(/复式(二连|三连|四连|五连)\s*各组(\d+(?:\.\d+)?)/g, '复式$1 $2');
+  // 修复"各十7"粘连：各+中文数字后紧跟阿拉伯数字时，转换后插入空格
+  t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)(\d)/g, function(m, cnVal, nextDigit){
+    var v = cn(cnVal) || parseCNNum(cnVal);
+    return '各' + (v || '') + ' ' + nextDigit;
+  });
   t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, cnVal){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return '各' + (v || '');
