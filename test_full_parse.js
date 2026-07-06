@@ -323,7 +323,21 @@ function processRule(rawRule){
       const nums=pool[spm[1]]||[]; return {display:`${hk?'HK':''}${spm[1]}各数${v}`, bet:v*nums.length, type:'nums', targets:nums}; }
   }
 
-  // Wave color combined (simplified)
+  // Wave color only (no size/parity): "红波蓝波各50", "红蓝各10"
+  const wcPureRe = new RegExp('^((?:[红绿蓝]波?\\s*)+)' + KW + '\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$');
+  const wcPureM = txtNoHK.match(wcPureRe);
+  if(wcPureM){
+    const WAVE_COLOR_MAP = {红波:["01","02","07","08","12","13","18","19","23","24","29","30","34","35","40","45","46"],绿波:["05","06","11","16","17","21","22","27","28","32","33","38","39","43","44","49"],蓝波:["03","04","09","10","14","15","20","25","26","31","36","37","41","42","47","48"]};
+    const WAVE_COLORS = {"红":"红波","绿":"绿波","蓝":"蓝波"};
+    const colorChars = wcPureM[1].match(/[红绿蓝]/g) || [];
+    const val = parseFloat(wcPureM[2]);
+    if(val && colorChars.length){
+      let waveSet = new Set();
+      colorChars.forEach(function(c){ const ck = WAVE_COLORS[c]; if(ck && WAVE_COLOR_MAP[ck]) WAVE_COLOR_MAP[ck].forEach(function(n){ waveSet.add(n); }); });
+      const targets = [...waveSet].sort(function(a,b){ return parseInt(a)-parseInt(b); });
+      if(targets.length){ return {display:`${hk?'HK':''}${colorChars.join('')}波各${val}`, bet:val*targets.length, type:'nums', targets}; }
+    }
+  }
   const wcRe = new RegExp('^([红绿蓝]{1,3})\\s*波?\\s*([单双大小]+)\\s*' + KW + '\\s*(\\d+(?:\\.\\d+)?)([A-Za-z])?\\s*(?:斤|米|块)?\\s*$');
   const wcm = txtNoHK.match(wcRe);
   if(wcm){

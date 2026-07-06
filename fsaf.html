@@ -1126,6 +1126,22 @@ function processRule(rawRule){
     }
   }
 
+  // Wave color only (pure color, no size/parity): "红波蓝波各50"
+  var wcPureRe = new RegExp('^((?:[红绿蓝]波?\\s*)+)' + KW + '\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$');
+  var wcPureM = txtNoHK.match(wcPureRe);
+  if(wcPureM){
+    var WAVE_COLOR_MAP = {红波:["01","02","07","08","12","13","18","19","23","24","29","30","34","35","40","45","46"],绿波:["05","06","11","16","17","21","22","27","28","32","33","38","39","43","44","49"],蓝波:["03","04","09","10","14","15","20","25","26","31","36","37","41","42","47","48"]};
+    var WAVE_COLORS = {"红":"红波","绿":"绿波","蓝":"蓝波"};
+    var colorChars = wcPureM[1].match(/[红绿蓝]/g) || [];
+    var val = parseFloat(wcPureM[2]);
+    if(val && colorChars.length){
+      var waveSet = new Set();
+      colorChars.forEach(function(c){ var ck = WAVE_COLORS[c]; if(ck && WAVE_COLOR_MAP[ck]) WAVE_COLOR_MAP[ck].forEach(function(n){ waveSet.add(n); }); });
+      var targets = [...waveSet].sort(function(a,b){ return parseInt(a)-parseInt(b); });
+      if(targets.length){ return {display:(hk?'HK':'')+colorChars.join('')+'波各'+val, bet:val*targets.length, type:'nums', targets:targets}; }
+    }
+  }
+
   // Wave color + size/parity combined (波色+单双大小, 支持多属性组合)
   // Examples: "红双各数8"→红∩双9码, "红蓝大双各数10"→(红∪蓝)∩大∩双8码
   const wcRe = new RegExp(
