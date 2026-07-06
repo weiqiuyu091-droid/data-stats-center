@@ -97,10 +97,12 @@ function norm(s){
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
     .replace(/(?<!各)数十斤/g,'各10斤').replace(/(?<!各)数十米/g,'各10米').replace(/(?<!各)数十块/g,'各10块')
     .replace(/平特\s*一肖/g,'平特')
+    .replace(/平特(三连|二连|四连|五连)肖/g, '$1')
+    .replace(/平特(三连|二连|四连|五连)(?!肖)/g, '$1')
     .replace(/(\d)[Oo](\d)/g,'$10$2').replace(/(\d+)[A-Za-z]+/g,'$1')
     .replace(/门\s*$/g,'')
     .replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 ').replace(/(\d{1,2})\.(?![\d]{1,2})/g,'$1 ')
-    .replace(new RegExp(`([${ZODIAC_CHARS}]+)各肖\\s*(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
+    .replace(new RegExp(`([${ZODIAC_CHARS}]+)各肖各?(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
       return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
     })
     .replace(new RegExp(`([${ZODIAC_CHARS}])肖`,'g'), '$1')
@@ -138,7 +140,7 @@ function norm(s){
   t = t.replace(/(\d+(?:\.\d+)?)\s*一组共(\d+)组/g, '$1各$2组');
   // 前置三中三/二中二: "三中三12-23-21，16-47-37各11米" → "12.23.21三中三11；16.47.37三中三11"
   // 也支持"组"替代"各": "三中三...组11米"
-  t = t.replace(/^(三中三|二中二)\s*([\d\s\.\-\－\—，,、]+?)[各组](\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, type, groups, val, unit) {
+  t = t.replace(/^(三中三|二中二)\s*([\d\s\.\-\－\—，,、]+?)(?:各组?)(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, type, groups, val, unit) {
     var groupList = groups.split(/[，,、]/).filter(Boolean);
     // 如果逗号分隔后只有一组但含空格，说明逗号已被提前替换为空格，按k个号码一组切分
     if (groupList.length === 1 && /\s/.test(groupList[0])) {

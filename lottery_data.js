@@ -1,1 +1,1 @@
-﻿var LOTTERY_DATA = {"openTime":"2026-07-01 21:32:32","expect":"2026182","flatZodiacs":["龙","猴","狗","羊","虎"],"numbers":["15","23","09","45","24","39","41"],"zodiacRaw":"龍,猴,狗,狗,羊,龍,虎","teMa":"41","timestamp":"2026-07-01 21:34:49","validCount":7};
+var LOTTERY_DATA = {"openTime":"2026-07-06 21:32:32","expect":"2026187","flatZodiacs":["猴","羊","蛇","龍","雞","馬"],"numbers":["23","12","36","38","27","22","01"],"zodiacRaw":"猴,羊,羊,蛇,龍,雞,馬","teMa":"01","timestamp":"2026-07-06 21:34:49","validCount":7};

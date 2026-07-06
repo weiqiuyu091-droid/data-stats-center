@@ -38,7 +38,8 @@ async function fetchLotteryFromApi() {
     if (validNumbers.length === 0) return null;
     const seven = []; for (let i = 0; i < 7; i++) seven.push(raw[i] || '');
     const teMa = seven[6] || '';
-    const rawZodiacs = data.zodiac ? data.zodiac.split(',').map(s => s.trim()) : [];
+    const t2s = {'雞':'鸡','龍':'龙','馬':'马','豬':'猪','鴨':'鸭','鵝':'鹅','龜':'龟'};
+    const rawZodiacs = data.zodiac ? data.zodiac.split(',').map(s => { const t = s.trim(); return t2s[t] || t; }) : [];
     const seen = {}; const flatZodiacs = [];
     rawZodiacs.forEach(z => { if (z && !seen[z]) { seen[z] = true; flatZodiacs.push(z); } });
     return {
