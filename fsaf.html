@@ -1137,8 +1137,8 @@ function processRule(rawRule){
     if(val && colorChars.length){
       var waveSet = new Set();
       colorChars.forEach(function(c){ var ck = WAVE_COLORS[c]; if(ck && WAVE_COLOR_MAP[ck]) WAVE_COLOR_MAP[ck].forEach(function(n){ waveSet.add(n); }); });
-      var targets = [...waveSet].sort(function(a,b){ return parseInt(a)-parseInt(b); });
-      if(targets.length){ return {display:(hk?'HK':'')+colorChars.join('')+'波各'+val, bet:val*targets.length, type:'nums', targets:targets}; }
+      var pureTargets = [...waveSet].sort(function(a,b){ return parseInt(a)-parseInt(b); });
+      if(pureTargets.length){ return {display:(hk?'HK':'')+colorChars.join('')+'波各'+val, bet:val*pureTargets.length, type:'nums', targets:pureTargets}; }
     }
   }
 
