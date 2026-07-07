@@ -813,7 +813,7 @@ function parseCNNum(s){
   return total+tmp;
 }
 function isHK(r){ return /香港|香|港/.test(r); }
-function stripSender(s){ return s.replace(/^([^:：]+)[：:]\s*/,function(m,p){ if(/[\d\.。,，、\-\—\－]/.test(p))return m; if(p.length>5)return m; var zc=(p.match(/[猴鸡狗猪鼠牛虎兔龙蛇马羊]/g)||[]).length; return zc>2?m:''; }).trim(); }
+function stripSender(s){ return s.replace(/^([^:：]+)[：:]\s*/,function(m,p){ if(/[\d\.。,，、\-\—\－]/.test(p))return m; if(p.length>5)return m; if(/^(?:特肖|平特)$/.test(p))return m; var zc=(p.match(/[猴鸡狗猪鼠牛虎兔龙蛇马羊]/g)||[]).length; return zc>2?m:''; }).trim(); }
 function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|澳特|澳|利来|门特|门|新)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function stripHK(s){ return s.replace(/^(?:香港|港|香)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function expandDot(s){ return s.replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 '); }
@@ -821,6 +821,7 @@ function norm(s){
   let t = s.replace(/[+＋]/g,'').replace(/。/g,'')
     .replace(/免/g,'兔').replace(/于一肖/g,'一肖')
     .replace(/候/g,'猴')  // 候→猴 纠错
+    .replace(/[（(]\s*\d+\s*[码个]?\s*[）)]/g,'')  // 过滤括号注释如（24码）
     .replace(/元/g,'块')  // 元→块 归一化
     .replace(/复试/g,'复式')  // 复试→复式 归一化
     .replace(/\d+期\s*/g,'')  // 去掉 "173期" 等期号前缀
@@ -844,6 +845,8 @@ function norm(s){
     .replace(/(\d)[Oo](\d)/g,'$10$2').replace(/(\d+)[A-Za-z]+/g,'$1')
     .replace(/门\s*$/g,'')  // 去掉末尾的 "门"
     .replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 ').replace(/(\d{1,2})\.(?![\d]{1,2})/g,'$1 ')  // "5.05"→"5 05", "25.35"→"25 35", and "10.绿"→"10 绿"
+    .replace(new RegExp(`([${ZODIAC_CHARS}])\.(?=[${ZODIAC_CHARS}])`, 'g'), '$1 ')  // 生肖间点号转空格: 兔.马→兔 马
+    .replace(/\.(?=\s*各)/g, ' ')  // "狗.各10"→"狗 各10"
     // "各肖"→平特(flat bet per zodiac): "狗马各肖45" → "平特狗45 平特马45"
     .replace(new RegExp(`([${ZODIAC_CHARS}]+)各肖各?(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
       return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
@@ -909,7 +912,7 @@ function norm(s){
   t = t.replace(/(\d+(?:\.\d+)?)\s*一组共(\d+)组/g, '$1各$2组');
   // 前置三中三/二中二: "三中三12-23-21，16-47-37各11米" → "12.23.21三中三11；16.47.37三中三11"
   // 也支持"组"替代"各": "三中三...组11米"
-  t = t.replace(/^(三中三|二中二)\s*([\d\s\.\-\－\—，,、]+?)(?:各组?)(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, type, groups, val, unit) {
+  t = t.replace(/^(三中三|二中二)\s*([\d\s\.\-\－\—，,、]+?)(?:各?组?)(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, type, groups, val, unit) {
     var groupList = groups.split(/[，,、]/).filter(Boolean);
     // 如果逗号分隔后只有一组但含空格，说明逗号已被提前替换为空格，按k个号码一组切分
     if (groupList.length === 1 && /\s/.test(groupList[0])) {
@@ -1020,6 +1023,8 @@ function getVal(txt){
   m=n.match(new RegExp(`\\s*${KW}\\s*([\\u4e00-\\u9fa5]+)\\s*(?:斤|米|块)?\\s*$`));
   if(m){ const v=cn(m[1])||parseCNNum(m[1]); if(v>0) return v; }
   if(!/各/.test(n)){
+    var numToks_gv = n.match(/\b\d{1,2}\b/g) || [];
+    if (!/[斤米块]/.test(n) && numToks_gv.length >= 3) return 0;
     m=n.match(/(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/);
     if(m){ const b=n.slice(0,m.index).trim(); if(b.length>0) return parseFloat(m[1]); }
     m=n.match(/^(.+?)([一二三四五六七八九十百千万廿卅两]+)\s*(?:斤|米|块)?\s*$/);
@@ -1265,6 +1270,7 @@ function processRule(rawRule){
   // 特肖 (special zodiac): "特肖狗 45" → type='special_zodiac'
   let txm = txtNoHK.match(new RegExp(`^特肖([${ZODIAC_CHARS}])\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
   if(!txm) txm = txtNoHK.match(new RegExp(`^特肖\\s*([${ZODIAC_CHARS}](?:\\s*[${ZODIAC_CHARS}])*)\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
+  if(!txm) txm = txtNoHK.match(new RegExp(`^特肖\\s*([${ZODIAC_CHARS}](?:\\s*[${ZODIAC_CHARS}])*)\\s*${KW}\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
   if(txm){
     const zs = txm[1].replace(/\s+/g,'').split(''), v = txm[2] ? parseFloat(txm[2]) : getVal(txtNoHK);
     if(!v) return null;
