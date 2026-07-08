@@ -827,12 +827,14 @@ function norm(s){
     .replace(/\d+期\s*/g,'')  // 去掉 "173期" 等期号前缀
     .replace(/号个/g,'号各').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1')  // "09号各30" → "09各数30", 名数→各数, 每个号→各数
     .replace(/蚊/g,'')  // 蚊→去掉 (粤语元)
+    .replace(/[嘛呀啊呢吧哦噢哟唉]+/g, '')  // 去掉语气词
     // 到 范围展开: 01到12 → 01 02 03 ... 12
     .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
     // 个数<中文>斤 → 各数<数字>斤
     .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
     .replace(/个字/g,'各数')  // "猴个字十"→"猴各数十"
+    .replace(/字/g,'各数')  // "05字三十"→"05各数30", "龙字二十嘛"→"龙各数20嘛"
     .replace(/号个/g,'各数')  // "狗号个25米"→"狗各数25米"
     .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/=/g,'各')  // =各 → 各 (避免各各).replace(/数十/g,'10')
     .replace(/单数/g,'单').replace(/双数/g,'双')  // 单数→单, 双数→双 (用于大小单双匹配)
@@ -845,7 +847,7 @@ function norm(s){
     .replace(/(\d)[Oo](\d)/g,'$10$2').replace(/(\d+)[A-Za-z]+/g,'$1')
     .replace(/门\s*$/g,'')  // 去掉末尾的 "门"
     .replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 ').replace(/(\d{1,2})\.(?![\d]{1,2})/g,'$1 ')  // "5.05"→"5 05", "25.35"→"25 35", and "10.绿"→"10 绿"
-    .replace(new RegExp(`([${ZODIAC_CHARS}])\.(?=[${ZODIAC_CHARS}])`, 'g'), '$1 ')  // 生肖间点号转空格: 兔.马→兔 马
+    .replace(new RegExp(`([${ZODIAC_CHARS}])\\.(?=[${ZODIAC_CHARS}])`, 'g'), '$1 ')  // 生肖间点号转空格: 兔.马→兔 马
     .replace(/\.(?=\s*各)/g, ' ')  // "狗.各10"→"狗 各10"
     // "各肖"→平特(flat bet per zodiac): "狗马各肖45" → "平特狗45 平特马45"
     .replace(new RegExp(`([${ZODIAC_CHARS}]+)各肖各?(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
@@ -1013,7 +1015,23 @@ function expandLine(l){
       return all;
     }
   }
-  return splitBets(s).map(p=>{ const c=clean(p); return c||null; }).filter(Boolean);
+  var sparts = splitBets(s);
+  // 金额继承: 尾部只有号码无金额时，继承前一段的"各<金额><单位>"
+  var lastKW = null;
+  for (var si = 0; si < sparts.length; si++) {
+    var sn = norm(sparts[si]);
+    var sv = getVal(sn);
+    if (sv > 0) {
+      var km = sn.match(new RegExp(`(${KW}\\s*\\d+(?:\\.\\d+)?\\s*(?:斤|米|块)?)\\s*$`));
+      if (km) lastKW = km[1];
+    } else if (lastKW) {
+      var sl = getList(sn);
+      if (sl && /[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(sl)) {
+        sparts[si] = sparts[si] + lastKW;
+      }
+    }
+  }
+  return sparts.map(p=>{ const c=clean(p); return c||null; }).filter(Boolean);
 }
 
 function getVal(txt){
@@ -1426,6 +1444,20 @@ function analyze(){
   rawLines.forEach(function(rawLine, lineIdx){
     var msgBet = 0;
     const subLines=rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
+    // 合并续行: 前一行只有号码/生肖但无金额标记时，与后一行合并
+    for (var si = 0; si < subLines.length - 1; si++) {
+      var slNorm = norm(stripHK(stripMacau(stripSender(subLines[si]))));
+      if (getVal(slNorm) === 0) {
+        var listPart = getList(slNorm);
+        if (listPart && /[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(listPart)) {
+          subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
+          subLines[si] = '';
+        }
+      }
+    }
+    for (var si = subLines.length - 1; si >= 0; si--) {
+      if (!subLines[si]) subLines.splice(si, 1);
+    }
     var curHKMode = false; // Default Macau, stateful within a line
     subLines.forEach(function(sl){
       // Try inline mode switching first (e.g. "澳门内容  香港内容")
