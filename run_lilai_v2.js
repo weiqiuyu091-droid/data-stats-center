@@ -54,7 +54,7 @@ function norm(s){
     .replace(/号个/g,'号各').replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1')
     .replace(/蚊/g,'')
     .replace(/[嘛呀啊呢吧哦噢哟唉]+/g, '')
-    .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
+    .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); }).replace(/尾数(\d)尾/g, '$1尾').replace(/(\d)尾/g, function(m, d){ var r=[]; for(var i=0;i<=4;i++){ var n=i*10+parseInt(d); if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
     .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
     .replace(/个字/g,'各数')
@@ -401,6 +401,14 @@ function processRule(rawRule){
   let fms=txtNoHK.match(new RegExp(`^平([${ZODIAC_CHARS}])\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
   if(!fms) fms=txtNoHK.match(new RegExp(`^平\\s*([${ZODIAC_CHARS}](?:\\s*[${ZODIAC_CHARS}])*)\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
   if(fms){ const zs=fms[1].replace(/\s+/g,'').split(''), v=fms[2]?parseFloat(fms[2]):getVal(txtNoHK); if(!v) return null; return {display:`平${fms[1]}各${v}`, bet:v*zs.length, type:'flat', targets:zs}; }
+
+  // 平特尾: 平特+号码列表 flat bet, 金额不乘号码数
+  var ptnm = txtNoHK.match(/^平特\s*(\d{1,2}(?:\s+\d{1,2})*)\s*各?\s*(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/);
+  if (ptnm) {
+    var ptNums = ptnm[1].trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+    var ptVal = parseFloat(ptnm[2]);
+    if (ptNums.length > 0) return {display:`平特${ptNums.join('.')} ${ptVal}`, bet:ptVal, type:'flat_tail', targets:ptNums};
+  }
 
   // Implicit combo
   const icm=txtNoHK.match(new RegExp(`^([${ZODIAC_CHARS}]{2,5})\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
