@@ -1270,8 +1270,8 @@ function processRule(rawRule){
     var flatTotal = parseFloat(ptTailM[2]);
     var tailNums = TAIL_MAP[tailDigit] || [];
     if(tailNums.length){
-      tailNums.forEach(function(n){ numberBets[n] = (numberBets[n]||0) + flatTotal; });
-      return {display: '平特'+tailDigit+'尾 '+flatTotal+'('+tailNums.length+'码)', bet:flatTotal, type:'nums', targets:tailNums};
+      tailNums.forEach(function(n){ numberBets[n] = (numberBets[n]||0) + flatTotal/tailNums.length; });
+      return {display: '平特'+tailDigit+'尾 '+flatTotal+'('+tailNums.length+'码)', bet:flatTotal, type:'flat_tail', targets:tailNums};
     }
   }
 
@@ -1676,6 +1676,19 @@ function calcAll(){
         }
       });
       if(hitZs.length){ note = `中${hitZs.join(',')} (平特${odds})`; }
+    } else if(s.type==='flat_tail'){
+      // 平特尾数: 匹配所有正码(含特码)，用平特赔率
+      const perBet = s.targets.length>0 ? s.bet/s.targets.length : s.bet;
+      let hitNums = [];
+      s.targets.forEach(t=>{
+        if(theWinNums.includes(t)){
+          odds = ODDS_PT_OTHER;
+          win += perBet * odds;
+          hitBet += perBet;
+          hitNums.push(t);
+        }
+      });
+      if(hitNums.length){ note = `中${hitNums.join(',')} (平特尾${odds})`; }
     } else if(s.type==='special_zodiac'){
       // 特肖仅匹配特码的生肖，与前面6个正码生肖无关
       const teMaZodiac = NUM_TO_ZODIAC[theTeMa];
@@ -1732,7 +1745,7 @@ function calcAll(){
       totalPayout += r.win;
       if(r.note) {
         hitAmount += r.hitBet;
-        if(r.type === 'flat') flatHitAmount += r.hitBet;
+        if(r.type === 'flat' || r.type === 'flat_tail') flatHitAmount += r.hitBet;
         else if(r.type === 'nums') numsHitAmount += r.hitBet;
         else comboHitAmount += r.hitBet;
       }
@@ -1748,7 +1761,7 @@ function calcAll(){
       totalPayout += r.win;
       if(r.note) {
         hitAmount += r.hitBet;
-        if(r.type === 'flat') flatHitAmount += r.hitBet;
+        if(r.type === 'flat' || r.type === 'flat_tail') flatHitAmount += r.hitBet;
         else if(r.type === 'nums') numsHitAmount += r.hitBet;
         else comboHitAmount += r.hitBet;
       }
