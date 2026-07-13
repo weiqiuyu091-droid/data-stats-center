@@ -1811,7 +1811,7 @@ function calcAll(){
   var allRows = macauRows.concat(hkRows);
   settlementAllRows = allRows;  // 缓存用于 xlsx 导出
   tbody.innerHTML = allRows.map(function(r){
-    var typeName = r.type==='nums'?'特码':r.type==='flat'?'平特':r.type==='special_zodiac'?'特肖':r.type==='n3'?'三中三':r.type==='n2'?'二中二':r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
+    var typeName = r.type==='nums'?'特码':r.type==='flat'?'平特':r.type==='flat_tail'?'平特尾':r.type==='special_zodiac'?'特肖':r.type==='n3'?'三中三':r.type==='n2'?'二中二':r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
     var hkTag = r.hk ? ' <span style="color:#f59e0b;font-size:.65rem;">HK</span>' : '';
     return '<tr>'+
       '<td>'+esc(r.display)+hkTag+(r.note?' <span style="color:#22c55e;font-size:.7rem;">'+r.note+'</span>':'')+'</td>'+
@@ -2775,7 +2775,7 @@ function doExportXlsx(){
     var sHeaders = ['来源', '投注内容', '投注额', '类型', '赔率', '中奖额', '净结果', '备注'];
     var sRows = [sHeaders];
     settlementAllRows.forEach(function(r){
-      var typeName = r.type==='nums'?'特码':r.type==='flat'?'平特':r.type==='special_zodiac'?'特肖':r.type==='n3'?'三中三':r.type==='n2'?'二中二':r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
+      var typeName = r.type==='nums'?'特码':r.type==='flat'?'平特':r.type==='flat_tail'?'平特尾':r.type==='special_zodiac'?'特肖':r.type==='n3'?'三中三':r.type==='n2'?'二中二':r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
       sRows.push([
         r.hk ? '香港' : '澳门',
         r.display || '',
