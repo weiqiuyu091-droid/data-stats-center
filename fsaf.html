@@ -1270,7 +1270,7 @@ function processRule(rawRule){
     var flatTotal = parseFloat(ptTailM[2]);
     var tailNums = TAIL_MAP[tailDigit] || [];
     if(tailNums.length){
-      tailNums.forEach(function(n){ numberBets[n] = (numberBets[n]||0) + flatTotal/tailNums.length; });
+      tailNums.forEach(function(n){ numberBets[n] = (numberBets[n]||0) + flatTotal; });
       return {display: '平特'+tailDigit+'尾 '+flatTotal+'('+tailNums.length+'码)', bet:flatTotal, type:'flat_tail', targets:tailNums};
     }
   }
@@ -1677,8 +1677,8 @@ function calcAll(){
       });
       if(hitZs.length){ note = `中${hitZs.join(',')} (平特${odds})`; }
     } else if(s.type==='flat_tail'){
-      // 平特尾数: 匹配所有正码(含特码)，用平特赔率
-      const perBet = s.targets.length>0 ? s.bet/s.targets.length : s.bet;
+      // 平特尾数: 每码投注额=bet(不按targets均分)，匹配所有正码(含特码)，用平特赔率
+      const perBet = s.bet;
       let hitNums = [];
       s.targets.forEach(t=>{
         if(theWinNums.includes(t)){
