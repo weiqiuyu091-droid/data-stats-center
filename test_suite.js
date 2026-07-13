@@ -1,7 +1,62 @@
-// 测试 7月12日 两份数据，对比用户手工计算
+// 自动化回归测试套件
+// 用法: node test_suite.js
+// 每新增一份数据：在 datasets 数组中追加 { name, rawChatLog, expected }
 const { analyze } = require('./parser.js');
 
-// ===== 第一份数据 =====
+let totalTests = 0;
+let passedTests = 0;
+let failedTests = 0;
+
+function runTest(dataset) {
+  console.log(`\n${'='.repeat(70)}`);
+  console.log(`📋 ${dataset.name}`);
+  console.log(`${'='.repeat(70)}`);
+
+  const result = analyze(dataset.rawChatLog);
+  const actual = result.messageSummary.map(m => m.totalBet);
+
+  if (actual.length !== dataset.expected.length) {
+    console.log(`❌ 消息数量不匹配: 实际 ${actual.length} vs 预期 ${dataset.expected.length}`);
+    failedTests++;
+    return;
+  }
+
+  let mismatchCount = 0;
+  let totalDiff = 0;
+
+  dataset.expected.forEach((exp, i) => {
+    totalTests++;
+    const act = actual[i];
+    const diff = act - exp;
+    if (diff !== 0) {
+      mismatchCount++;
+      totalDiff += diff;
+      const msg = result.messageSummary[i];
+      const preview = msg.fullText.length > 60 ? msg.fullText.substring(0, 60) + '...' : msg.fullText;
+      console.log(`  ⚠️  #${msg.index} 实际:${String(act).padStart(6)} 预期:${String(exp).padStart(6)} 差额:${String(diff).padStart(5)} | ${preview}`);
+    } else {
+      passedTests++;
+    }
+  });
+
+  if (mismatchCount === 0) {
+    console.log(`✅ 全部 ${dataset.expected.length} 条消息匹配 (总额: ${result.grandTotal})`);
+  } else {
+    failedTests += mismatchCount;
+    const actTotal = actual.reduce((a, b) => a + b, 0);
+    const expTotal = dataset.expected.reduce((a, b) => a + b, 0);
+    console.log(`❌ ${mismatchCount}/${dataset.expected.length} 条不匹配 | 实际总额:${actTotal} 预期总额:${expTotal} 差额:${totalDiff}`);
+  }
+
+  // 检查零额消息
+  const zeroMsgs = result.messageSummary.filter(m => m.totalBet === 0);
+  if (zeroMsgs.length > 0) {
+    console.log(`⚠️  零投注额消息:`);
+    zeroMsgs.forEach(m => console.log(`    #${m.index}: ${m.fullText.substring(0, 80)}`));
+  }
+}
+
+// ===== 数据集1: 7月12日第一批 =====
 const data1 = String.raw`利来
 2026年07月12日 17:38
 复试三中三：47 12 36 34 32 19各组2斤
@@ -262,10 +317,9 @@ const data1 = String.raw`利来
 2026年07月12日 21:31
 19各10`;
 
-// 第一份用户预期
 const expected1 = [40,30,20,65,60,50,55,270,160,30,300,35,30,180,45,40,70,80,220,40,55,60,1600,5,6,5,500,5,20,35,90,7,95,420,30,60,60,10,9,3000,5,7,1260,20,340,40,10,10,280,20,280,5,40,540,340,180,30,10];
 
-// ===== 第二份数据 =====
+// ===== 数据集2: 7月12日第二批 =====
 const data2 = String.raw`利来
 2026年07月12日 20:32
 澳特，19各号5斤
@@ -407,52 +461,26 @@ const data2 = String.raw`利来
 2026年07月12日 21:24
 27 08 各10`;
 
-// 第二份用户预期
 const expected2 = [5,300,200,410,320,300,250,340,2000,280,80,200,40,300,80,280,215,640,550,155,160,20,630,1400,8540,460,100,280,390,20];
 
-console.log('='.repeat(80));
-console.log('第一份数据对比 (7月12日)');
-console.log('='.repeat(80));
+// ===== 执行所有测试 =====
+console.log('╔══════════════════════════════════════════════════════════════════╗');
+console.log('║              自动化回归测试套件 — test_suite.js                  ║');
+console.log('╚══════════════════════════════════════════════════════════════════╝');
 
-const result1 = analyze(data1);
-console.log('消息数:', result1.messageSummary.length, '| 预期:', expected1.length);
-console.log('');
+const datasets = [
+  { name: '7月12日第一批 (58条)', rawChatLog: data1, expected: expected1 },
+  { name: '7月12日第二批 (30条)', rawChatLog: data2, expected: expected2 },
+];
 
-let totalDiff1 = 0;
-result1.messageSummary.forEach((msg, i) => {
-  const exp = expected1[i] !== undefined ? expected1[i] : 0;
-  const diff = msg.totalBet - exp;
-  if (diff !== 0) {
-    console.log('⚠️  #' + String(msg.index).padStart(2) + ' 脚本:' + String(msg.totalBet).padStart(6) + ' 预期:' + String(exp).padStart(6) + ' 差额:' + String(diff).padStart(6) + ' | ' + msg.fullText.substring(0, 80));
-  }
-  totalDiff1 += diff;
-});
+datasets.forEach(ds => runTest(ds));
 
-console.log('');
-console.log('脚本总额:', result1.grandTotal, '| 预期总额:', expected1.reduce((a,b)=>a+b,0), '| 总差额:', totalDiff1);
-console.log('零额消息:');
-result1.messageSummary.forEach(msg => { if (msg.totalBet === 0) console.log('  #' + msg.index + ': ' + msg.fullText.substring(0, 100)); });
-
-console.log('');
-console.log('='.repeat(80));
-console.log('第二份数据对比 (7月12日)');
-console.log('='.repeat(80));
-
-const result2 = analyze(data2);
-console.log('消息数:', result2.messageSummary.length, '| 预期:', expected2.length);
-console.log('');
-
-let totalDiff2 = 0;
-result2.messageSummary.forEach((msg, i) => {
-  const exp = expected2[i] !== undefined ? expected2[i] : 0;
-  const diff = msg.totalBet - exp;
-  if (diff !== 0) {
-    console.log('⚠️  #' + String(msg.index).padStart(2) + ' 脚本:' + String(msg.totalBet).padStart(6) + ' 预期:' + String(exp).padStart(6) + ' 差额:' + String(diff).padStart(6) + ' | ' + msg.fullText.substring(0, 100));
-  }
-  totalDiff2 += diff;
-});
-
-console.log('');
-console.log('脚本总额:', result2.grandTotal, '| 预期总额:', expected2.reduce((a,b)=>a+b,0), '| 总差额:', totalDiff2);
-console.log('零额消息:');
-result2.messageSummary.forEach(msg => { if (msg.totalBet === 0) console.log('  #' + msg.index + ': ' + msg.fullText.substring(0, 100)); });
+console.log(`\n${'═'.repeat(70)}`);
+console.log(`📊 汇总: ${totalTests} 条消息 | ✅ ${passedTests} 通过 | ❌ ${failedTests} 失败`);
+if (failedTests === 0) {
+  console.log(`🎉 全部测试通过！`);
+} else {
+  console.log(`⚠️  存在 ${failedTests} 条差异，请检查。`);
+  process.exitCode = 1;
+}
+console.log(`${'═'.repeat(70)}\n`);

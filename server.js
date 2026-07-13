@@ -248,6 +248,10 @@ app.get('/admin', function(req, res) {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+app.get('/parser.js', function(req, res) {
+  res.sendFile(path.join(__dirname, 'parser.js'));
+});
+
 // API 代理 - 解决 CORS 问题
 app.get('/api/live', async function(req, res) {
   try {
