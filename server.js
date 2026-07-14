@@ -272,6 +272,18 @@ const HK_API_URL = 'https://0oe0t6wiqqjs.lhc888.im/prod-api/system/hk/latest';
 const HK_RELAY_URL = 'https://data-stats-center.onrender.com/api/hk-latest?direct=1';
 
 function fetchHKApi(url, res, allowRetry) {
+  var finished = false;
+  function done(err) {
+    if (finished) return;
+    finished = true;
+    if (allowRetry) {
+      console.log('[HK] 直连失败(' + err + ')，通过 onrender 中继...');
+      fetchHKApi(HK_RELAY_URL, res, false);
+    } else {
+      console.log('[HK] 请求失败: ' + err);
+      res.status(502).json({ error: 'API unreachable' });
+    }
+  }
   var req = https.get(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
     timeout: 10000
@@ -288,22 +300,10 @@ function fetchHKApi(url, res, allowRetry) {
   });
   req.on('timeout', function() {
     req.destroy();
-    if (allowRetry) {
-      console.log('[HK] 直连超时，通过 onrender 中继...');
-      fetchHKApi(HK_RELAY_URL, res, false);
-    } else {
-      console.log('[HK] 请求超时');
-      res.status(502).json({ error: 'API unreachable' });
-    }
+    done('timeout');
   });
   req.on('error', function(e) {
-    if (allowRetry) {
-      console.log('[HK] 直连失败，通过 onrender 中继...');
-      fetchHKApi(HK_RELAY_URL, res, false);
-    } else {
-      console.log('[HK] 请求失败: ' + e.message);
-      res.status(502).json({ error: 'API unreachable' });
-    }
+    done(e.message);
   });
 }
 
