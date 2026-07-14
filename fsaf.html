@@ -2548,14 +2548,22 @@ async function fetchHKLatest(silent){
     var resp = await fetch('/api/hk-latest');
     if(!resp.ok) throw new Error('API error');
     var data = await resp.json();
-    if(!data.one || !data.seven) throw new Error('数据不完整');
+    // 优先用 opencode（逗号分隔的7个中奖号码），比 one~seven 字段更早更新
+    var codeArr = data.opencode ? data.opencode.split(',') : null;
+    if(!codeArr || codeArr.length < 7){
+      // 降级：使用 one~seven 字段
+      if(!data.one || !data.seven) throw new Error('数据不完整');
+      codeArr = [data.one, data.two, data.three, data.four, data.five, data.six, data.seven];
+    }
+    var nums = codeArr.slice(0, 6);
+    var teMa = codeArr[6];
+    var allNums = nums.concat([teMa]);
+
+    // 跳过重复期号（已显示过的数据）
     if(data.expect === hkLastExpect && hkResult){
       if(btn){ btn.disabled = false; btn.textContent = '🔄 获取开奖'; }
       return;
     }
-    var nums = [data.one, data.two, data.three, data.four, data.five, data.six];
-    var teMa = data.seven;
-    var allNums = nums.concat([teMa]);
 
     var flatZodiacs = [];
     var seenZ = {};
