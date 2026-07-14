@@ -2545,9 +2545,18 @@ async function fetchHKLatest(silent){
   var btn = document.getElementById('hkFetchBtn');
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 获取中...'; }
   try {
-    var resp = await fetch('/api/hk-latest');
-    if(!resp.ok) throw new Error('API error');
-    var data = await resp.json();
+    var data = null;
+    // 优先使用 HKJC 官方 API
+    try {
+      var resp = await fetch('/api/hk-jc');
+      if(resp.ok) data = await resp.json();
+    } catch(e1) { console.warn('[HK] HKJC API 失败，降级到旧API:', e1.message); }
+    // 降级到 lhc888.im
+    if(!data){
+      var resp2 = await fetch('/api/hk-latest');
+      if(!resp2.ok) throw new Error('API error');
+      data = await resp2.json();
+    }
     // 优先用 opencode（逗号分隔的7个中奖号码），比 one~seven 字段更早更新
     var codeArr = data.opencode ? data.opencode.split(',') : null;
     if(!codeArr || codeArr.length < 7){

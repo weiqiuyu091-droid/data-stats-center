@@ -317,6 +317,58 @@ app.get('/api/hk-latest', function(req, res) {
   }
 });
 
+// 香港六合彩 - HKJC 官方 API 代理（比 lhc888.im 更可靠）
+const HKJC_API_URL = 'https://bet.hkjc.com/contentserver/jcbw/cmc/last30draw.json';
+
+app.get('/api/hk-jc', function(req, res) {
+  var req2 = https.get(HKJC_API_URL, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+    timeout: 15000
+  }, function(resp) {
+    var body = [];
+    resp.on('data', function(c) { body.push(c); });
+    resp.on('end', function() {
+      try {
+        var buf = Buffer.concat(body);
+        // 处理 UTF-8 BOM
+        if (buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
+          buf = buf.slice(3);
+        }
+        var text = buf.toString('utf-8');
+        var draws = JSON.parse(text);
+        if (!Array.isArray(draws) || draws.length === 0) {
+          return res.status(502).json({ error: 'Empty data' });
+        }
+        // 取最新一期，no 格式为 "1+2+3+4+5+6"，p7 为特码
+        var latest = draws[0];
+        var nums = latest.no.split('+');
+        res.json({
+          expect: latest.id,
+          one: nums[0] || '',
+          two: nums[1] || '',
+          three: nums[2] || '',
+          four: nums[3] || '',
+          five: nums[4] || '',
+          six: nums[5] || '',
+          seven: latest.p7 || latest.sno || '',
+          opencode: [nums.join(','), latest.p7 || latest.sno].join(','),
+          opentime: latest.date || '',
+          source: 'hkjc'
+        });
+      } catch(e) {
+        res.status(502).json({ error: 'Parse error: ' + e.message });
+      }
+    });
+  });
+  req2.on('timeout', function() {
+    req2.destroy();
+    res.status(502).json({ error: 'HKJC API timeout' });
+  });
+  req2.on('error', function(e) {
+    res.status(502).json({ error: 'HKJC API unreachable: ' + e.message });
+  });
+});
+
 // 管理认证
 app.post('/api/admin/auth', function(req, res) {
   if (req.body.password === ADMIN_PASSWORD) {
