@@ -2524,7 +2524,7 @@ function renderHKLiveBar(){
     return '<span style="color:' + (e[0]==='红波'?'#ef4444':e[0]==='绿波'?'#22c55e':'#3b82f6') + ';">' + e[0] + ' x ' + e[1] + '</span>';
   }).join(' ');
 
-  time.innerHTML = (r.timestamp || '--') + ' | 波色: ' + (waveSummary || '--');
+  time.innerHTML = (r.timestamp || '--') + ' | 波色: ' + (waveSummary || '--') + (hkNextOpenTime ? ' | 下期: ' + hkNextOpenTime : '');
   dot.classList.add('online');
   status.textContent = '第' + (hkLastExpect || '--') + '期';
   status.style.color = '#22c55e';
@@ -2533,6 +2533,9 @@ function renderHKLiveBar(){
 function clearHKResult(){
   hkResult = null;
   hkLastExpect = '';
+  hkNextExpect = '';
+  hkNextOpenTime = '';
+  hkCloseTime = '';
   renderHKLiveBar();
   toast('香港开奖已清除');
 }
@@ -2540,6 +2543,9 @@ function clearHKResult(){
 // ===== 香港开奖自动获取 =====
 var hkFetchTimer = null;
 var hkLastExpect = '';
+var hkNextExpect = '';
+var hkNextOpenTime = '';
+var hkCloseTime = '';
 
 async function fetchHKLatest(silent){
   var btn = document.getElementById('hkFetchBtn');
@@ -2588,6 +2594,9 @@ async function fetchHKLatest(silent){
       timestamp: new Date().toLocaleString('zh-CN', {hour12:false})
     };
     hkLastExpect = data.expect;
+    hkNextExpect = data.nextExpect || '';
+    hkNextOpenTime = data.nextOpenTime || '';
+    hkCloseTime = data.nextCloseTime || '';
     renderHKLiveBar();
     if(!silent) toast('已获取香港第' + data.expect + '期开奖');
   } catch(e){

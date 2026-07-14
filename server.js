@@ -321,7 +321,12 @@ app.get('/api/hk-latest', function(req, res) {
 const { markSixClient } = require('hkjc-marksix-client');
 
 app.get('/api/hk-jc', function(req, res) {
-  markSixClient.getDrawRaw().then(function(data) {
+  Promise.all([
+    markSixClient.getDrawRaw(),
+    markSixClient.getUpcomingDraw().catch(function() { return null; })
+  ]).then(function(results) {
+    var data = results[0];
+    var upcoming = results[1];
     var draws = (data && data.lotteryDraws) || [];
     // 找最新一期已开奖的（drawResult有数据）
     var latest = null;
@@ -353,7 +358,11 @@ app.get('/api/hk-jc', function(req, res) {
       seven: teMa,
       opencode: strNums.concat(teMa ? [teMa] : []).join(','),
       opentime: latest.drawDate || '',
-      source: 'hkjc-graphql'
+      source: 'hkjc-graphql',
+      // 下期信息
+      nextExpect: upcoming ? upcoming.id : '',
+      nextOpenTime: upcoming ? upcoming.drawDate : '',
+      nextCloseTime: upcoming ? upcoming.closeDate : ''
     });
   }).catch(function(e) {
     console.error('[HKJC] GraphQL error:', e.message);
