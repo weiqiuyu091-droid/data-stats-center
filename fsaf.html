@@ -2574,6 +2574,7 @@ async function fetchHKLatest(silent){
     renderHKLiveBar();
     if(!silent) toast('已获取香港第' + data.expect + '期开奖');
   } catch(e){
+    console.error('[HK] 获取开奖失败:', e.message);
     if(!silent) toast('香港开奖获取失败: ' + e.message);
   }
   if(btn){ btn.disabled = false; btn.textContent = '🔄 获取开奖'; }
@@ -2585,11 +2586,17 @@ function startHKPolling(){
     var now = new Date();
     var h = now.getHours();
     var m = now.getMinutes();
-    if(h === 21 && m >= 31 && m <= 35){
+    // 开奖窗口 21:30-21:45，每15秒轮询一次
+    if(h === 21 && m >= 30 && m <= 45){
       fetchHKLatest(true);
     }
   }
   check();
+  // 首次加载时如果已过开奖时间且无数据，自动拉取一次
+  var now = new Date();
+  if(!hkResult && (now.getHours() > 21 || (now.getHours() === 21 && now.getMinutes() >= 30))){
+    fetchHKLatest(true);
+  }
   hkFetchTimer = setInterval(check, 15000);
 }
 
