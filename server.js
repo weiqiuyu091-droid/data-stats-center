@@ -321,14 +321,28 @@ app.get('/api/hk-latest', function(req, res) {
 const { markSixClient } = require('hkjc-marksix-client');
 
 app.get('/api/hk-jc', function(req, res) {
-  markSixClient.getLastDraw().then(function(draw) {
-    var nums = (draw.drawResult && draw.drawResult.drawnNo) || [];
-    var xNums = (draw.drawResult && draw.drawResult.xDrawnNo) || [];
-    // drawnNo: 正码(6个), xDrawnNo: 特码
+  markSixClient.getDrawRaw().then(function(data) {
+    var draws = (data && data.lotteryDraws) || [];
+    // 找最新一期已开奖的（drawResult有数据）
+    var latest = null;
+    for (var i = 0; i < draws.length; i++) {
+      var d = draws[i];
+      if (d.drawResult && d.drawResult.drawnNo && d.drawResult.drawnNo.length > 0) {
+        latest = d;
+        break;
+      }
+    }
+    if (!latest) {
+      // 降级：取第一条
+      latest = draws[0];
+    }
+    if (!latest) return res.status(502).json({ error: 'No draw data' });
+    var nums = (latest.drawResult && latest.drawResult.drawnNo) || [];
+    var xNums = (latest.drawResult && latest.drawResult.xDrawnNo) || [];
     var strNums = nums.map(function(n) { return String(n).padStart(2, '0'); });
     var teMa = xNums.length > 0 ? String(xNums[0]).padStart(2, '0') : '';
     res.json({
-      expect: draw.id || '',
+      expect: latest.id || '',
       one: strNums[0] || '',
       two: strNums[1] || '',
       three: strNums[2] || '',
@@ -337,8 +351,9 @@ app.get('/api/hk-jc', function(req, res) {
       six: strNums[5] || '',
       seven: teMa,
       opencode: strNums.concat(teMa ? [teMa] : []).join(','),
-      opentime: draw.drawDate || '',
-      source: 'hkjc-graphql'
+      opentime: latest.drawDate || '',
+      source: 'hkjc-graphql',
+      _debug: { id: latest.id, status: latest.status, drawResult: latest.drawResult }
     });
   }).catch(function(e) {
     console.error('[HKJC] GraphQL error:', e.message);
