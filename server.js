@@ -323,8 +323,10 @@ const { markSixClient } = require('hkjc-marksix-client');
 app.get('/api/hk-jc', function(req, res) {
   markSixClient.getLastDraw().then(function(draw) {
     var nums = (draw.drawResult && draw.drawResult.drawnNo) || [];
-    // drawnNo 是数字数组，前6个为正码，第7个为特码
+    var xNums = (draw.drawResult && draw.drawResult.xDrawnNo) || [];
+    // drawnNo: 正码(6个), xDrawnNo: 特码
     var strNums = nums.map(function(n) { return String(n).padStart(2, '0'); });
+    var teMa = xNums.length > 0 ? String(xNums[0]).padStart(2, '0') : '';
     res.json({
       expect: draw.id || '',
       one: strNums[0] || '',
@@ -333,8 +335,8 @@ app.get('/api/hk-jc', function(req, res) {
       four: strNums[3] || '',
       five: strNums[4] || '',
       six: strNums[5] || '',
-      seven: strNums[6] || '',
-      opencode: strNums.join(','),
+      seven: teMa,
+      opencode: strNums.concat(teMa ? [teMa] : []).join(','),
       opentime: draw.drawDate || '',
       source: 'hkjc-graphql'
     });
