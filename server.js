@@ -322,7 +322,12 @@ const HKJC_API_URL = 'https://bet.hkjc.com/contentserver/jcbw/cmc/last30draw.jso
 
 app.get('/api/hk-jc', function(req, res) {
   var req2 = https.get(HKJC_API_URL, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'zh-HK,zh;q=0.9,en;q=0.8',
+      'Referer': 'https://bet.hkjc.com/marksix/'
+    },
     timeout: 15000
   }, function(resp) {
     var body = [];
