@@ -338,9 +338,10 @@ app.get('/api/hk-jc', function(req, res) {
     }
     if (!latest) return res.status(502).json({ error: 'No draw data' });
     var nums = (latest.drawResult && latest.drawResult.drawnNo) || [];
-    var xNums = (latest.drawResult && latest.drawResult.xDrawnNo) || [];
+    var xDrawn = (latest.drawResult && latest.drawResult.xDrawnNo);
+    // xDrawnNo 可能是数字或数组
+    var teMa = Array.isArray(xDrawn) ? String(xDrawn[0] || '').padStart(2, '0') : (xDrawn ? String(xDrawn).padStart(2, '0') : '');
     var strNums = nums.map(function(n) { return String(n).padStart(2, '0'); });
-    var teMa = xNums.length > 0 ? String(xNums[0]).padStart(2, '0') : '';
     res.json({
       expect: latest.id || '',
       one: strNums[0] || '',
@@ -352,8 +353,7 @@ app.get('/api/hk-jc', function(req, res) {
       seven: teMa,
       opencode: strNums.concat(teMa ? [teMa] : []).join(','),
       opentime: latest.drawDate || '',
-      source: 'hkjc-graphql',
-      _debug: { id: latest.id, status: latest.status, drawResult: latest.drawResult }
+      source: 'hkjc-graphql'
     });
   }).catch(function(e) {
     console.error('[HKJC] GraphQL error:', e.message);
