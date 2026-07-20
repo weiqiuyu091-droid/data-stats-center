@@ -350,6 +350,7 @@ function fetchHKJC(url, res, allowRetry) {
       res.status(502).json({ error: 'HKJC API unreachable' });
     }
   }
+  var isRelay = url.indexOf('onrender.com') !== -1;
   var req = https.get(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -364,12 +365,18 @@ function fetchHKJC(url, res, allowRetry) {
         var buf = Buffer.concat(chunks);
         // 处理 UTF-8 BOM
         if (buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) buf = buf.slice(3);
-        var draws = JSON.parse(buf.toString('utf-8'));
-        if (!Array.isArray(draws) || draws.length === 0) {
+        var json = JSON.parse(buf.toString('utf-8'));
+
+        // 中继返回的已经是标准格式，直接透传
+        if (isRelay || json.one) {
+          return res.json(json);
+        }
+
+        // bet.hkjc.com 原始格式: [{id, no:"1+2+3+4+5+6", p7:"7", date:"..."}]
+        if (!Array.isArray(json) || json.length === 0) {
           return res.status(502).json({ error: 'Empty data' });
         }
-        // 取最新一期，no 格式为 "1+2+3+4+5+6"，p7/sno 为特码
-        var latest = draws[0];
+        var latest = json[0];
         var nums = (latest.no || '').split('+');
         var teMa = (latest.p7 || latest.sno || '').toString();
         if (teMa.length === 1) teMa = '0' + teMa;
@@ -386,9 +393,8 @@ function fetchHKJC(url, res, allowRetry) {
           opencode: strNums.concat(teMa ? [teMa] : []).join(','),
           opentime: latest.date || '',
           source: 'hkjc-bet',
-          // 下期信息从最新未开奖的 draw 获取
-          nextExpect: draws.length > 1 ? draws[1].id || draws[1].period || '' : '',
-          nextOpenTime: draws.length > 1 ? draws[1].date || '' : ''
+          nextExpect: json.length > 1 ? (json[1].id || json[1].period || '') : '',
+          nextOpenTime: json.length > 1 ? (json[1].date || '') : ''
         });
       } catch(e) {
         res.status(502).json({ error: 'Parse error: ' + e.message });
