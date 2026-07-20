@@ -323,90 +323,108 @@ app.get('/api/hk-latest', function(req, res) {
   }
 });
 
-// 香港六合彩 - HKJC 官方 API 代理（bet.hkjc.com last30draw.json）
-const HKJC_JSON_URL = 'https://bet.hkjc.com/contentserver/jcbw/cmc/last30draw.json';
+// 香港六合彩 - HKJC API 代理（GraphQL 直连 + onrender 中继回退）
+const { markSixClient } = require('hkjc-marksix-client');
 const HKJC_RELAY_URL = 'https://data-stats-center.onrender.com/api/hk-jc?direct=1';
 
 app.get('/api/hk-jc', function(req, res) {
   if (req.query.direct === '1') {
-    // onrender 被中继调用，直接访问 HKJC，不重试
-    fetchHKJC(HKJC_JSON_URL, res, false);
+    // onrender 被中继调用，直接调 GraphQL API
+    fetchHKJCGraphQL(res);
   } else {
-    // 本地：先直连，失败则通过 onrender 中继
-    fetchHKJC(HKJC_JSON_URL, res, true);
+    // 本地：先直连 GraphQL，失败则通过 onrender 中继
+    fetchHKJCGraphQLWithRetry(res);
   }
 });
 
-function fetchHKJC(url, res, allowRetry) {
-  var finished = false;
-  function done(err) {
-    if (finished) return;
-    finished = true;
-    if (allowRetry) {
-      console.log('[HKJC] 直连失败(' + err + ')，通过 onrender 中继...');
-      fetchHKJC(HKJC_RELAY_URL, res, false);
-    } else {
-      console.log('[HKJC] 请求失败: ' + err);
-      res.status(502).json({ error: 'HKJC API unreachable' });
+function fetchHKJCGraphQLWithRetry(res) {
+  var sent = false;
+  var timeout = setTimeout(function() {
+    if (!sent) {
+      console.log('[HKJC] 直连超时，通过 onrender 中继...');
+      sent = true;
+      relayHKJC(res);
     }
-  }
-  var isRelay = url.indexOf('onrender.com') !== -1;
-  var req = https.get(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Referer': 'https://bet.hkjc.com/marksix/'
-    },
-    timeout: 10000
+  }, 8000);
+
+  Promise.all([
+    markSixClient.getDrawRaw(),
+    markSixClient.getUpcomingDraw().catch(function() { return null; })
+  ]).then(function(results) {
+    if (sent) return;
+    clearTimeout(timeout);
+    sent = true;
+    sendHKJCResponse(res, results[0], results[1]);
+  }).catch(function(e) {
+    if (sent) return;
+    clearTimeout(timeout);
+    console.log('[HKJC] 直连失败(' + e.message + ')，通过 onrender 中继...');
+    sent = true;
+    relayHKJC(res);
+  });
+}
+
+function fetchHKJCGraphQL(res) {
+  Promise.all([
+    markSixClient.getDrawRaw(),
+    markSixClient.getUpcomingDraw().catch(function() { return null; })
+  ]).then(function(results) {
+    sendHKJCResponse(res, results[0], results[1]);
+  }).catch(function(e) {
+    console.error('[HKJC] GraphQL error:', e.message);
+    res.status(502).json({ error: 'HKJC API error: ' + e.message });
+  });
+}
+
+function relayHKJC(res) {
+  https.get(HKJC_RELAY_URL, {
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+    timeout: 15000
   }, function(resp) {
-    var chunks = [];
-    resp.on('data', function(c) { chunks.push(c); });
+    var body = '';
+    resp.on('data', function(c) { body += c; });
     resp.on('end', function() {
       try {
-        var buf = Buffer.concat(chunks);
-        // 处理 UTF-8 BOM
-        if (buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) buf = buf.slice(3);
-        var json = JSON.parse(buf.toString('utf-8'));
-
-        // 中继返回的已经是标准格式，直接透传
-        if (isRelay || json.one) {
-          return res.json(json);
-        }
-
-        // bet.hkjc.com 原始格式: [{id, no:"1+2+3+4+5+6", p7:"7", date:"..."}]
-        if (!Array.isArray(json) || json.length === 0) {
-          return res.status(502).json({ error: 'Empty data' });
-        }
-        var latest = json[0];
-        var nums = (latest.no || '').split('+');
-        var teMa = (latest.p7 || latest.sno || '').toString();
-        if (teMa.length === 1) teMa = '0' + teMa;
-        var strNums = nums.map(function(n) { return n.length === 1 ? '0' + n : n; });
-        res.json({
-          expect: latest.id || latest.period || '',
-          one: strNums[0] || '',
-          two: strNums[1] || '',
-          three: strNums[2] || '',
-          four: strNums[3] || '',
-          five: strNums[4] || '',
-          six: strNums[5] || '',
-          seven: teMa,
-          opencode: strNums.concat(teMa ? [teMa] : []).join(','),
-          opentime: latest.date || '',
-          source: 'hkjc-bet',
-          nextExpect: json.length > 1 ? (json[1].id || json[1].period || '') : '',
-          nextOpenTime: json.length > 1 ? (json[1].date || '') : ''
-        });
+        res.json(JSON.parse(body));
       } catch(e) {
-        res.status(502).json({ error: 'Parse error: ' + e.message });
+        res.status(502).json({ error: 'Relay parse error' });
       }
     });
-  });
-  req.on('timeout', function() {
-    req.destroy();
-    done('timeout');
-  });
-  req.on('error', function(e) {
-    done(e.message);
+  }).on('timeout', function() { this.destroy(); res.status(502).json({ error: 'Relay timeout' }); })
+    .on('error', function(e) { res.status(502).json({ error: 'Relay error: ' + e.message }); });
+}
+
+function sendHKJCResponse(res, data, upcoming) {
+  var draws = (data && data.lotteryDraws) || [];
+  var latest = null;
+  for (var i = 0; i < draws.length; i++) {
+    var d = draws[i];
+    if (d.drawResult && d.drawResult.drawnNo && d.drawResult.drawnNo.length > 0) {
+      latest = d;
+      break;
+    }
+  }
+  if (!latest) latest = draws[0];
+  if (!latest) return res.status(502).json({ error: 'No draw data' });
+  var nums = (latest.drawResult && latest.drawResult.drawnNo) || [];
+  var xDrawn = (latest.drawResult && latest.drawResult.xDrawnNo);
+  var teMa = Array.isArray(xDrawn) ? String(xDrawn[0] || '').padStart(2, '0') : (xDrawn ? String(xDrawn).padStart(2, '0') : '');
+  var strNums = nums.map(function(n) { return String(n).padStart(2, '0'); });
+  res.json({
+    expect: latest.id || '',
+    one: strNums[0] || '',
+    two: strNums[1] || '',
+    three: strNums[2] || '',
+    four: strNums[3] || '',
+    five: strNums[4] || '',
+    six: strNums[5] || '',
+    seven: teMa,
+    opencode: strNums.concat(teMa ? [teMa] : []).join(','),
+    opentime: latest.drawDate || '',
+    source: 'hkjc-graphql',
+    nextExpect: upcoming ? upcoming.id : '',
+    nextOpenTime: upcoming ? upcoming.drawDate : '',
+    nextCloseTime: upcoming ? upcoming.closeDate : ''
   });
 }
 
