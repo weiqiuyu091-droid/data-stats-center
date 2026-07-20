@@ -2552,16 +2552,17 @@ async function fetchHKLatest(silent){
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 获取中...'; }
   try {
     var data = null;
-    // 优先使用 HKJC 官方 API
+    // 优先使用 HKJC 官方 API (bet.hkjc.com last30draw.json)
     try {
       var resp = await fetch('/api/hk-jc');
       if(resp.ok) data = await resp.json();
-    } catch(e1) { console.warn('[HK] HKJC API 失败，降级到旧API:', e1.message); }
-    // 降级到 lhc888.im
+    } catch(e1) { console.warn('[HK] HKJC API 失败，降级:', e1.message); }
+    // 降级到 lhc888.im（静默备用）
     if(!data){
-      var resp2 = await fetch('/api/hk-latest');
-      if(!resp2.ok) throw new Error('API error');
-      data = await resp2.json();
+      try {
+        var resp2 = await fetch('/api/hk-latest');
+        if(resp2.ok) data = await resp2.json();
+      } catch(e2) { console.warn('[HK] 备用API也失败:', e2.message); }
     }
     // 优先用 opencode（逗号分隔的7个中奖号码），比 one~seven 字段更早更新
     var codeArr = data.opencode ? data.opencode.split(',') : null;
@@ -2601,6 +2602,11 @@ async function fetchHKLatest(silent){
     if(!silent) toast('已获取香港第' + data.expect + '期开奖');
   } catch(e){
     console.error('[HK] 获取开奖失败:', e.message);
+    // 自动模式首次失败后 3 秒重试一次（限一次，避免死循环）
+    if(silent && !hkResult && !fetchHKLatest._retried){
+      fetchHKLatest._retried = true;
+      setTimeout(function(){ fetchHKLatest._retried = false; fetchHKLatest(true); }, 3000);
+    }
     if(!silent) toast('香港开奖获取失败: ' + e.message);
   }
   if(btn){ btn.disabled = false; btn.textContent = '🔄 获取开奖'; }

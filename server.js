@@ -323,58 +323,86 @@ app.get('/api/hk-latest', function(req, res) {
   }
 });
 
-// 香港六合彩 - HKJC 官方 GraphQL API 代理
-const { markSixClient } = require('hkjc-marksix-client');
+// 香港六合彩 - HKJC 官方 API 代理（bet.hkjc.com last30draw.json）
+const HKJC_JSON_URL = 'https://bet.hkjc.com/contentserver/jcbw/cmc/last30draw.json';
+const HKJC_RELAY_URL = 'https://data-stats-center.onrender.com/api/hk-jc?direct=1';
 
 app.get('/api/hk-jc', function(req, res) {
-  Promise.all([
-    markSixClient.getDrawRaw(),
-    markSixClient.getUpcomingDraw().catch(function() { return null; })
-  ]).then(function(results) {
-    var data = results[0];
-    var upcoming = results[1];
-    var draws = (data && data.lotteryDraws) || [];
-    // 找最新一期已开奖的（drawResult有数据）
-    var latest = null;
-    for (var i = 0; i < draws.length; i++) {
-      var d = draws[i];
-      if (d.drawResult && d.drawResult.drawnNo && d.drawResult.drawnNo.length > 0) {
-        latest = d;
-        break;
-      }
-    }
-    if (!latest) {
-      // 降级：取第一条
-      latest = draws[0];
-    }
-    if (!latest) return res.status(502).json({ error: 'No draw data' });
-    var nums = (latest.drawResult && latest.drawResult.drawnNo) || [];
-    var xDrawn = (latest.drawResult && latest.drawResult.xDrawnNo);
-    // xDrawnNo 可能是数字或数组
-    var teMa = Array.isArray(xDrawn) ? String(xDrawn[0] || '').padStart(2, '0') : (xDrawn ? String(xDrawn).padStart(2, '0') : '');
-    var strNums = nums.map(function(n) { return String(n).padStart(2, '0'); });
-    res.json({
-      expect: latest.id || '',
-      one: strNums[0] || '',
-      two: strNums[1] || '',
-      three: strNums[2] || '',
-      four: strNums[3] || '',
-      five: strNums[4] || '',
-      six: strNums[5] || '',
-      seven: teMa,
-      opencode: strNums.concat(teMa ? [teMa] : []).join(','),
-      opentime: latest.drawDate || '',
-      source: 'hkjc-graphql',
-      // 下期信息
-      nextExpect: upcoming ? upcoming.id : '',
-      nextOpenTime: upcoming ? upcoming.drawDate : '',
-      nextCloseTime: upcoming ? upcoming.closeDate : ''
-    });
-  }).catch(function(e) {
-    console.error('[HKJC] GraphQL error:', e.message);
-    res.status(502).json({ error: 'HKJC API error: ' + e.message });
-  });
+  if (req.query.direct === '1') {
+    // onrender 被中继调用，直接访问 HKJC，不重试
+    fetchHKJC(HKJC_JSON_URL, res, false);
+  } else {
+    // 本地：先直连，失败则通过 onrender 中继
+    fetchHKJC(HKJC_JSON_URL, res, true);
+  }
 });
+
+function fetchHKJC(url, res, allowRetry) {
+  var finished = false;
+  function done(err) {
+    if (finished) return;
+    finished = true;
+    if (allowRetry) {
+      console.log('[HKJC] 直连失败(' + err + ')，通过 onrender 中继...');
+      fetchHKJC(HKJC_RELAY_URL, res, false);
+    } else {
+      console.log('[HKJC] 请求失败: ' + err);
+      res.status(502).json({ error: 'HKJC API unreachable' });
+    }
+  }
+  var req = https.get(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Referer': 'https://bet.hkjc.com/marksix/'
+    },
+    timeout: 10000
+  }, function(resp) {
+    var chunks = [];
+    resp.on('data', function(c) { chunks.push(c); });
+    resp.on('end', function() {
+      try {
+        var buf = Buffer.concat(chunks);
+        // 处理 UTF-8 BOM
+        if (buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) buf = buf.slice(3);
+        var draws = JSON.parse(buf.toString('utf-8'));
+        if (!Array.isArray(draws) || draws.length === 0) {
+          return res.status(502).json({ error: 'Empty data' });
+        }
+        // 取最新一期，no 格式为 "1+2+3+4+5+6"，p7/sno 为特码
+        var latest = draws[0];
+        var nums = (latest.no || '').split('+');
+        var teMa = (latest.p7 || latest.sno || '').toString();
+        if (teMa.length === 1) teMa = '0' + teMa;
+        var strNums = nums.map(function(n) { return n.length === 1 ? '0' + n : n; });
+        res.json({
+          expect: latest.id || latest.period || '',
+          one: strNums[0] || '',
+          two: strNums[1] || '',
+          three: strNums[2] || '',
+          four: strNums[3] || '',
+          five: strNums[4] || '',
+          six: strNums[5] || '',
+          seven: teMa,
+          opencode: strNums.concat(teMa ? [teMa] : []).join(','),
+          opentime: latest.date || '',
+          source: 'hkjc-bet',
+          // 下期信息从最新未开奖的 draw 获取
+          nextExpect: draws.length > 1 ? draws[1].id || draws[1].period || '' : '',
+          nextOpenTime: draws.length > 1 ? draws[1].date || '' : ''
+        });
+      } catch(e) {
+        res.status(502).json({ error: 'Parse error: ' + e.message });
+      }
+    });
+  });
+  req.on('timeout', function() {
+    req.destroy();
+    done('timeout');
+  });
+  req.on('error', function(e) {
+    done(e.message);
+  });
+}
 
 // 管理认证
 app.post('/api/admin/auth', function(req, res) {
