@@ -146,6 +146,7 @@ wss.on('connection', function(ws, req) {
   ws.on('error', function() {
     ws._clientInfo.online = false;
     clients.delete(clientId);
+    clearInterval(ws._heartbeatTimer);
     broadcastAdminUpdate();
   });
 
@@ -216,15 +217,20 @@ function handleMessage(ws, msg) {
   }
 }
 
-// 向所有管理员广播客户端列表更新
+// 向所有管理员广播客户端列表更新（300ms 防抖，避免高频消息堆积）
+var _adminUpdateTimer = null;
 function broadcastAdminUpdate() {
-  const list = getClientList();
-  const payload = JSON.stringify({ type: 'clients_update', clients: list });
-  wss.clients.forEach(function(c) {
-    if (c.readyState === 1 && c._isAdmin) {
-      c.send(payload);
-    }
-  });
+  if (_adminUpdateTimer) return;
+  _adminUpdateTimer = setTimeout(function() {
+    _adminUpdateTimer = null;
+    const list = getClientList();
+    const payload = JSON.stringify({ type: 'clients_update', clients: list });
+    wss.clients.forEach(function(c) {
+      if (c.readyState === 1 && c._isAdmin) {
+        c.send(payload);
+      }
+    });
+  }, 300);
 }
 
 function getClientList() {
@@ -500,8 +506,12 @@ app.post('/api/save-result', function(req, res) {
 
     const filename = 'settlement_' + ts + '.txt';
     const filepath = path.join(saveDir, filename);
-    fs.writeFileSync(filepath, text, 'utf-8');
-    console.log('[存储] 结算数据已保存: ' + filepath);
+    fs.writeFile(filepath, text, 'utf-8', function(err) {
+      if (err) console.error('[存储] 写入失败: ' + err.message);
+      else console.log('[存储] 结算数据已保存: ' + filepath);
+    });
+    // 新数据写入后使 XLSX 缓存失效
+    xlsxCache = null;
 
     res.json({ ok: true, file: filename, dir: saveDir });
   } catch(e) {
@@ -512,69 +522,90 @@ app.post('/api/save-result', function(req, res) {
 
 // ===== XLSX 导出接口 =====
 const XLSX = require('xlsx');
+var xlsxCache = null;  // { buf, mtime, fileCount } — 有新结算时自动失效
 
 // 下载历史结算汇总 xlsx
 app.get('/api/export/xlsx', function(req, res) {
-  try {
-    // 读取所有结算文件
-    let saveDir = DATA_DIR;
-    try {
-      if (!fs.existsSync(saveDir)) saveDir = path.join(__dirname, 'shuju');
-    } catch(e) {
-      saveDir = path.join(__dirname, 'shuju');
-    }
+  // 解析保存目录
+  let saveDir = DATA_DIR;
+  try { if (!fs.existsSync(saveDir)) saveDir = path.join(__dirname, 'shuju'); }
+  catch(e) { saveDir = path.join(__dirname, 'shuju'); }
 
-    if (!fs.existsSync(saveDir)) {
-      return res.status(404).json({ error: '数据目录不存在' });
-    }
+  if (!fs.existsSync(saveDir)) {
+    return res.status(404).json({ error: '数据目录不存在' });
+  }
 
-    const files = fs.readdirSync(saveDir)
-      .filter(f => f.startsWith('settlement_') && f.endsWith('.txt'))
-      .map(f => path.join(saveDir, f))
-      .sort();
+  // 检查缓存是否有效（文件数量和最新修改时间未变）
+  var files = fs.readdirSync(saveDir)
+    .filter(function(f) { return f.startsWith('settlement_') && f.endsWith('.txt'); })
+    .map(function(f) { return path.join(saveDir, f); })
+    .sort();
 
-    if (files.length === 0) {
-      return res.status(404).json({ error: '没有结算数据' });
-    }
+  if (files.length === 0) {
+    return res.status(404).json({ error: '没有结算数据' });
+  }
 
-    const allData = [];
-    for (const fp of files) {
+  var latestMtime = 0;
+  try { latestMtime = fs.statSync(files[files.length - 1]).mtimeMs; } catch(e) {}
+
+  if (xlsxCache && xlsxCache.fileCount === files.length && xlsxCache.mtime === latestMtime) {
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="结算汇总_' + new Date().toISOString().slice(0,10) + '.xlsx"');
+    return res.send(xlsxCache.buf);
+  }
+
+  // 异步读取所有文件并生成 XLSX
+  var remaining = files.length;
+  var allData = new Array(files.length);
+  var hasError = false;
+
+  files.forEach(function(fp, idx) {
+    fs.readFile(fp, 'utf-8', function(err, content) {
+      if (err) { remaining--; checkDone(); return; }
       try {
-        const content = fs.readFileSync(fp, 'utf-8');
-        const lines = content.split('\n');
-        const data = {};
-        for (const line of lines) {
-          const m1 = line.match(/^时间:\s*(.+)/); if (m1) data.time = m1[1].trim();
-          const m2 = line.match(/^来源:\s*(.+)/); if (m2) data.source = m2[1].trim();
-          const m3 = line.match(/^客户端:\s*(.+)/); if (m3) data.clientId = m3[1].trim();
-          const m4 = line.match(/^总收:\s*([\d.]+)/); if (m4) data.totalBet = parseFloat(m4[1]);
-          const m5 = line.match(/^总派:\s*([\d.]+)/); if (m5) data.totalPayout = parseFloat(m5[1]);
-          const m6 = line.match(/^盈利:\s*([-\d.]+)/); if (m6) data.netProfit = parseFloat(m6[1]);
-          const m7 = line.match(/^抽水率:\s*([\d.]+)/); if (m7) data.waterRate = parseFloat(m7[1]);
-          const m8 = line.match(/^中奖金额:\s*([\d.]+)/); if (m8) data.hitAmount = parseFloat(m8[1]);
-          const m9 = line.match(/^条目数:\s*([\d.]+)/); if (m9) data.itemCount = parseInt(m9[1]);
-          const m10 = line.match(/^抽水后盈利:\s*([-\d.]+)/); if (m10) data.netAfterWater = parseFloat(m10[1]);
-          const m11 = line.match(/^特码:\s*(.+)/); if (m11) data.teMa = m11[1].trim();
-          const m12 = line.match(/^开奖号码:\s*(.+)/);
+        var lines = content.split('\n');
+        var data = {};
+        for (var li = 0; li < lines.length; li++) {
+          var line = lines[li];
+          var m1 = line.match(/^时间:\s*(.+)/); if (m1) data.time = m1[1].trim();
+          var m2 = line.match(/^来源:\s*(.+)/); if (m2) data.source = m2[1].trim();
+          var m3 = line.match(/^客户端:\s*(.+)/); if (m3) data.clientId = m3[1].trim();
+          var m4 = line.match(/^总收:\s*([\d.]+)/); if (m4) data.totalBet = parseFloat(m4[1]);
+          var m5 = line.match(/^总派:\s*([\d.]+)/); if (m5) data.totalPayout = parseFloat(m5[1]);
+          var m6 = line.match(/^盈利:\s*([-\d.]+)/); if (m6) data.netProfit = parseFloat(m6[1]);
+          var m7 = line.match(/^抽水率:\s*([\d.]+)/); if (m7) data.waterRate = parseFloat(m7[1]);
+          var m8 = line.match(/^中奖金额:\s*([\d.]+)/); if (m8) data.hitAmount = parseFloat(m8[1]);
+          var m9 = line.match(/^条目数:\s*([\d.]+)/); if (m9) data.itemCount = parseInt(m9[1]);
+          var m10 = line.match(/^抽水后盈利:\s*([-\d.]+)/); if (m10) data.netAfterWater = parseFloat(m10[1]);
+          var m11 = line.match(/^特码:\s*(.+)/); if (m11) data.teMa = m11[1].trim();
+          var m12 = line.match(/^开奖号码:\s*(.+)/);
           if (m12) {
             try {
-              const win = JSON.parse(m12[1]);
+              var win = JSON.parse(m12[1]);
               data.winNumbers = win.numbers ? win.numbers.join(',') : '';
               data.winZodiacs = win.flatZodiacs ? win.flatZodiacs.join(',') : '';
             } catch(e2) {}
           }
         }
-        const bn = path.basename(fp, '.txt');
-        const tsMatch = bn.match(/settlement_(.+)/);
+        var bn = path.basename(fp, '.txt');
+        var tsMatch = bn.match(/settlement_(.+)/);
         if (tsMatch) data.fileTimestamp = tsMatch[1].replace(/_/g, ' ');
-        allData.push(data);
-      } catch(e3) {}
-    }
+        allData[idx] = data;
+      } catch(e3) { allData[idx] = null; }
+      remaining--;
+      checkDone();
+    });
+  });
 
-    // 生成汇总 sheet
-    const headers = ['序号','结算时间','文件时间戳','客户端','总收注','总派彩','净收益','抽水率(%)','中奖金额','条目数','抽水后盈利','开奖号码','特码','开出生肖'];
-    const rows = [headers];
-    allData.forEach((d, i) => {
+  function checkDone() {
+    if (remaining > 0) return;
+    if (hasError) return;
+    // 过滤掉读取失败的
+    var clean = allData.filter(function(d) { return d != null; });
+
+    var headers = ['序号','结算时间','文件时间戳','客户端','总收注','总派彩','净收益','抽水率(%)','中奖金额','条目数','抽水后盈利','开奖号码','特码','开出生肖'];
+    var rows = [headers];
+    clean.forEach(function(d, i) {
       rows.push([
         i + 1, d.time || '', d.fileTimestamp || '', d.clientId || '',
         d.totalBet || 0, d.totalPayout || 0, d.netProfit || 0,
@@ -584,18 +615,23 @@ app.get('/api/export/xlsx', function(req, res) {
       ]);
     });
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = headers.map(() => ({ wch: 14 }));
-    XLSX.utils.book_append_sheet(wb, ws, '结算汇总');
+    try {
+      var wb = XLSX.utils.book_new();
+      var ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = headers.map(function() { return { wch: 14 }; });
+      XLSX.utils.book_append_sheet(wb, ws, '结算汇总');
+      var buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="结算汇总_' + new Date().toISOString().slice(0,10) + '.xlsx"');
-    res.send(buf);
-  } catch(e) {
-    console.error('[导出] ' + e.message);
-    res.status(500).json({ error: e.message });
+      // 写入缓存
+      xlsxCache = { buf: buf, mtime: latestMtime, fileCount: files.length };
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="结算汇总_' + new Date().toISOString().slice(0,10) + '.xlsx"');
+      res.send(buf);
+    } catch(e) {
+      console.error('[导出] ' + e.message);
+      if (!res.headersSent) res.status(500).json({ error: e.message });
+    }
   }
 });
 
@@ -721,6 +757,26 @@ app.get('/api/export/xlsx/:filename', function(req, res) {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ===== 优雅关闭 =====
+function gracefulShutdown(signal) {
+  console.log('\n[关闭] 收到 ' + signal + ' 信号，正在清理...');
+  if (pollTimer) clearTimeout(pollTimer);
+  if (_adminUpdateTimer) clearTimeout(_adminUpdateTimer);
+  wss.clients.forEach(function(c) {
+    try { c.terminate(); } catch(e) {}
+  });
+  wss.close(function() {
+    server.close(function() {
+      console.log('[关闭] 服务已停止');
+      process.exit(0);
+    });
+  });
+  // 强制退出（10 秒超时）
+  setTimeout(function() { process.exit(1); }, 10000);
+}
+process.on('SIGTERM', function() { gracefulShutdown('SIGTERM'); });
+process.on('SIGINT', function() { gracefulShutdown('SIGINT'); });
 
 // ===== 启动 =====
 server.listen(PORT, function() {

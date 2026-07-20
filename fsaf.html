@@ -2594,8 +2594,8 @@ async function fetchHKLatest(silent){
       timestamp: new Date().toLocaleString('zh-CN', {hour12:false})
     };
     hkLastExpect = data.expect;
-    hkNextExpect = data.nextExpect || '';
-    hkNextOpenTime = data.nextOpenTime || '';
+    hkNextExpect = data.nextExpect || data.nextqishu || '';
+    hkNextOpenTime = data.nextOpenTime || data.nextopentime || '';
     hkCloseTime = data.nextCloseTime || '';
     renderHKLiveBar();
     if(!silent) toast('已获取香港第' + data.expect + '期开奖');
@@ -2616,13 +2616,12 @@ function startHKPolling(){
     if(h === 21 && m >= 30 && m <= 45){
       fetchHKLatest(true);
     }
+    // 其他时间每30分钟刷新一次，保持数据不过时
+    else if(m % 30 === 0 && !hkResult){
+      fetchHKLatest(true);
+    }
   }
   check();
-  // 首次加载时如果已过开奖时间且无数据，自动拉取一次
-  var now = new Date();
-  if(!hkResult && (now.getHours() > 21 || (now.getHours() === 21 && now.getMinutes() >= 30))){
-    fetchHKLatest(true);
-  }
   hkFetchTimer = setInterval(check, 15000);
 }
 
@@ -3144,6 +3143,8 @@ function adminSendCmd(cid, cmd, params){
       }
     });
     startAutoRefresh();
+    // 香港开奖也自动拉取一次（不限制开奖时间）
+    fetchHKLatest(true);
   }, 800);
 })();
 // 密码门禁
