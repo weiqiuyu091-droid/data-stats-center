@@ -324,8 +324,15 @@ app.get('/api/hk-latest', function(req, res) {
 });
 
 // 香港六合彩 - HKJC API 代理（GraphQL 直连 + onrender 中继回退）
-const { markSixClient } = require('hkjc-marksix-client');
 const HKJC_RELAY_URL = 'https://data-stats-center.onrender.com/api/hk-jc?direct=1';
+var _markSixClient = null;
+function getMarkSixClient() {
+  if (_markSixClient) return Promise.resolve(_markSixClient);
+  return import('hkjc-marksix-client').then(function(m) {
+    _markSixClient = m.markSixClient;
+    return _markSixClient;
+  });
+}
 
 app.get('/api/hk-jc', function(req, res) {
   if (req.query.direct === '1') {
@@ -347,11 +354,14 @@ function fetchHKJCGraphQLWithRetry(res) {
     }
   }, 8000);
 
-  Promise.all([
-    markSixClient.getDrawRaw(),
-    markSixClient.getUpcomingDraw().catch(function() { return null; })
-  ]).then(function(results) {
+  getMarkSixClient().then(function(client) {
     if (sent) return;
+    return Promise.all([
+      client.getDrawRaw(),
+      client.getUpcomingDraw().catch(function() { return null; })
+    ]);
+  }).then(function(results) {
+    if (sent || !results) return;
     clearTimeout(timeout);
     sent = true;
     sendHKJCResponse(res, results[0], results[1]);
@@ -365,10 +375,12 @@ function fetchHKJCGraphQLWithRetry(res) {
 }
 
 function fetchHKJCGraphQL(res) {
-  Promise.all([
-    markSixClient.getDrawRaw(),
-    markSixClient.getUpcomingDraw().catch(function() { return null; })
-  ]).then(function(results) {
+  getMarkSixClient().then(function(client) {
+    return Promise.all([
+      client.getDrawRaw(),
+      client.getUpcomingDraw().catch(function() { return null; })
+    ]);
+  }).then(function(results) {
     sendHKJCResponse(res, results[0], results[1]);
   }).catch(function(e) {
     console.error('[HKJC] GraphQL error:', e.message);
