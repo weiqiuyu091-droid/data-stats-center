@@ -476,6 +476,35 @@ app.post('/api/admin/command', function(req, res) {
   }
 });
 
+// 管理：部署文件更新 + 重启服务
+app.post('/api/admin/deploy', function(req, res) {
+  const { password, files, restart } = req.body;
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: '未授权' });
+  if (!files || !Array.isArray(files) || files.length === 0) return res.status(400).json({ error: '无文件' });
+
+  const errors = [];
+  files.forEach(function(f) {
+    try {
+      const buf = Buffer.from(f.content, 'base64');
+      const filePath = path.join(__dirname, f.path);
+      fs.writeFileSync(filePath, buf);
+      console.log('[部署] 已更新:', f.path, '(' + buf.length + ' bytes)');
+    } catch(e) {
+      errors.push(f.path + ': ' + e.message);
+    }
+  });
+
+  if (errors.length > 0) return res.status(500).json({ ok: false, errors: errors });
+
+  var msg = '已更新 ' + files.length + ' 个文件';
+  if (restart) {
+    res.json({ ok: true, msg: msg + '，正在重启...' });
+    setTimeout(function() { process.exit(0); }, 500);
+  } else {
+    res.json({ ok: true, msg: msg });
+  }
+});
+
 // 结算数据保存目录（可通过环境变量 DATA_DIR 自定义）
 const DATA_DIR = process.env.DATA_DIR || 'E:\\shuju';
 

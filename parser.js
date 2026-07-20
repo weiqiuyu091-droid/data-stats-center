@@ -329,7 +329,7 @@ function getVal(txt){
   if(m){ const v=cn(m[1])||parseCNNum(m[1]); if(v>0) return v; }
   if(!/各/.test(n)){
     var numToks_gv = n.match(/\b\d{1,2}\b/g) || [];
-    if (!/[斤米块]/.test(n) && numToks_gv.length >= 3) return 0;
+    if (!/[斤米块]/.test(n) && numToks_gv.length >= 3 && !/二中二|三中三/.test(n)) return 0;
     m=n.match(/(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/);
     if(m){ const b=n.slice(0,m.index).trim(); if(b.length>0) return parseFloat(m[1]); }
     m=n.match(/^(.+?)([一二三四五六七八九十百千万廿卅两]+)\s*(?:斤|米|块)?\s*$/);
