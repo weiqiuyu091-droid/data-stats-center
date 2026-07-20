@@ -412,8 +412,8 @@ app.post('/api/admin/command', function(req, res) {
   }
 });
 
-// 结算数据保存目录
-const DATA_DIR = 'E:\\shuju';
+// 结算数据保存目录（可通过环境变量 DATA_DIR 自定义）
+const DATA_DIR = process.env.DATA_DIR || 'E:\\shuju';
 
 // 确保目录存在
 try {
