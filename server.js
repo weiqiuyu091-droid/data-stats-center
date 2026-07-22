@@ -264,14 +264,17 @@ app.use(function(req, res, next) {
 app.use(express.json());
 
 app.get('/', function(req, res) {
+  res.set('Cache-Control', 'public, max-age=3600');
   res.sendFile(path.join(__dirname, 'fsaf.html'));
 });
 
 app.get('/admin', function(req, res) {
+  res.set('Cache-Control', 'public, max-age=3600');
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
 app.get('/parser.js', function(req, res) {
+  res.set('Cache-Control', 'public, max-age=86400');
   res.sendFile(path.join(__dirname, 'parser.js'));
 });
 
