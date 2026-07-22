@@ -12,40 +12,40 @@
    所有波色/数据底色规则完整保留，不受全局样式影响
    ============================================================ */
 :root {
-  --bg: #111318; --text: #c4c8d0; --text-secondary: #959aa3;
-  --text-muted: #858a93; --text-heading: #d8dbe0;
+  --bg: #111318; --text: var(--text); --text-secondary: var(--text-secondary);
+  --text-muted: var(--text-muted); --text-heading: var(--text-heading);
   --surface: var(--surface); --surface-hover: var(--input-border);
   --card-bg: var(--card-bg); --card-border: var(--card-border);
   --card-border-hover: var(--card-border-hover); --border-light: var(--border-light);
   --input-bg: var(--card-bg); --input-border: var(--input-border);
   --table-stripe: var(--table-stripe); --table-hover: var(--card-bg);
   --tab-bg: var(--card-bg); --tab-hover: var(--card-border);
-  --tab-active-bg: rgba(120,152,180,.15); --tab-active-color: #8baec8;
+  --tab-active-bg: rgba(120,152,180,.15); --tab-active-color: var(--tab-active-color);
   --btn-outline-border: var(--border-light); --btn-outline-color: var(--text-secondary);
   --btn-outline-hover-bg: var(--card-bg);
-  --btn-outline-hover-border: var(--btn-outline-hover-border); --btn-outline-hover-color: #c4c8d0;
+  --btn-outline-hover-border: var(--btn-outline-hover-border); --btn-outline-hover-color: var(--text);
   --stat-card-bg: var(--card-bg); --stat-card-border: var(--surface);
   --modal-overlay: rgba(0,0,0,.6); --modal-bg: #1a1d27;
   --modal-border: var(--card-border); --thead-bg: var(--card-bg);
   --tbody-divider: var(--card-bg); --shadow-card: rgba(0,0,0,.15);
 }
 body.light {
-  --bg: #f0f2f5; --text: #2c3e50; --text-secondary: #6b7280;
-  --text-muted: #9ca3af; --text-heading: #1f2937;
-  --surface: rgba(0,0,0,.03); --surface-hover: rgba(0,0,0,.06);
-  --card-bg: #ffffff; --card-border: rgba(0,0,0,.08);
-  --card-border-hover: rgba(0,0,0,.12); --border-light: rgba(0,0,0,.10);
-  --input-bg: #ffffff; --input-border: rgba(0,0,0,.12);
-  --table-stripe: rgba(0,0,0,.02); --table-hover: rgba(0,0,0,.03);
-  --tab-bg: rgba(0,0,0,.03); --tab-hover: rgba(0,0,0,.05);
-  --tab-active-bg: rgba(59,130,246,.10); --tab-active-color: #2563eb;
-  --btn-outline-border: rgba(0,0,0,.12); --btn-outline-color: #6b7280;
-  --btn-outline-hover-bg: rgba(0,0,0,.04);
-  --btn-outline-hover-border: rgba(0,0,0,.20); --btn-outline-hover-color: #374151;
-  --stat-card-bg: #ffffff; --stat-card-border: rgba(0,0,0,.06);
-  --modal-overlay: rgba(0,0,0,.4); --modal-bg: #ffffff;
-  --modal-border: rgba(0,0,0,.08); --thead-bg: rgba(0,0,0,.03);
-  --tbody-divider: rgba(0,0,0,.04); --shadow-card: rgba(0,0,0,.06);
+  --bg: #e8ecf1; --text: #1a1a2e; --text-secondary: #374151;
+  --text-muted: #6b7280; --text-heading: #0f172a;
+  --surface: rgba(0,0,0,.04); --surface-hover: rgba(0,0,0,.08);
+  --card-bg: #ffffff; --card-border: rgba(0,0,0,.10);
+  --card-border-hover: rgba(0,0,0,.15); --border-light: rgba(0,0,0,.12);
+  --input-bg: #ffffff; --input-border: rgba(0,0,0,.15);
+  --table-stripe: rgba(0,0,0,.025); --table-hover: rgba(0,0,0,.04);
+  --tab-bg: rgba(0,0,0,.04); --tab-hover: rgba(0,0,0,.06);
+  --tab-active-bg: rgba(37,99,235,.12); --tab-active-color: #1d4ed8;
+  --btn-outline-border: rgba(0,0,0,.15); --btn-outline-color: #374151;
+  --btn-outline-hover-bg: rgba(0,0,0,.05);
+  --btn-outline-hover-border: rgba(0,0,0,.25); --btn-outline-hover-color: #111827;
+  --stat-card-bg: #ffffff; --stat-card-border: rgba(0,0,0,.08);
+  --modal-overlay: rgba(0,0,0,.45); --modal-bg: #ffffff;
+  --modal-border: rgba(0,0,0,.10); --thead-bg: rgba(0,0,0,.04);
+  --tbody-divider: rgba(0,0,0,.06); --shadow-card: rgba(0,0,0,.08);
 }
 .theme-toggle {
   width: 36px; height: 36px; border-radius: 8px;
@@ -136,7 +136,7 @@ textarea:focus-visible { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 2p
 .btn-outline {
   background:transparent; border-color:var(--border-light); color:var(--text-secondary);
 }
-.btn-outline:hover { border-color:var(--btn-outline-hover-border); color:#c4c8d0; background:var(--card-bg); }
+.btn-outline:hover { border-color:var(--btn-outline-hover-border); color:var(--text); background:var(--card-bg); }
 
 /* 成功按钮 — 极淡绿 */
 .btn-success {
@@ -170,8 +170,8 @@ textarea:focus-visible { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 2p
 }
 .tab-btn:first-child { border-radius:8px 0 0 0; }
 .tab-btn:last-child { border-radius:0 8px 0 0; }
-.tab-btn:hover { color:#b0b5bd; background:var(--surface); }
-.tab-btn.active { background:rgba(120,152,180,.15); color:#8baec8; border-bottom-color:#8baec8; }
+.tab-btn:hover { color:var(--text-secondary); background:var(--surface); }
+.tab-btn.active { background:rgba(120,152,180,.15); color:var(--tab-active-color); border-bottom-color:var(--tab-active-color); }
 
 /* ============================================================
    卡片容器 — 高透磨砂
@@ -195,7 +195,7 @@ textarea {
   width:100%; height:160px; padding:14px;
   background:var(--surface);
   border:1px solid var(--card-border); border-radius:8px;
-  color:#c4c8d0; font-size:.8rem; resize:vertical; line-height:1.7;
+  color:var(--text); font-size:.8rem; resize:vertical; line-height:1.7;
   font-family:'Cascadia Code','Consolas','Microsoft YaHei',monospace;
   transition:border-color .22s,box-shadow .22s;
 }
@@ -255,7 +255,7 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
   border-bottom:1px solid var(--input-border);
   letter-spacing:.03em; text-transform:uppercase; font-size:.68rem;
 }
-.tbl td { padding:8px 12px; border-bottom:1px solid var(--card-bg); color:#c4c8d0; }
+.tbl td { padding:8px 12px; border-bottom:1px solid var(--card-bg); color:var(--text); }
 .tbl tr:hover td { background:rgba(255,255,255,.03); }
 .tbl .td-r { text-align:center; }
 .tbl .td-win { text-align:center; color:#22c55e; font-weight:600; }
@@ -294,7 +294,7 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 /* ---- 折叠 ---- */
 .collapse-toggle { cursor:pointer; user-select:none; }
 .collapse-toggle::before { content:'▸ '; font-size:.7rem; color:var(--text-muted); transition:color .2s; }
-.collapse-toggle:hover::before { color:#b0b5bd; }
+.collapse-toggle:hover::before { color:var(--text-secondary); }
 .collapse-toggle.open::before { content:'▾ '; }
 .collapse-body { display:none; }
 .collapse-body.show { display:block; }
@@ -318,7 +318,7 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 /* ---- Toast ---- */
 .toast {
   position:fixed; top:16px; right:16px;
-  background:rgba(22,24,30,.95); color:#c4c8d0;
+  background:rgba(22,24,30,.95); color:var(--text);
   padding:8px 16px; border-radius:6px; font-size:.8rem; z-index:200;
   border:1px solid var(--input-border);
   opacity:0; transform:translateX(100%); transition:all .3s cubic-bezier(.4,0,.2,1);
@@ -350,7 +350,7 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
   width:100%; padding:12px 16px;
   background:var(--card-border);
   border:1px solid var(--card-border-hover); border-radius:6px;
-  color:#c4c8d0; font-size:1.2rem; text-align:center; letter-spacing:4px;
+  color:var(--text); font-size:1.2rem; text-align:center; letter-spacing:4px;
   outline:none; margin-bottom:8px; transition:border-color .2s;
 }
 .login-box input:focus { border-color:#7a9ab8; }
@@ -2115,7 +2115,7 @@ function renderZodiacGrid(winFlat){
     const isWin=winFlat && winFlat.includes(z);
     const cell=document.createElement('div');
     cell.style.cssText=`background:var(--surface);border:1px solid ${isWin?'#22c55e':v>0?'#2563eb':'var(--card-border)'};border-radius:4px;padding:8px;text-align:center;`;
-    cell.innerHTML=`<div style="font-size:.85rem;font-weight:600;color:${isWin?'#4ade80':'#c4c8d0'};">${z}</div><div style="font-size:.78rem;font-weight:600;color:${v>0?'#60a5fa':'#6b6f78'};margin-top:2px;">${v||''}</div>`;
+    cell.innerHTML=`<div style="font-size:.85rem;font-weight:600;color:${isWin?'#4ade80':'var(--text)'};">${z}</div><div style="font-size:.78rem;font-weight:600;color:${v>0?'#60a5fa':'#6b6f78'};margin-top:2px;">${v||''}</div>`;
     grid.appendChild(cell);
   });
 }
@@ -2156,7 +2156,7 @@ function renderComboStats(winNums){
       }
       var odds = getComboOdds(a.zodiacs);
       var risk = a.totalBet * odds;
-      var hitColor = allHit ? '#4ade80' : '#8b8f98';
+      var hitColor = allHit ? '#4ade80' : 'var(--text-muted)';
       h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--card-border);">';
       h += '<span>'+a.zodiacs.map(function(z){ return '<span style="color:#60a5fa;">'+z+'</span>'; }).join('')+(a.isHK?' <span style="color:#ef4444;font-size:.6rem;">HK</span>':'')+'</span>';
       h += '<span style="text-align:right;">投'+a.totalBet+' <span style="color:#fbbf24;">赔'+odds+'</span> <span style="color:#ef4444;">险'+risk+'</span> <span style="color:'+hitColor+';">'+(winNums&&winNums.length?(allHit?'全中':'未中'):'')+'</span></span>';
