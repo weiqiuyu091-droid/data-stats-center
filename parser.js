@@ -651,7 +651,7 @@ function analyze(inputText){
       }
       // Default: prefix-based mode detection
       var slNoSender = sl.replace(/^[^\d]{1,15}?[：:]\s*/, '').trim();
-      if (/^(?:香港|港|香)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /香港/.test(slNoSender) || /(?:[\s\d]|^)(?:港|香)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = true;
+      if (/^(?:香港|港|香)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /香港/.test(slNoSender) || /(?:[\s\d]|^)(?:港|香)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender) || /^(?:香港|港|香)[：:\s]*$/.test(sl)) curHKMode = true;
       else if (/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /澳门|澳門/.test(slNoSender) || /(?:[\s\d]|^)(?:澳特|利来|门特|新澳|新奥)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = false;
       expandLine(sl).forEach(function(sr){
         var r = processRule(sr);
