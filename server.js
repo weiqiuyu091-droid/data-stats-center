@@ -1,7 +1,7 @@
 // 数据统计中心 - 后端服务
 // 功能: 静态文件服务 + WebSocket 通信 + API 代理 + 设备管理
 const PORT = process.env.PORT || 3456;
-const ADMIN_PASSWORD = process.env.ADMIN_PW || '686868';
+const ADMIN_PASSWORD = process.env.ADMIN_PW;
 
 const express = require('express');
 const https = require('https');
@@ -244,6 +244,23 @@ function getClientList() {
 // ===== Express 路由 =====
 
 // 静态文件
+
+// CORS
+app.use(function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
+// Security headers
+app.use(function(req, res, next) {
+  res.header('X-Content-Type-Options', 'nosniff');
+  res.header('X-Frame-Options', 'DENY');
+  next();
+});
+
 app.use(express.json());
 
 app.get('/', function(req, res) {
@@ -440,8 +457,20 @@ function sendHKJCResponse(res, data, upcoming) {
   });
 }
 
+// 速率限制（管理认证）
+var rateLimitMap = new Map();
+var RATE_LIMIT_MAX = 10, RATE_LIMIT_WINDOW = 60000;
+setInterval(function() {
+  var now = Date.now();
+  rateLimitMap.forEach(function(v, k) { if (now - v.reset > RATE_LIMIT_WINDOW) rateLimitMap.delete(k); });
+}, 60000);
+
 // 管理认证
 app.post('/api/admin/auth', function(req, res) {
+  var ip = req.ip || req.socket.remoteAddress || 'unknown';
+  var now = Date.now(), entry = rateLimitMap.get(ip);
+  if (!entry || now - entry.reset > RATE_LIMIT_WINDOW) { rateLimitMap.set(ip, {count:1, reset:now}); }
+  else { entry.count++; if (entry.count > RATE_LIMIT_MAX) return res.status(429).json({error:'Too many attempts'}); }
   if (req.body.password === ADMIN_PASSWORD) {
     res.json({ ok: true, token: 'admin_' + Date.now() });
   } else {
@@ -485,8 +514,10 @@ app.post('/api/admin/deploy', function(req, res) {
   const errors = [];
   files.forEach(function(f) {
     try {
+      if (/\.\./.test(f.path)) { errors.push(f.path + ': invalid path'); return; }
       const buf = Buffer.from(f.content, 'base64');
       const filePath = path.join(__dirname, f.path);
+      if (!filePath.startsWith(__dirname + path.sep)) { errors.push(f.path + ': path escape'); return; }
       fs.writeFileSync(filePath, buf);
       console.log('[部署] 已更新:', f.path, '(' + buf.length + ' bytes)');
     } catch(e) {
@@ -877,7 +908,6 @@ server.listen(PORT, function() {
   console.log('====== 数据统计中心 ======');
   console.log('  服务地址: http://localhost:' + PORT);
   console.log('  管理后台: http://localhost:' + PORT + '/admin');
-  console.log('  管理密码: ' + ADMIN_PASSWORD);
   console.log('=====================================');
   console.log('');
 });
