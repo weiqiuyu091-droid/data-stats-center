@@ -666,7 +666,8 @@ function analyze(inputText){
         }
       });
     });
-    var displayText = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
+    var rawDisplay = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
+    var displayText = rawDisplay.replace(/\n/g, '；');
     messageSummary.push({
       index: lineIdx + 1,
       text: displayText.length > 80 ? displayText.substring(0, 80) + '...' : displayText,
