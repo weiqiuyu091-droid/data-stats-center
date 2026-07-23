@@ -101,8 +101,11 @@ function norm(s, debug){
     .replace(/--/g,'-')
     .replace(/(\d{1,2})\s*[-—－]{2,}\s*(\d+(?:\.\d+)?)/g,'$1各$2').replace(/[*、]+/g,' ').replace(/[-—－]+/g,' ')
     .replace(/([斤米块])\s*，/g, '$1；')
-    .replace(/(二连|三连|四连|五连)[.\/]/g,'$1 ').replace(/\/(二连|三连|四连|五连)/g,' $1')
-    .replace(/(二连|三连|四连|五连)各(\d)/g,'$1 $2')
+	    .replace(/(二连|三连|四连|五连)[.\/]/g,'$1 ').replace(/\/(二连|三连|四连|五连)/g,' $1')
+	    .replace(/\/(\d+(?:\.\d+)?)\s*(二连|三连|四连|五连)/g,'$2$1')
+	    .replace(/\s*\/\s*各/g,'各')
+	    .replace(new RegExp('([' + ZODIAC_CHARS + '])\\s+(?=[' + ZODIAC_CHARS + '])', 'g'), '$1')
+	    .replace(/(二连|三连|四连|五连)各(\d)/g,'$1 $2')
     .replace(/(\d)([A-Za-z])?[，、](?=[红绿蓝单双大小平特特肖])/g,'$1$2 ').replace(/\s+(各(?!组))/g,'$1').replace(/(各)\s+/g,'$1').replace(/\s+/g,' ').trim();
   // 展开无分隔符连肖: "二连狗猴30狗虎30猴虎30" → "狗猴二连30；狗虎二连30；猴虎二连30"
   t = t.replace(new RegExp('^(二连|三连|四连|五连)([' + ZODIAC_CHARS + ']+)(\\d+(?:\\.\\d+)?)((?:[' + ZODIAC_CHARS + ']+\\d+(?:\\.\\d+)?)+)$'), function(m, comboType, firstZodiacs, firstVal, rest) {
