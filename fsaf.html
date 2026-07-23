@@ -1686,8 +1686,9 @@ function analyze(){
         }
       });
     });
-    var displayText = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
-    var fullText = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
+    var rawDisplay = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
+    var displayText = rawDisplay.replace(/\n/g, '；');
+    var fullText = displayText;
     messageSummary.push({
       index: lineIdx + 1,
       text: displayText.length > 80 ? displayText.substring(0, 80) + '...' : displayText,
@@ -1918,21 +1919,6 @@ function calcAll(){
   wsReportBets({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, waterRate: waterRate, hitAmount: Math.round(hitAmount*100)/100, itemCount: allRows.length });
   wsReportSettlement({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100, rows: allRows.slice(0, 20) });
 
-  // 上报结算数据+消息投注汇总到存储服务器
-  saveResultRemote({
-    settlement: {
-      totalBet: totalBet,
-      totalPayout: Math.round(totalPayout*100)/100,
-      netProfit: Math.round(netProfit*100)/100,
-      netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100,
-      waterRate: waterRate,
-      hitAmount: Math.round(hitAmount*100)/100,
-      itemCount: allRows.length
-    },
-    messageSummary: messageSummary,
-    winNumbers: { numbers: canCalcMacau ? winNums : hkWinNums, teMa: canCalcMacau ? teMa : hkTeMa, flatZodiacs: canCalcMacau ? winFlat : hkWinFlat }
-  });
-
   // 汇总每条消息的中奖内容到消息投注汇总
   messageSummary.forEach(function(m){ m.winNote = ''; });
   var comboWinDetails = [];
@@ -1952,6 +1938,21 @@ function calcAll(){
     }
   });
   renderMsgSummary();
+  // 上报结算数据+消息投注汇总到存储服务器
+  saveResultRemote({
+    settlement: {
+      totalBet: totalBet,
+      totalPayout: Math.round(totalPayout*100)/100,
+      netProfit: Math.round(netProfit*100)/100,
+      netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100,
+      waterRate: waterRate,
+      hitAmount: Math.round(hitAmount*100)/100,
+      itemCount: allRows.length
+    },
+    messageSummary: messageSummary,
+    winNumbers: { numbers: canCalcMacau ? winNums : hkWinNums, teMa: canCalcMacau ? teMa : hkTeMa, flatZodiacs: canCalcMacau ? winFlat : hkWinFlat }
+  });
+
 
   // 填充消息汇总统计栏
   var statsBar = document.getElementById('msgSummaryStats');
@@ -3099,6 +3100,7 @@ function wsReportSettlement(results){
 function saveResultRemote(settlementData){
   var payload = {
     settlement: settlementData.settlement,
+    messageSummary: settlementData.messageSummary,
     winNumbers: settlementData.winNumbers,
     clientInfo: { id: (typeof clientId !== 'undefined' ? clientId : 'unknown'), ip: '' }
   };
