@@ -76,13 +76,14 @@ function norm(s, debug){
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
     .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
     .replace(/个字/g,'各数')
-    .replace(/字/g,'各数')
+    .replace(/字([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, n){ return '各' + (cn(n) || parseCNNum(n) || '') + ';'; }).replace(/字/g,'各数')
     .replace(/号个/g,'各数')
-    .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/=/g,'各')
+    .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各')
     .replace(/单数/g,'单').replace(/双数/g,'双')
     .replace(/各\.(\d)/g,'各$1')
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
     .replace(/(?<!各)数十斤/g,'各10斤').replace(/(?<!各)数十米/g,'各10米').replace(/(?<!各)数十块/g,'各10块')
+	    .replace(/特肖/g,'平特')
     .replace(/平特\s*一肖/g,'平特')
     .replace(/平特(三连|二连|四连|五连)肖/g, '$1')
     .replace(/平特(三连|二连|四连|五连)(?!肖)/g, '$1')
@@ -99,7 +100,7 @@ function norm(s, debug){
     .replace(/(\d{1,2})\s*([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, (m,n1,n2,n3)=>n1+'各'+cn(n2)+n3)
     .replace(/(\d{1,2})\s*[-—－]+\s*(\d+(?:\.\d+)?)\s*(斤|米|块)/g,'$1各$2$3')
     .replace(/--/g,'-')
-    .replace(/(\d{1,2})\s*[-—－]{2,}\s*(\d+(?:\.\d+)?)/g,'$1各$2').replace(/[*、]+/g,' ').replace(/[-—－]+/g,' ')
+    .replace(/(\d{1,2})\s*[-—－]{2,}\s*(\d+(?:\.\d+)?)(?!\.?\d)(?!\s*各)/g,'$1各$2').replace(/[*、]+/g,' ').replace(/[-—－]+/g,' ')
     .replace(/([斤米块])\s*，/g, '$1；')
 	    .replace(/(二连|三连|四连|五连)[.\/]/g,'$1 ').replace(/\/(二连|三连|四连|五连)/g,' $1')
 	    .replace(/\/(\d+(?:\.\d+)?)\s*(二连|三连|四连|五连)/g,'$2$1')
@@ -217,7 +218,9 @@ function norm(s, debug){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return (v || cnVal).toString();
   });
-  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/g, function(m, prefix, val){
+  // 各组\d+后跟其他投注内容时插入分号分隔，确保各组传播能正确工作
+  t = t.replace(/(各组\d+(?:\.\d+)?)\s+(?=\S)/g, '$1；');
+  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+?)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*(?:；|$)/g, function(m, prefix, val){
     return prefix.split(/\s+/).map(function(seg){ return seg + val; }).join(' ');
   });
   t = t.replace(/^连肖\s*/g, '');
