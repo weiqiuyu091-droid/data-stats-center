@@ -56,7 +56,7 @@ function norm(s, debug){
     .replace(/[，,]/g,' ')
     .replace(/[（(]\s*\d+\s*[码个]?\s*[）)]/g,'')
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')
-    .replace(/每组/g, '各组')
+    .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })
     .replace(/元/g,'块')
     .replace(/复试/g,'复式')
     .replace(/\d+期\s*/g,'')
@@ -75,7 +75,7 @@ function norm(s, debug){
     .replace(/单各/g, ODD_NUMS.join(' ')+'各')
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
     .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
-    .replace(/个字/g,'各数')
+    .replace(/个字/g,'各数').replace(/各字/g,'各数')
     .replace(/字([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, n){ return '各' + (cn(n) || parseCNNum(n) || '') + ';'; }).replace(/字/g,'各数')
     .replace(/号个/g,'各数')
     .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各')
@@ -189,6 +189,25 @@ function norm(s, debug){
     }
     return pairs.join('；');
   });
+    // 三中三/二中二显式多组(数字在前): "N1 N2 N3 N4...三中三各组V" → 拆分为独立组合
+    t = t.replace(/([\d\s]+)三中三\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, nums, val, unit){
+      var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+      if (numsArr.length < 3 || numsArr.length % 3 !== 0) return m;
+      var triplets = [];
+      for (var i = 0; i < numsArr.length; i += 3) {
+        triplets.push(numsArr.slice(i, i+3).join(" ") + " 三中三 " + val + (unit||""));
+      }
+      return triplets.join("；");
+    });
+    t = t.replace(/([\d\s]+)二中二\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, nums, val, unit){
+      var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+      if (numsArr.length < 2 || numsArr.length % 2 !== 0) return m;
+      var pairs = [];
+      for (var i = 0; i < numsArr.length; i += 2) {
+        pairs.push(numsArr.slice(i, i+2).join(" ") + " 二中二 " + val + (unit||""));
+      }
+      return pairs.join("；");
+    });
   t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)(\d)/g, function(m, cnVal, nextDigit){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return '各' + (v || '') + ' ' + nextDigit;
@@ -615,9 +634,9 @@ function analyze(inputText){
         var listPart = getList(slNorm);
         if (listPart && /[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(listPart)) {
           if (hasComboStruct) {
-            // 结构化投注: 仅当下行有金额时才合并，防止三中三/二中二行级联
-            var nextNorm = norm(stripHK(stripMacau(stripSender(subLines[si+1]))));
-            if (getVal(nextNorm) > 0) {
+            // 结构化投注: 仅当本行无三中三/二中二关键词时才向前级联
+            var curHasComboKW = /三中三|二中二/.test(subLines[si]);
+            if (!curHasComboKW) {
               subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
               subLines[si] = '';
             }

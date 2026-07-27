@@ -884,7 +884,7 @@ function norm(s){
     .replace(/候/g,'猴')  // 候→猴 纠错
     .replace(/[（(]\s*\d+\s*[码个]?\s*[）)]/g,'')  // 过滤括号注释如（24码）
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')  // 【】→， 展开 （必须在破折号→空格之前）
-    .replace(/每组/g, '各组')  // 每组→各组 归一化
+    .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })  // 每组→各组 归一化
     .replace(/元/g,'块')  // 元→块 归一化
     .replace(/复试/g,'复式')  // 复试→复式 归一化
     .replace(/\d+期\s*/g,'')  // 去掉 "173期" 等期号前缀
@@ -896,7 +896,7 @@ function norm(s){
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
     // 个数<中文>斤 → 各数<数字>斤
     .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; }).replace(/尾数(\d)尾/g, '$1尾')
-    .replace(/个字/g,'各数')  // "猴个字十"→"猴各数十"
+    .replace(/个字/g,'各数').replace(/各字/g,'各数')  // "猴个字十"→"猴各数十"
     .replace(/字/g,'各数')  // "05字三十"→"05各数30", "龙字二十嘛"→"龙各数20嘛"
     .replace(/号个/g,'各数')  // "狗号个25米"→"狗各数25米"
     .replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/=/g,'各')  // =各 → 各 (避免各各).replace(/数十/g,'10')
@@ -1007,6 +1007,35 @@ function norm(s){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     if (numsArr.length < 2) return m;
     return expandOrCompact(numsArr, 2, '二中二', val, unit);
+  });
+    // 三中三/二中二显式多组(数字在前): "N1 N2 N3 N4...三中三各组V" → 拆分为独立组合
+    t = t.replace(/([\d\s]+)三中三\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, nums, val, unit){
+      var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+      if (numsArr.length < 3 || numsArr.length % 3 !== 0) return m;
+      var triplets = [];
+      for (var i = 0; i < numsArr.length; i += 3) {
+        triplets.push(numsArr.slice(i, i+3).join(" ") + " 三中三 " + val + (unit||""));
+      }
+      return triplets.join("；");
+    });
+    t = t.replace(/([\d\s]+)二中二\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, nums, val, unit){
+      var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+      if (numsArr.length < 2 || numsArr.length % 2 !== 0) return m;
+      var pairs = [];
+      for (var i = 0; i < numsArr.length; i += 2) {
+        pairs.push(numsArr.slice(i, i+2).join(" ") + " 二中二 " + val + (unit||""));
+      }
+      return pairs.join("；");
+    });
+
+  t = t.replace(/([ds]+)二中二s*各组(d+(?:.d+)?)s*(斤|米|块)?$/g, function(m, nums, val, unit){
+    var numsArr = nums.trim().split(/s+/).filter(function(n){ return /^d{1,2}$/.test(n); });
+    if (numsArr.length < 2 || numsArr.length % 2 !== 0) return m;
+    var pairs = [];
+    for (var i = 0; i < numsArr.length; i += 2) {
+      pairs.push(numsArr.slice(i, i+2).join(" ") + " 二中二 " + val + (unit||""));
+    }
+    return pairs.join("；");
   });
   // 修复"各十7"粘连：各+中文数字后紧跟阿拉伯数字时，转换后插入空格
   t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)(\d)/g, function(m, cnVal, nextDigit){
@@ -1608,13 +1637,27 @@ function analyze(){
       }
     }
     // 合并续行: 前一行只有号码/生肖但无金额标记时，与后一行合并
+    // 检测消息中是否有三中三/二中二结构（防止级联破坏独立投注行）
+    var hasComboStruct = subLines.some(function(sl) {
+      return /三中三|二中二/.test(stripSender(sl));
+    });
     for (var si = 0; si < subLines.length - 1; si++) {
       var slNorm = norm(stripHK(stripMacau(stripSender(subLines[si]))));
       if (getVal(slNorm) === 0) {
         var listPart = getList(slNorm);
         if (listPart && /[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(listPart)) {
-          subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
-          subLines[si] = '';
+          if (hasComboStruct) {
+            // 结构化投注: 仅当本行无三中三/二中二关键词时才向前级联
+            var curHasComboKW = /三中三|二中二/.test(subLines[si]);
+            if (!curHasComboKW) {
+              subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
+              subLines[si] = '';
+            }
+          } else {
+            // 普通数字列表: 正常级联合并
+            subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
+            subLines[si] = '';
+          }
         }
       }
     }
