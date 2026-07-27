@@ -1994,7 +1994,7 @@ function calcAll(){
       itemCount: allRows.length
     },
     messageSummary: messageSummary,
-    winNumbers: { numbers: canCalcMacau ? winNums : hkWinNums, teMa: canCalcMacau ? teMa : hkTeMa, flatZodiacs: canCalcMacau ? winFlat : hkWinFlat }
+    winNumbers: { numbers: canCalcMacau ? winNums : hkWinNums, teMa: canCalcMacau ? teMa : hkTeMa, flatZodiacs: canCalcMacau ? winFlat : hkWinFlat, expect: canCalcMacau ? (liveResult && liveResult.expect) : hkLastExpect }
   });
 
 
@@ -2400,7 +2400,7 @@ function renderLiveBar(){
 
   document.getElementById('liveTime').innerHTML = (r.timestamp||'--') + ' | 已开 <b>' + drawnCount + '</b>/7 球 | 波色: ' + (waveSummary||'--');
   document.getElementById('liveDot').classList.add('online');
-  document.getElementById('liveStatus').textContent = '在线';
+  document.getElementById('liveStatus').textContent = r.expect ? '第' + r.expect + '期' : '在线';
   document.getElementById('liveStatus').style.color = '#22c55e';
 }
 

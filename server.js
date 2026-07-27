@@ -606,7 +606,8 @@ app.post('/api/save-result', function(req, res) {
     // 开奖号码
     if (payload.winNumbers) {
       text += '----------------------------------------\n';
-      text += '开奖号码: ' + JSON.stringify(payload.winNumbers) + '\n';
+      if (payload.winNumbers.expect) text += '期号: ' + payload.winNumbers.expect + '\n';
+      text += '开奖号码: ' + JSON.stringify(payload.winNumbers.numbers) + '\n';
       if (payload.winNumbers.teMa) text += '特码: ' + payload.winNumbers.teMa + '\n';
     }
     // 详细行
