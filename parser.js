@@ -139,41 +139,35 @@ function norm(s, debug){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     var k = type === '三中三' ? 3 : 2;
     if (numsArr.length < k) return m;
-    var combos = combinations(numsArr, k);
-    return combos.map(function(c){ return c.join(' ') + ' ' + type + ' ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, k, type, val, unit);
   });
   t = t.replace(/复式(三中三|二中二)\s*([\d\s]*\d)各组(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, type, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     var k = type === '三中三' ? 3 : 2;
     if (numsArr.length < k) return m;
-    var combos = combinations(numsArr, k);
-    return combos.map(function(c){ return c.join(' ') + ' ' + type + ' ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, k, type, val, unit);
   });
   t = t.replace(/([\d\s]+)复式(三中三|二中二)\s*各(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, type, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     var k = type === '三中三' ? 3 : 2;
     if (numsArr.length < k) return m;
-    var combos = combinations(numsArr, k);
-    return combos.map(function(c){ return c.join(' ') + ' ' + type + ' ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, k, type, val, unit);
   });
   t = t.replace(/([\d\s]+)三中三复式各(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     if (numsArr.length < 3) return m;
-    var combos = combinations(numsArr, 3);
-    return combos.map(function(c){ return c.join(' ') + ' 三中三 ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, 3, '三中三', val, unit);
   });
   t = t.replace(/([\d\s]+)二中二复式各(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     if (numsArr.length < 2) return m;
-    var combos = combinations(numsArr, 2);
-    return combos.map(function(c){ return c.join(' ') + ' 二中二 ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, 2, '二中二', val, unit);
   });
   // 二中二复式: N1 N2 N3...各组V  (复式关键词在前)
   t = t.replace(/二中二复式\s*([\d\s]+)各组(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     if (numsArr.length < 2) return m;
-    var combos = combinations(numsArr, 2);
-    return combos.map(function(c){ return c.join(' ') + ' 二中二 ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, 2, '二中二', val, unit);
   });
   t = t.replace(/复式(二连|三连|四连|五连)\s*各组(\d+(?:\.\d+)?)/g, '复式$1 $2');
   // 三中三/二中二多行合并: "三中三 N1 N2 N3...组V" → 展开为独立组合
@@ -220,7 +214,7 @@ function norm(s, debug){
   });
   // 各组\d+后跟其他投注内容时插入分号分隔，确保各组传播能正确工作
   t = t.replace(/(各组\d+(?:\.\d+)?)\s+(?=\S)/g, '$1；');
-  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+?)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*(?:；|$)/g, function(m, prefix, val){
+  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+?)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*(?:；|$)/, function(m, prefix, val){
     return prefix.split(/\s+/).map(function(seg){ return seg + val; }).join(' ');
   });
   t = t.replace(/^连肖\s*/g, '');
@@ -298,6 +292,16 @@ function combinations(arr,k){
   if(k===0)return[[]]; if(arr.length<k)return[];
   const r=[]; for(let i=0;i<=arr.length-k;i++){ const f=arr[i]; combinations(arr.slice(i+1),k-1).forEach(c=>r.push([f,...c])); }
   return r;
+}
+// 复式展开阈值: C(n,k)超过此值时不枚举，用数学公式计算
+var COMBO_EXPAND_MAX = 500;
+function expandOrCompact(numsArr, k, type, val, unit) {
+  var n = numsArr.length;
+  if (C(n, k) > COMBO_EXPAND_MAX) {
+    return '@@COMBO@@ ' + type + ' ' + numsArr.join(' ') + ' 各组' + val + (unit || '');
+  }
+  var combos = combinations(numsArr, k);
+  return combos.map(function(c){ return c.join(' ') + ' ' + type + ' ' + val + (unit || ''); }).join('；');
 }
 
 function expandLine(l){
@@ -430,6 +434,16 @@ function processRule(rawRule){
   const rule=clean(rawRule); if(!rule) return null;
   const txt=norm(stripHK(stripMacau(stripSender(rule))));
   const txtNoHK=txt.replace(/香港|香|港/g,'').trim();
+
+  // ==== P0: 复式组合集 (紧凑格式, 超过阈值未展开) ====
+  var csm = txt.match(/^@@COMBO@@ (三中三|二中二) (.+) 各组(\d+(?:\.\d+)?)\s*(斤|米|块)?$/);
+  if (csm) {
+    var csNums = csm[2].split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+    var csPerVal = parseFloat(csm[3]);
+    var csK = csm[1] === '三中三' ? 3 : 2;
+    var csCount = C(csNums.length, csK);
+    return {display: csNums.length + '个号' + csm[1] + '复式 各组' + csPerVal + ' (共' + csCount + '组)', bet: csCount * csPerVal, type: 'combo_set', comboNums: csNums, comboK: csK, comboCount: csCount, perBet: csPerVal};
+  }
 
   // ==== P1: 连肖组合 (二连/三连/四连/五连) ====
   // 先合并相邻生肖之间的空格（"鼠 牛 兔"→"鼠牛兔"），否则正则只捕获最后一个

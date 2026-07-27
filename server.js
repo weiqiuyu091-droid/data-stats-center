@@ -2,6 +2,10 @@
 // 功能: 静态文件服务 + WebSocket 通信 + API 代理 + 设备管理
 const PORT = process.env.PORT || 3456;
 const ADMIN_PASSWORD = process.env.ADMIN_PW;
+if (!ADMIN_PASSWORD) {
+  console.error('[安全] 未设置 ADMIN_PW 环境变量，管理功能将不可用！');
+  console.error('[安全] 请在 Render 环境变量中设置 ADMIN_PW');
+}
 
 const express = require('express');
 const https = require('https');
@@ -14,7 +18,7 @@ const app = express();
 const server = http.createServer(app);
 
 // ===== WebSocket 服务 =====
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, maxPayload: 5 * 1024 * 1024 });
 
 // 客户端状态追踪: clientId → { ws, info, bets, settlement, lottery, lastSeen, online }
 const clients = new Map();
@@ -463,7 +467,7 @@ function sendHKJCResponse(res, data, upcoming) {
 // 速率限制（管理认证）
 var rateLimitMap = new Map();
 var RATE_LIMIT_MAX = 10, RATE_LIMIT_WINDOW = 60000;
-setInterval(function() {
+var _rateLimitTimer = setInterval(function() {
   var now = Date.now();
   rateLimitMap.forEach(function(v, k) { if (now - v.reset > RATE_LIMIT_WINDOW) rateLimitMap.delete(k); });
 }, 60000);
@@ -684,7 +688,6 @@ app.get('/api/export/xlsx', function(req, res) {
   // 异步读取所有文件并生成 XLSX
   var remaining = files.length;
   var allData = new Array(files.length);
-  var hasError = false;
 
   files.forEach(function(fp, idx) {
     fs.readFile(fp, 'utf-8', function(err, content) {
@@ -726,7 +729,6 @@ app.get('/api/export/xlsx', function(req, res) {
 
   function checkDone() {
     if (remaining > 0) return;
-    if (hasError) return;
     // 过滤掉读取失败的
     var clean = allData.filter(function(d) { return d != null; });
 
@@ -890,6 +892,7 @@ function gracefulShutdown(signal) {
   console.log('\n[关闭] 收到 ' + signal + ' 信号，正在清理...');
   if (pollTimer) clearTimeout(pollTimer);
   if (_adminUpdateTimer) clearTimeout(_adminUpdateTimer);
+  if (_rateLimitTimer) clearInterval(_rateLimitTimer);
   wss.clients.forEach(function(c) {
     try { c.terminate(); } catch(e) {}
   });

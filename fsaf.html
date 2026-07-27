@@ -987,30 +987,26 @@ function norm(s){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     var k = type === '三中三' ? 3 : 2;
     if (numsArr.length < k) return m;
-    var combos = combinations(numsArr, k);
-    return combos.map(function(c){ return c.join(' ') + ' ' + type + ' ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, k, type, val, unit);
   });
   // 复式三中三/复式二中二 号码在后: "复式三中三 47 12 36 34 32 19各组2斤"（各组紧跟数字，不留空格）
   t = t.replace(/复式(三中三|二中二)\s*([\d\s]*\d)各组(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, type, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     var k = type === '三中三' ? 3 : 2;
     if (numsArr.length < k) return m;
-    var combos = combinations(numsArr, k);
-    return combos.map(function(c){ return c.join(' ') + ' ' + type + ' ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, k, type, val, unit);
   });
   // 三中三复式各: "01.05.06.25.37.38.45.46三中三复式各100" → 生成所有C(n,3)组合
   t = t.replace(/([\d\s]+)三中三复式各(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     if (numsArr.length < 3) return m;
-    var combos = combinations(numsArr, 3);
-    return combos.map(function(c){ return c.join(' ') + ' 三中三 ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, 3, '三中三', val, unit);
   });
   // 二中二复式各: "01.05.06.25二中二复式各100" → 生成所有C(n,2)组合
   t = t.replace(/([\d\s]+)二中二复式各(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     if (numsArr.length < 2) return m;
-    var combos = combinations(numsArr, 2);
-    return combos.map(function(c){ return c.join(' ') + ' 二中二 ' + val + (unit || ''); }).join('；');
+    return expandOrCompact(numsArr, 2, '二中二', val, unit);
   });
   // 修复"各十7"粘连：各+中文数字后紧跟阿拉伯数字时，转换后插入空格
   t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)(\d)/g, function(m, cnVal, nextDigit){
@@ -2207,21 +2203,28 @@ function renderN3Stats(winNums, teMa){
     html += '<span style="color:#60a5fa;font-weight:600;">'+b.numbers.join('.')+'</span>';
     html += '<span style="color:var(--text-secondary);">'+b.count+'组 × '+b.perUnit+' = <span style="color:#fbbf24;">投'+(b.count*b.perUnit)+'</span></span>';
     html += '</div>';
-    const combos = combinations(b.numbers, 3);
-    let hitGroups = 0;
+    var hitGroups = 0;
+    var showAllCombos = b.count <= COMBO_EXPAND_MAX;
     if(regNums.length){
-      html += '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
-      combos.forEach(combo => {
-        const allHit = combo.every(n => regNums.includes(n));
-        if(allHit) hitGroups++;
-        html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#166534;color:#4ade80;border:1px solid #22c55e;':'background:var(--card-border);color:var(--text-muted);border:1px solid var(--input-border);')+'">'+combo.join('.')+'</span>';
-      });
-      html += '</div>';
+      if(showAllCombos){
+        var combos = combinations(b.numbers, 3);
+        html += '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
+        combos.forEach(combo => {
+          var allHit = combo.every(n => regNums.includes(n));
+          if(allHit) hitGroups++;
+          html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#166534;color:#4ade80;border:1px solid #22c55e;':'background:var(--card-border);color:var(--text-muted);border:1px solid var(--input-border);')+'">'+combo.join('.')+'</span>';
+        });
+        html += '</div>';
+      } else {
+        var matchedNums = b.numbers.filter(function(n){ return regNums.includes(n); });
+        hitGroups = C(matchedNums.length, 3);
+        html += '<div style="color:var(--text-muted);font-size:.68rem;">'+b.numbers.length+'个号×三中三 = '+b.count+'组 (太多，不展开显示)</div>';
+      }
       if(hitGroups > 0){
         html += '<div style="color:#4ade80;font-weight:600;margin-top:4px;">中'+hitGroups+'组 → 派彩 '+hitGroups+'×'+b.perUnit+'×600 = <span style="color:#fbbf24;">'+(hitGroups*b.perUnit*600)+'</span></div>';
       }
     } else {
-      html += '<div style="color:var(--text-muted);font-size:.68rem;">'+combos.length+'组 | 等待开奖</div>';
+      html += '<div style="color:var(--text-muted);font-size:.68rem;">'+b.count+'组 | 等待开奖</div>';
     }
     html += '</div>';
   });
@@ -2243,21 +2246,28 @@ function renderN2Stats(winNums, teMa){
     html += '<span style="color:#60a5fa;font-weight:600;">'+b.numbers.join('.')+'</span>';
     html += '<span style="color:var(--text-secondary);">'+b.count+'组 × '+b.perUnit+' = <span style="color:#fbbf24;">投'+(b.count*b.perUnit)+'</span></span>';
     html += '</div>';
-    const combos = combinations(b.numbers, 2);
-    let hitGroups = 0;
+    var hitGroups = 0;
+    var showAllCombos = b.count <= COMBO_EXPAND_MAX;
     if(regNums.length){
-      html += '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
-      combos.forEach(combo => {
-        const allHit = combo.every(n => regNums.includes(n));
-        if(allHit) hitGroups++;
-        html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#166534;color:#4ade80;border:1px solid #22c55e;':'background:var(--card-border);color:var(--text-muted);border:1px solid var(--input-border);')+'">'+combo.join('.')+'</span>';
-      });
-      html += '</div>';
+      if(showAllCombos){
+        var combos = combinations(b.numbers, 2);
+        html += '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
+        combos.forEach(combo => {
+          var allHit = combo.every(n => regNums.includes(n));
+          if(allHit) hitGroups++;
+          html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#166534;color:#4ade80;border:1px solid #22c55e;':'background:var(--card-border);color:var(--text-muted);border:1px solid var(--input-border);')+'">'+combo.join('.')+'</span>';
+        });
+        html += '</div>';
+      } else {
+        var matchedNums = b.numbers.filter(function(n){ return regNums.includes(n); });
+        hitGroups = C(matchedNums.length, 2);
+        html += '<div style="color:var(--text-muted);font-size:.68rem;">'+b.numbers.length+'个号×二中二 = '+b.count+'组 (太多，不展开显示)</div>';
+      }
       if(hitGroups > 0){
         html += '<div style="color:#4ade80;font-weight:600;margin-top:4px;">中'+hitGroups+'组 → 派彩 '+hitGroups+'×'+b.perUnit+'×60 = <span style="color:#fbbf24;">'+(hitGroups*b.perUnit*60)+'</span></div>';
       }
     } else {
-      html += '<div style="color:var(--text-muted);font-size:.68rem;">'+combos.length+'组 | 等待开奖</div>';
+      html += '<div style="color:var(--text-muted);font-size:.68rem;">'+b.count+'组 | 等待开奖</div>';
     }
     html += '</div>';
   });
