@@ -43,7 +43,7 @@ function parseCNNum(s){
 }
 function isMsgDateLine(s){ return /^\d{4}年\d{1,2}月\d{1,2}日\s*\d{1,2}:\d{2}/.test(s); }
 function stripSender(s){ return s.replace(/^([^:：]+)[：:]\s*/,function(m,p){ if(/[\d\.。,，、\-\—\－]/.test(p))return m; if(/^(?:复[试式]|[三二]中[三二]|平特|特肖|门特|香|港|香港|澳|门|[二三四五]连)/.test(p))return m; if(p.length>5)return m; var zc=(p.match(/[猴鸡狗猪鼠牛虎兔龙蛇马羊]/g)||[]).length; return zc>2?m:''; }).trim(); }
-function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|澳特|澳|奥|利来|门特|门|新)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
+function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|奥|利来|新)\s*[:：]?\s*/i,'').replace(/^(?:澳特|门特)\s*[:：]?\s*/i,'特肖').replace(/^(?:澳|门)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function stripHK(s){ return s.replace(/^(?:香港|港|香)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function expandDot(s){ return s.replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 '); }
 
@@ -86,7 +86,6 @@ function norm(s, debug){
     .replace(/各\.(\d)/g,'各$1')
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
     .replace(/(?<!各)数十斤/g,'各10斤').replace(/(?<!各)数十米/g,'各10米').replace(/(?<!各)数十块/g,'各10块')
-	    .replace(/特肖/g,'平特')
     .replace(/平特\s*一肖/g,'平特')
     .replace(/平特(三连|二连|四连|五连)肖/g, '$1')
     .replace(/平特(三连|二连|四连|五连)(?!肖)/g, '$1')
@@ -95,6 +94,10 @@ function norm(s, debug){
     .replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 ').replace(/(\d{1,2})\.(?![\d]{1,2})/g,'$1 ')
     .replace(new RegExp(`([${ZODIAC_CHARS}])\\.(?=[${ZODIAC_CHARS}])`, 'g'), '$1 ')
     .replace(/\.(?=\s*各)/g, ' ')
+    // "特肖猪狗各号5" → "特肖猪 5 特肖狗 5" (澳特/门特转换后展开)
+    .replace(new RegExp(`特肖([${ZODIAC_CHARS}]+)各号(\\d+(?:\\\.\\d+)?)`,'g'), function(m, zs, v){
+      return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
+    })
     .replace(new RegExp(`([${ZODIAC_CHARS}]+)各肖各?(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
       return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
     })
