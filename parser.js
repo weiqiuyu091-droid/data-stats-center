@@ -467,7 +467,7 @@ function processRule(rawRule){
     var csPerVal = parseFloat(csm[3]);
     var csK = csm[1] === '三中三' ? 3 : 2;
     var csCount = C(csNums.length, csK);
-    return {display: csNums.length + '个号' + csm[1] + '复式 各组' + csPerVal + ' (共' + csCount + '组)', bet: csCount * csPerVal, type: 'combo_set', comboNums: csNums, comboK: csK, comboCount: csCount, perBet: csPerVal};
+    return {display: csNums.length + '个号' + csm[1] + '复式 各组' + csPerVal + ' (共' + csCount + '组)', bet: csCount * csPerVal, type: csK===3?'n3':'n2', numbers: csNums, k: csK, perUnit: csPerVal, comboCount: csCount};
   }
 
   // ==== P1: 连肖组合 (二连/三连/四连/五连) ====
@@ -494,7 +494,7 @@ function processRule(rawRule){
     const nums = ssm[1].split(/\s+/).filter(Boolean);
     const sstype = ssm[2], ssval = parseFloat(ssm[3]);
     const k = sstype === '三中三' ? 3 : 2;
-    if (nums.length === k) return {display:`${nums.join(' ')}${sstype} ${ssval}`, bet:ssval, type:'combo_nums', targets:nums};
+    if (nums.length === k) return {display:`${nums.join(' ')}${sstype} ${ssval}`, bet:ssval, type:sstype==='三中三'?'n3':'n2', numbers:nums, k:k, perUnit:ssval};
   }
 
   // ==== P3: 特肖 ====

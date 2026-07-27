@@ -1485,7 +1485,7 @@ function processRule(rawRule){
     const sstype = ssm[2];
     const ssval = parseFloat(ssm[3]);
     const k = sstype === '三中三' ? 3 : 2;
-    if (nums.length === k) return {display:`${hk?'香港':''}${nums.join(' ')}${sstype} ${ssval}`, bet:ssval, type:'combo_nums', targets:nums};
+    if (nums.length === k) return {display:`${hk?'香港':''}${nums.join(' ')}${sstype} ${ssval}`, bet:ssval, type:sstype==='三中三'?'n3':'n2', numbers:nums, k:k, perUnit:ssval};
   }
 
   const value=getVal(txtNoHK); if(!value) return null;
