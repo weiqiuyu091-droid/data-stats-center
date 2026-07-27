@@ -59,8 +59,9 @@ function norm(s, debug){
     .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })
     .replace(/元/g,'块')
     .replace(/复试/g,'复式')
+    .replace(/(二连|三连|四连|五连)复式/g, '复式$1')
     .replace(/\d+期\s*/g,'')
-    .replace(/号个/g,'号各').replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1')
+    .replace(/号个/g,'号各').replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1').replace(/个组/g,'各组').replace(/个\//g,'各')
     .replace(/蚊/g,'')
     .replace(/[嘛呀啊呢吧哦噢哟唉]+/g, '')
     .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); }).replace(/尾数(\d)尾/g, '$1尾').replace(/(\d)尾/g, function(m, d){ var r=[]; for(var i=0;i<=4;i++){ var n=i*10+parseInt(d); if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
@@ -73,6 +74,8 @@ function norm(s, debug){
     // 独立"双"/"单"展开为所有双数/单数 (红波双等已在前面展开,此处处理剩余的独立双/单)
     .replace(/双各/g, EVEN_NUMS.join(' ')+'各')
     .replace(/单各/g, ODD_NUMS.join(' ')+'各')
+    // 纯波色展开(不带单双): "红波各数十"→17个红波号码各10
+    .replace(/(红波|蓝波|绿波)各/g, function(m, wave){ var base = wave==='红波'?WAVE_RED:wave==='蓝波'?WAVE_BLUE:WAVE_GREEN; return base.join(' ')+'各'; })
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
     .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
     .replace(/个字/g,'各数').replace(/各字/g,'各数')
@@ -608,6 +611,82 @@ function groupNewFormatMessages(lines){
   return messages.length>0 ? messages : null;
 }
 
+// ===== preprocessComboMessage — 三中三/二中二结构预处理 =====
+// 将"各组VAL"分发到每个数字组，生成规范化"N1 N2 N3 三中三 VAL"行
+function preprocessComboMessage(subLines) {
+  // 确定组合类型
+  var k = 0, comboTypeName = '';
+  for (var i = 0; i < subLines.length; i++) {
+    var sl = subLines[i].trim();
+    if (/^三中三$/.test(sl)) { k = 3; comboTypeName = '三中三'; break; }
+    if (/^二中二$/.test(sl)) { k = 2; comboTypeName = '二中二'; break; }
+  }
+  if (k === 0) return null;
+
+  // 分类每个子行
+  var items = [];
+  for (var i = 0; i < subLines.length; i++) {
+    var sl = subLines[i].trim();
+    if (!sl || /^三中三$/.test(sl) || /^二中二$/.test(sl)) continue;
+
+    // 数字组带金额: "31-12-26组10米"
+    var groupWithBet = sl.match(/^([\d\s\.\-\－\—]+)组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s*$/);
+    if (groupWithBet) {
+      var nums = groupWithBet[1].split(/[\s\.\-\－\—]+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+      if (nums.length === k) {
+        items.push({type: 'group', nums: nums, bet: parseFloat(groupWithBet[2])});
+      }
+      continue;
+    }
+
+    // 各组标记: "各组20米"
+    var markerMatch = sl.match(/^各组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s*$/);
+    if (markerMatch) {
+      items.push({type: 'marker', bet: parseFloat(markerMatch[1])});
+      continue;
+    }
+
+    // 纯数字组
+    var bareGroup = sl.match(/^([\d\s\.\-\－\—]+)$/);
+    if (bareGroup) {
+      var nums2 = bareGroup[1].split(/[\s\.\-\－\—]+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+      if (nums2.length === k) {
+        items.push({type: 'group', nums: nums2, bet: 0});
+        continue;
+      }
+    }
+
+    // 其他内容保留给常规处理
+    items.push({type: 'other', text: sl});
+  }
+
+  // 反向传播: 各组标记→前方未赋值组, 有值组→更前方未赋值组
+  var pendingBet = 0;
+  for (var i = items.length - 1; i >= 0; i--) {
+    if (items[i].type === 'marker') {
+      pendingBet = items[i].bet;
+      items[i].consumed = true;
+    } else if (items[i].type === 'group' && items[i].bet === 0 && pendingBet > 0) {
+      items[i].bet = pendingBet;
+    } else if (items[i].type === 'group' && items[i].bet > 0) {
+      pendingBet = items[i].bet;
+    }
+  }
+
+  // 生成规范化行
+  var result = [];
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].consumed) continue;
+    if (items[i].type === 'group' && items[i].bet > 0) {
+      result.push(items[i].nums.join(' ') + ' ' + comboTypeName + ' ' + items[i].bet);
+    } else if (items[i].type === 'other') {
+      result.push(items[i].text);
+    }
+  }
+
+  return result;
+}
+
 // ===== analyze() — 复刻 fsaf.html 1404行行为 =====
 function analyze(inputText){
   const text = inputText.replace(/\r\n/g,'\n').replace(/　/g,' ').replace(/[ \t]+/g,' ');
@@ -631,6 +710,16 @@ function analyze(inputText){
     var hasComboStruct = subLines.some(function(sl) {
       return /三中三|二中二/.test(stripSender(sl));
     });
+    // 三中三/二中二结构预处理: 将"各组VAL"按组分配，生成规范化行
+    if (hasComboStruct) {
+      var preprocessed = preprocessComboMessage(subLines);
+      if (preprocessed !== null) {
+        // 替换subLines，跳过后续合并逻辑（规范化行已有完整金额）
+        subLines.length = 0;
+        Array.prototype.push.apply(subLines, preprocessed);
+        hasComboStruct = false; // 规范化后不需要hasComboStruct特殊合并
+      }
+    }
     for (var si = 0; si < subLines.length - 1; si++) {
       var slNorm = norm(stripHK(stripMacau(stripSender(subLines[si]))));
       if (getVal(slNorm) === 0) {
