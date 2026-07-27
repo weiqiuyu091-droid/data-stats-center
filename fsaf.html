@@ -1808,6 +1808,9 @@ function analyze(){
         }
       });
     });
+    } catch(e2) {
+      console.error('analyze msg ' + (lineIdx+1) + ' error:', e2);
+    }
     var rawDisplay = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
     var displayText = rawDisplay.replace(/\n/g, '；');
     var fullText = displayText;
@@ -1817,9 +1820,6 @@ function analyze(){
       fullText: fullText,
       totalBet: Math.round(msgBet * 100) / 100
     });
-    } catch(e2) {
-      console.error('analyze msg ' + (lineIdx+1) + ' error:', e2);
-    }
   });
 
   try { renderAll(); } catch(e3) { console.error('renderAll error:', e3); alert('渲染号码网格失败: ' + e3.message); }
