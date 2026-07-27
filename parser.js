@@ -233,8 +233,9 @@ function norm(s, debug){
   });
   // 各组\d+后跟其他投注内容时插入分号分隔，确保各组传播能正确工作
   t = t.replace(/(各组\d+(?:\.\d+)?)\s+(?=\S)/g, '$1；');
-  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+?)\s*各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*(?:；|$)/, function(m, prefix, val){
-    return prefix.split(/\s+/).map(function(seg){ return seg + val; }).join(' ');
+  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+?)\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s*(?:；|$)/, function(m, prefix, val, unit){
+    var items = prefix.split(/\s+/).filter(function(seg){ return seg.length > 0; });
+    return items.map(function(seg){ return seg + '各' + val + (unit||''); }).join(' ');
   });
   t = t.replace(/^连肖\s*/g, '');
   t = t.replace(/复式(二连|三连|四连|五连)肖\s*(\d+(?:\.\d+)?)\s*一组(?:共(\d+)组)?/g, function(m, lx, v, cnt){
@@ -393,6 +394,8 @@ function getVal(txt){
   if(m) return parseFloat(m[1]);
   m=n.match(new RegExp(`\\s*${KW}\\s*([\\u4e00-\\u9fa5]+)\\s*(?:斤|米|块)?\\s*$`));
   if(m){ const v=cn(m[1])||parseCNNum(m[1]); if(v>0) return v; }
+  m=n.match(/各组(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/);
+  if(m) return parseFloat(m[1]);
   if(!/各/.test(n)){
     var numToks_gv = n.match(/\b\d{1,2}\b/g) || [];
     if (!/[斤米块]/.test(n) && numToks_gv.length >= 3 && !/二中二|三中三/.test(n)) return 0;
@@ -632,14 +635,12 @@ function analyze(inputText){
       var slNorm = norm(stripHK(stripMacau(stripSender(subLines[si]))));
       if (getVal(slNorm) === 0) {
         var listPart = getList(slNorm);
-        if (listPart && /[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(listPart)) {
+        if (listPart && (/[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(listPart) || /三中三|二中二/.test(listPart))) {
           if (hasComboStruct) {
-            // 结构化投注: 仅当本行无三中三/二中二关键词时才向前级联
-            var curHasComboKW = /三中三|二中二/.test(subLines[si]);
-            if (!curHasComboKW) {
-              subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
-              subLines[si] = '';
-            }
+            // 结构化投注: 级联合并，有金额行(getVal>0)自动停止
+            // (getVal 已修复可识别各组\d+，级联不会穿透有值行)
+            subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
+            subLines[si] = '';
           } else {
             // 普通数字列表: 正常级联合并
             subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
