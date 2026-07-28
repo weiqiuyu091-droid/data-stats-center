@@ -43,7 +43,7 @@ function parseCNNum(s){
 }
 function isMsgDateLine(s){ return /^\d{4}年\d{1,2}月\d{1,2}日\s*\d{1,2}:\d{2}/.test(s); }
 function stripSender(s){ return s.replace(/^([^:：]+)[：:]\s*/,function(m,p){ if(/[\d\.。,，、\-\—\－]/.test(p))return m; if(/^(?:复[试式]|[三二]中[三二]|平特|特肖|门特|香|港|香港|澳|门|[二三四五]连)/.test(p))return m; if(p.length>5)return m; var zc=(p.match(/[猴鸡狗猪鼠牛虎兔龙蛇马羊]/g)||[]).length; return zc>2?m:''; }).trim(); }
-function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|奥|利来|新)\s*[:：]?\s*/i,'').replace(/^(?:澳特|门特)\s*[:：]?\s*/i,'特肖').replace(/^(?:澳|门)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
+function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|澳特|澳|奥|利来|门特|门|新)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function stripHK(s){ return s.replace(/^(?:香港|港|香)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function expandDot(s){ return s.replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 '); }
 
