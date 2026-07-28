@@ -701,6 +701,30 @@ function analyze(inputText){
     rawLines = groupedMessages.map(function(m){ return m.content; });
   }
 
+  // 多行三中三/二中二预合并: 独立标题行吸入后续数字组行(裸粘贴无发送者头时)
+  for (var mi = 0; mi < rawLines.length; mi++) {
+    var titleT = stripSender(rawLines[mi]).trim();
+    var ck = /^三中三$/.test(titleT) ? 3 : (/^二中二$/.test(titleT) ? 2 : 0);
+    if (!ck) continue;
+    var absorbed = 0;
+    while (mi + 1 + absorbed < rawLines.length) {
+      var nl = rawLines[mi + 1 + absorbed].trim();
+      var absorbOk = false;
+      if (/^各组\d+(\.\d+)?\s*(斤|米|块)?$/.test(nl)) absorbOk = true;
+      else if (/^[\d\s\.\-\－\—]+组\d+(\.\d+)?\s*(斤|米|块)?$/.test(nl)) absorbOk = true;
+      else if (/^[\d\s\.\-\－\—]+$/.test(nl)) {
+        var ns = nl.split(/[\s\.\-\－\—]+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+        if (ns.length === ck) absorbOk = true;
+      }
+      if (!absorbOk) break;
+      absorbed++;
+    }
+    if (absorbed > 0) {
+      rawLines[mi] = rawLines[mi] + '；' + rawLines.slice(mi + 1, mi + 1 + absorbed).join('；');
+      rawLines.splice(mi + 1, absorbed);
+    }
+  }
+
   var betSummary = [];
   var messageSummary = [];
   var grandTotal = 0;
@@ -714,6 +738,7 @@ function analyze(inputText){
       return /三中三|二中二/.test(stripSender(sl));
     });
     // 三中三/二中二结构预处理: 将"各组VAL"按组分配，生成规范化行
+    var preprocessedCombo = false;
     if (hasComboStruct) {
       var preprocessed = preprocessComboMessage(subLines);
       if (preprocessed !== null) {
@@ -721,8 +746,10 @@ function analyze(inputText){
         subLines.length = 0;
         Array.prototype.push.apply(subLines, preprocessed);
         hasComboStruct = false; // 规范化后不需要hasComboStruct特殊合并
+        preprocessedCombo = true;
       }
     }
+    if (!preprocessedCombo) {
     for (var si = 0; si < subLines.length - 1; si++) {
       var slNorm = norm(stripHK(stripMacau(stripSender(subLines[si]))));
       if (getVal(slNorm) === 0) {
@@ -763,6 +790,7 @@ function analyze(inputText){
     for (var si = subLines.length - 1; si >= 0; si--) {
       if (!subLines[si]) subLines.splice(si, 1);
     }
+    } // end if (!preprocessedCombo)
     var curHKMode = false;
     subLines.forEach(function(sl){
       var segs = splitByModeMarkers(sl);
