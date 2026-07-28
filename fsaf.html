@@ -823,6 +823,15 @@ function combinations(arr,k){
   const r=[]; for(let i=0;i<=arr.length-k;i++){ const f=arr[i]; combinations(arr.slice(i+1),k-1).forEach(c=>r.push([f,...c])); }
   return r;
 }
+// 复式展开阈值: C(n,k)超过此值时不枚举，用数学公式计算
+function expandOrCompact(numsArr, k, type, val, unit) {
+  var n = numsArr.length;
+  if (C(n, k) > COMBO_EXPAND_MAX) {
+    return '@@COMBO@@ ' + type + ' ' + numsArr.join(' ') + ' 各组' + val + (unit || '');
+  }
+  var combos = combinations(numsArr, k);
+  return combos.map(function(c){ return c.join(' ') + ' ' + type + ' ' + val + (unit || ''); }).join('；');
+}
 
 // ===== 游戏状态 =====
 let betSummary = [];        // {display, bet, type:'nums'|'flat'|'combo'|'n3'|'n2', targets[], comboZodiacs?, comboType?, msgIndex?}
