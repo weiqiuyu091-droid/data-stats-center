@@ -58,7 +58,7 @@ function norm(s, debug){
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')
     .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })
     .replace(/元/g,'块')
-    .replace(/复试/g,'复式')
+    .replace(/复试/g,'复式').replace(/两连/g,'二连')
     .replace(/(二连|三连|四连|五连)复式/g, '复式$1')
     .replace(/\d+期\s*/g,'')
     .replace(/号个/g,'号各').replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1').replace(/个组/g,'各组').replace(/个\//g,'各')
@@ -237,6 +237,47 @@ function norm(s, debug){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return (v || cnVal).toString();
   });
+  // ===== 0805 修复块: 平特肖/复式缩写/连肖组字/句中中文金额 =====
+  // 平特肖 = 整体一注: "平特肖 狗800元" → "平特 狗800元"（防止被兜底展开成肖码×金额）
+  t = t.replace(/平特肖/g, '平特');
+  // 复式缩写展开: "猴虎狗蛇复三复四各30" → 枚举组合 "猴虎狗三连30；猴虎蛇三连30；..."
+  t = t.replace(new RegExp(`(平特\\s*)?([${ZODIAC_CHARS}]+)\\s*复([二三四五])复([二三四五])\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(斤|米|块)?`, 'g'), function(m, flat, zs, k1, k2, v, unit){
+    var lx = {二:'二连', 三:'三连', 四:'四连', 五:'五连'};
+    var zsArr = zs.split('');
+    var out = [];
+    [k1, k2].forEach(function(k){
+      var kk = k === '二' ? 2 : k === '三' ? 3 : k === '四' ? 4 : 5;
+      if (zsArr.length >= kk) {
+        combinations(zsArr, kk).forEach(function(c){ out.push(c.join('') + lx[k] + v + (unit || '')); });
+      }
+    });
+    return out.join('；');
+  });
+  // 复式在前格式: "复式三连猴虎狗蛇各30" → 枚举组合（AI canonical 输出形式）
+  t = t.replace(new RegExp(`复式([二三四五])连([${ZODIAC_CHARS}]+)\\s*各?(\\d+(?:\\.\\d+)?)\\s*(斤|米|块)?`, 'g'), function(m, k, zs, v, unit){
+    var lx = {二:'二连', 三:'三连', 四:'四连', 五:'五连'};
+    var kk = k === '二' ? 2 : k === '三' ? 3 : k === '四' ? 4 : 5;
+    var zsArr = zs.split('');
+    if (zsArr.length < kk) return m;
+    return combinations(zsArr, kk).map(function(c){ return c.join('') + lx[k] + v + (unit || ''); }).join('；');
+  });
+  // 连肖带"组"字: "四连猪鼠鸡兔组20" → "四连猪鼠鸡兔20"（"组"字挡在数字前导致走号码展开）
+  t = t.replace(new RegExp(`(二连|三连|四连|五连)([${ZODIAC_CHARS}]+)组([一二三四五六七八九十百千万廿卅两百\\d]+)`, 'g'), function(m, lx, zs, v){ var nv = cn(v) || parseCNNum(v); return lx + zs + (nv || v); });
+  t = t.replace(new RegExp(`([${ZODIAC_CHARS}]+)(二连|三连|四连|五连)组([一二三四五六七八九十百千万廿卅两百\\d]+)`, 'g'), function(m, zs, lx, v){ var nv = cn(v) || parseCNNum(v); return zs + lx + (nv || v); });
+  // 句中中文金额: "平特 蛇 两千 11..." → "平特 蛇 2000 11..."（"两千"在句中漏读）
+  // 先保护含中文数字的关键字，防止被后续转换破坏
+  t = t.replace(/三中三/g, '\x00SZS\x00');
+  t = t.replace(/二中二/g, '\x00EZE\x00');
+  t = t.replace(/(二连|三连|四连|五连)/g, '\x00$1\x00');
+  t = t.replace(/([一二三四五六七八九十百千万廿卅两百]+)(?=\s+\S)/g, function(m, cnVal){
+    var v = cn(cnVal);
+    if (!v && /[千百]$/.test(cnVal)) v = parseCNNum(cnVal);
+    return v ? v.toString() : cnVal;
+  });
+  // 还原受保护的关键字
+  t = t.replace(/\x00SZS\x00/g, '三中三');
+  t = t.replace(/\x00EZE\x00/g, '二中二');
+  t = t.replace(/\x00(二连|三连|四连|五连)\x00/g, '$1');
   // 各组\d+后跟其他投注内容时插入分号分隔，确保各组传播能正确工作
   t = t.replace(/(各组\d+(?:\.\d+)?)\s+(?=\S)/g, '$1；');
   t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+?)\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s*(?:；|$)/, function(m, prefix, val, unit){
@@ -623,6 +664,23 @@ function preprocessComboMessage(subLines) {
     var sl = subLines[i].trim();
     if (/^三中三$/.test(sl)) { k = 3; comboTypeName = '三中三'; break; }
     if (/^二中二$/.test(sl)) { k = 2; comboTypeName = '二中二'; break; }
+  }
+  if (k === 0) {
+    // 兜底: 检测内联格式 "组三中三12米" 或尾行含类型声明
+    for (var j = 0; j < subLines.length; j++) {
+      var sl2 = subLines[j].trim();
+      var im = sl2.match(/组(三中三|二中二)(\d+(?:\.\d+)?)\s*(斤|米|块)?\s*$/);
+      if (im) {
+        k = im[1] === "三中三" ? 3 : 2;
+        comboTypeName = im[1];
+        var prefix2 = sl2.replace(/组(三中三|二中二).*$/, "").trim();
+        subLines[j] = "各组" + im[2] + (im[3] || "");
+        if (prefix2 && /[\d]/.test(prefix2)) {
+          subLines.splice(j, 0, prefix2);
+        }
+        break;
+      }
+    }
   }
   if (k === 0) return null;
 

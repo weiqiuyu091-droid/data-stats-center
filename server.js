@@ -13,6 +13,8 @@ const http = require('http');
 const { WebSocketServer } = require('ws');
 const path = require('path');
 const fs = require('fs');
+let aiBrain = null;
+try { aiBrain = require('./ai_brain.js'); console.log('[AI] 大脑模块已加载'); } catch(e) { console.log('[AI] 大脑模块未加载:', e.message); }
 
 const app = express();
 const server = http.createServer(app);
@@ -648,6 +650,43 @@ app.post('/api/save-result', function(req, res) {
     res.json({ ok: true, file: filename, dir: saveDir });
   } catch(e) {
     console.error('[存储] 保存失败: ' + e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ===== AI 大脑解析接口 =====
+app.post('/api/ai/analyze', async function(req, res) {
+  if (!aiBrain) return res.status(503).json({ ok: false, error: 'AI 大脑模块未加载，请检查 ai_brain.js 是否存在' });
+  const { text } = req.body || {};
+  if (!text || !text.trim()) return res.status(400).json({ ok: false, error: '缺少投注文本' });
+
+  try {
+    const result = await aiBrain.analyze(text, {
+      onProgress: function(batchIdx, itemCount, err) {
+        if (err) console.log('[AI] 批次', batchIdx, '失败:', err);
+        else console.log('[AI] 批次', batchIdx, '→', itemCount, '条');
+      }
+    });
+
+    // 合并 AI 条目为 canonical 行（前端可直接当输入喂给规则解析器）
+    const canonicalLines = result.aiItems
+      .filter(function(it) { return it.canonical; })
+      .map(function(it) { return it.canonical; });
+
+    res.json({
+      ok: true,
+      grandTotal: result.grandTotal,
+      itemCount: result.aiItems.length,
+      parserItemCount: result.stats.parserItems,
+      canonicalLines: canonicalLines,
+      canonicalText: canonicalLines.join('\n'),
+      items: result.aiItems.map(function(it) {
+        return { canonical: it.canonical, amount: it.amount, unit: it.unit, type: it.type, market: it.market, target: it.target };
+      }),
+      stats: result.stats
+    });
+  } catch(e) {
+    console.error('[AI] 解析失败:', e.message);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
