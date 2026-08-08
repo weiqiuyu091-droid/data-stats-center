@@ -76,7 +76,7 @@ function norm(s, debug){
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')
     .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })
     .replace(/元/g,'块').replace(/(\d)文/g,'$1块')
-    .replace(/复(二|三|四|五)复(二|三|四|五)([' + ZODIAC_CHARS + ']+)各组([\\d一二三四五六七八九十百千万廿卅两百]+(?:\.[\\d]+)?)/g, function(m, a, b, zs, v){ var map={二:'二连',三:'三连',四:'四连',五:'五连'}; var nv = cn(v) || parseCNNum(v) || v; var ka = map[a]==='二连'?2:map[a]==='三连'?3:map[a]==='四连'?4:5; var kb = map[b]==='二连'?2:map[b]==='三连'?3:map[b]==='四连'?4:5; return zs+'复式'+map[a]+' '+nv+' 各'+ka+'组;'+zs+'复式'+map[b]+' '+nv+' 各'+kb+'组'; }).replace(/复(二|三|四|五)复(二|三|四|五)/g, function(m, a, b){ var map={二:'二连',三:'三连',四:'四连',五:'五连'}; return '复试'+map[a]+';复试'+map[b]; }).replace(/复试/g,'复式').replace(/两连/g,'二连').replace(/二友/g,'二连').replace(/三友/g,'三连')
+    .replace(/复试/g,'复式').replace(/两连/g,'二连').replace(/二友/g,'二连').replace(/三友/g,'三连')
     .replace(/(二连|三连|四连|五连)复式/g, '复式$1')
     .replace(/\d+期\s*/g,'').replace(/(\d+)\s*百(?!\d)/g, function(m, n){ return String(parseInt(n) * 100); }).replace(/(\d+)\s*千(?!\d)/g, function(m, n){ return String(parseInt(n) * 1000); })
     .replace(/号个/g,'号各').replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1').replace(/个组/g,'各组').replace(/个\//g,'各').replace(/一个\s*$/g,'')
@@ -820,18 +820,16 @@ function analyze(inputText){
   var grandTotal = 0;
 
   
-  // 复X复Y展开: 直接生成所有组合行
+  // 复X复Y展开
   for (var _fi = 0; _fi < rawLines.length; _fi++) {
-    var _fm = rawLines[_fi].match(new RegExp('复(二|三|四|五)复(二|三|四|五)([' + ZODIAC_CHARS + ']+)各组([\\d一二三四五六七八九十百千万廿卅两百]+(?:\\.[\\d]+)?)'));
-    if (_fm) {
-      var _fa = _fm[1], _fb = _fm[2], _fzs = _fm[3], _fv = _fm[4];
+    var _re = new RegExp('复(二|三|四|五)复(二|三|四|五)([' + ZODIAC_CHARS + ']+)各组([\\d一二三四五六七八九十百千万廿卅两百]+(?:\\.[\\d]+)?)', 'g');
+    rawLines[_fi] = rawLines[_fi].replace(_re, function(_m, _fa, _fb, _fzs, _fv) {
       var _map = {二:'二连',三:'三连',四:'四连',五:'五连'};
       var _nv = cn(_fv) || parseCNNum(_fv) || _fv;
       var _kA = _map[_fa] === '二连' ? 2 : _map[_fa] === '三连' ? 3 : _map[_fa] === '四连' ? 4 : 5;
       var _kB = _map[_fb] === '二连' ? 2 : _map[_fb] === '三连' ? 3 : _map[_fb] === '四连' ? 4 : 5;
       var _zArr = _fzs.split('');
       var _lines = [];
-      // 生成所有 kA-连组合
       for (var _ci = 0; _ci < (1 << _zArr.length); _ci++) {
         var _sel = [];
         for (var _cj = 0; _cj < _zArr.length; _cj++) {
@@ -839,7 +837,6 @@ function analyze(inputText){
         }
         if (_sel.length === _kA) _lines.push(_sel.join('') + _map[_fa] + _nv);
       }
-      // 生成所有 kB-连组合
       for (var _ci = 0; _ci < (1 << _zArr.length); _ci++) {
         var _sel = [];
         for (var _cj = 0; _cj < _zArr.length; _cj++) {
@@ -847,30 +844,8 @@ function analyze(inputText){
         }
         if (_sel.length === _kB) _lines.push(_sel.join('') + _map[_fb] + _nv);
       }
-      rawLines[_fi] = rawLines[_fi].replace(new RegExp('复(二|三|四|五)复(二|三|四|五)([' + ZODIAC_CHARS + ']+)各组([\d一二三四五六七八九十百千万廿卅两百]+(?:\.[\d]+)?)', 'g'), function(_m2, _fa2, _fb2, _fzs2, _fv2) {
-      var _map2 = {二:'二连',三:'三连',四:'四连',五:'五连'};
-      var _nv2 = cn(_fv2) || parseCNNum(_fv2) || _fv2;
-      var _kA2 = _map2[_fa2] === '二连' ? 2 : _map2[_fa2] === '三连' ? 3 : _map2[_fa2] === '四连' ? 4 : 5;
-      var _kB2 = _map2[_fb2] === '二连' ? 2 : _map2[_fb2] === '三连' ? 3 : _map2[_fb2] === '四连' ? 4 : 5;
-      var _zArr2 = _fzs2.split('');
-      var _lines2 = [];
-      for (var _ci2 = 0; _ci2 < (1 << _zArr2.length); _ci2++) {
-        var _sel2 = [];
-        for (var _cj2 = 0; _cj2 < _zArr2.length; _cj2++) {
-          if (_ci2 & (1 << _cj2)) _sel2.push(_zArr2[_cj2]);
-        }
-        if (_sel2.length === _kA2) _lines2.push(_sel2.join('') + _map2[_fa2] + _nv2);
-      }
-      for (var _ci2 = 0; _ci2 < (1 << _zArr2.length); _ci2++) {
-        var _sel2 = [];
-        for (var _cj2 = 0; _cj2 < _zArr2.length; _cj2++) {
-          if (_ci2 & (1 << _cj2)) _sel2.push(_zArr2[_cj2]);
-        }
-        if (_sel2.length === _kB2) _lines2.push(_sel2.join('') + _map2[_fb2] + _nv2);
-      }
-      return _lines2.join('；');
+      return _lines.join('；');
     });
-    }
   }
 rawLines.forEach(function(rawLine, lineIdx){
     var msgBet = 0;
