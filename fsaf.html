@@ -1980,11 +1980,10 @@ rawLines.forEach(function(rawLine, lineIdx){
     }
     } // end if (!preprocessedCombo)
     var curHKMode = false; // Default Macau, stateful within a line
+    var _isTarget = displayText.indexOf('04，21，30')>=0 || displayText.indexOf('20/个20')>=0;
+    if(_isTarget) console.log('=== TARGET #' + (lineIdx+1) + ' ===');
     subLines.forEach(function(sl){
-      // DEBUG
-      var _dbgVal = getVal(norm(stripHK(stripMacau(stripSender(sl)))));
-      var _dbgExp = expandLine(sl);
-      console.log('  subLine: getVal=' + _dbgVal + ' expandLen=' + _dbgExp.length + ' curHK=' + curHKMode + ' [' + sl.substring(0,40) + ']', _dbgExp);
+      if(_isTarget) console.log('  sub[' + sl.substring(0,40) + '] getVal=' + getVal(norm(stripHK(stripMacau(stripSender(sl))))));
       // Try inline mode switching first (e.g. "澳门内容  香港内容")
       var segs = splitByModeMarkers(sl);
       if (segs) {
@@ -2017,6 +2016,7 @@ rawLines.forEach(function(rawLine, lineIdx){
       else if (/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /澳门|澳門/.test(slNoSender) || /(?:[\s\d]|^)(?:澳特|利来|门特|新澳|新奥)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = false;
       expandLine(sl).forEach(function(sr){
         var r = processRule(sr);
+        if(_isTarget) console.log('    -> sr=[' + sr.substring(0,40) + '] bet=' + (r?r.bet:0) + ' type=' + (r?r.type:'null') + ' hk=' + curHKMode);
         if (r) {
           r.msgIndex = lineIdx;
           r.hk = curHKMode;
