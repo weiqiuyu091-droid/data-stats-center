@@ -2041,6 +2041,8 @@ rawLines.forEach(function(rawLine, lineIdx){
       fullText: fullText,
       totalBet: Math.round(msgBet * 100) / 100
     });
+    // DEBUG: 打印每消息投注额，F12控制台查看
+    console.log('msg#' + (lineIdx+1) + ' bet=' + Math.round(msgBet*100)/100 + ' ' + displayText.substring(0, 60));
   });
 
   try { renderAll(); } catch(e3) { console.error('renderAll error:', e3); alert('渲染号码网格失败: ' + e3.message); }
