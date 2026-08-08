@@ -821,7 +821,7 @@ function parseCNNum(s){
 function isHK(r){ return /香港|香|港/.test(r); }
 function stripSender(s){ return s.replace(/^([^:：]+)[：:]\s*/,function(m,p){ if(/[\d\.。,，、\-\—\－]/.test(p))return m; if(/^(?:复[试式]|[三二]中[三二]|平特|特肖|门特|香|港|香港|澳|门|[二三四五]连)/.test(p))return m; if(p.length>5)return m; var zc=(p.match(/[猴鸡狗猪鼠牛虎兔龙蛇马羊]/g)||[]).length; return zc>2?m:''; }).trim(); }
 function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|澳特|澳|利来|门特|门|新)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
-function stripHK(s){ return s.replace(/^(?:香港|港|香)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
+function stripHK(s){ return s.replace(/^(?:香港|港|香)s*[:：]?s*/i,"").replace(/s*(?:香港|港|香)s*$/i,"").replace(/^[：:,，s]+/,"").trim(); }
 function expandDot(s){ return s.replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 '); }
 // 二连/三连/四连多对拆分
 function splitMultiPairCombo(t) {
@@ -1980,10 +1980,7 @@ rawLines.forEach(function(rawLine, lineIdx){
     }
     } // end if (!preprocessedCombo)
     var curHKMode = false; // Default Macau, stateful within a line
-    var _isTarget = rawLine.indexOf('04，21，30')>=0 || rawLine.indexOf('20/个20')>=0;
-    if(_isTarget) console.log('=== TARGET #' + (lineIdx+1) + ' ===');
     subLines.forEach(function(sl){
-      if(_isTarget) console.log('  sub[' + sl.substring(0,40) + '] getVal=' + getVal(norm(stripHK(stripMacau(stripSender(sl))))));
       // Try inline mode switching first (e.g. "澳门内容  香港内容")
       var segs = splitByModeMarkers(sl);
       if (segs) {
@@ -2016,7 +2013,6 @@ rawLines.forEach(function(rawLine, lineIdx){
       else if (/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /澳门|澳門/.test(slNoSender) || /(?:[\s\d]|^)(?:澳特|利来|门特|新澳|新奥)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = false;
       expandLine(sl).forEach(function(sr){
         var r = processRule(sr);
-        if(_isTarget) console.log('    -> sr=[' + sr.substring(0,40) + '] bet=' + (r?r.bet:0) + ' type=' + (r?r.type:'null') + ' hk=' + curHKMode);
         if (r) {
           r.msgIndex = lineIdx;
           r.hk = curHKMode;
@@ -2045,8 +2041,6 @@ rawLines.forEach(function(rawLine, lineIdx){
       fullText: fullText,
       totalBet: Math.round(msgBet * 100) / 100
     });
-    // DEBUG: 打印每消息投注额，F12控制台查看
-    console.log('msg#' + (lineIdx+1) + ' bet=' + Math.round(msgBet*100)/100 + ' ' + displayText.substring(0, 60));
   });
 
   try { renderAll(); } catch(e3) { console.error('renderAll error:', e3); alert('渲染号码网格失败: ' + e3.message); }
