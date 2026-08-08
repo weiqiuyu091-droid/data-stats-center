@@ -1980,7 +1980,7 @@ rawLines.forEach(function(rawLine, lineIdx){
     }
     } // end if (!preprocessedCombo)
     var curHKMode = false; // Default Macau, stateful within a line
-    var _isTarget = displayText.indexOf('04，21，30')>=0 || displayText.indexOf('20/个20')>=0;
+    var _isTarget = rawLine.indexOf('04，21，30')>=0 || rawLine.indexOf('20/个20')>=0;
     if(_isTarget) console.log('=== TARGET #' + (lineIdx+1) + ' ===');
     subLines.forEach(function(sl){
       if(_isTarget) console.log('  sub[' + sl.substring(0,40) + '] getVal=' + getVal(norm(stripHK(stripMacau(stripSender(sl))))));
