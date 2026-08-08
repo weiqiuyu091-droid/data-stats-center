@@ -775,89 +775,6 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 
 <!-- ==================== SCRIPT ==================== -->
 <script>
-// ===== 生肖数据 =====
-const ZODIAC_MAP = {
-  马:["01","13","25","37","49"],蛇:["02","14","26","38"],龙:["03","15","27","39"],
-  兔:["04","16","28","40"],虎:["05","17","29","41"],牛:["06","18","30","42"],
-  鼠:["07","19","31","43"],猪:["08","20","32","44"],狗:["09","21","33","45"],
-  鸡:["10","22","34","46"],猴:["11","23","35","47"],羊:["12","24","36","48"]
-};
-const ALL_ZODIACS = ["马","蛇","龙","兔","虎","牛","鼠","猪","狗","鸡","猴","羊"];
-const ZODIAC_CHARS = ALL_ZODIACS.join('');
-const NUM_TO_ZODIAC = {};
-ALL_ZODIACS.forEach(z => ZODIAC_MAP[z].forEach(n => NUM_TO_ZODIAC[n] = z));
-const TAIL_MAP={};for(let d=0;d<=9;d++){const k=d.toString();TAIL_MAP[k]=[];for(let n=1;n<=49;n++)if(n%10===d)TAIL_MAP[k].push(n.toString().padStart(2,'0'));}
-
-const BIG=[],SMALL=[],ODD=[],EVEN=[];
-for(let i=1;i<=49;i++){ const n=i.toString().padStart(2,'0'); (i>=25?BIG:SMALL).push(n); (i%2?ODD:EVEN).push(n); }
-
-// ===== 波色映射 =====
-const WAVE_COLOR_MAP = {
-  红波: ["01","02","07","08","12","13","18","19","23","24","29","30","34","35","40","45","46"],
-  绿波: ["05","06","11","16","17","21","22","27","28","32","33","38","39","43","44","49"],
-  蓝波: ["03","04","09","10","14","15","20","25","26","31","36","37","41","42","47","48"]
-};
-const WAVE_COLORS = {"红":"红波","绿":"绿波","蓝":"蓝波"};
-const WAVE_COLOR_SETS = {};
-Object.keys(WAVE_COLOR_MAP).forEach(k => { WAVE_COLOR_SETS[k] = new Set(WAVE_COLOR_MAP[k]); });
-const NUM_TO_WAVE = {};
-Object.keys(WAVE_COLOR_MAP).forEach(k => { WAVE_COLOR_MAP[k].forEach(n => NUM_TO_WAVE[n] = k); });
-const SIZE_PARITY_MAP = {单:ODD,双:EVEN,大:BIG,小:SMALL};
-
-// ===== 庄家固定赔率 =====
-const ODDS_TM = 47;       // 特码
-const ODDS_PT_MA = 1.8;   // 平特马
-const ODDS_PT_OTHER = 2;  // 其他平特
-	const ODDS_TX_MA = 10;    // 特肖马
-	const ODDS_TX_OTHER = 11; // 特肖其他
-const ODDS_2 = 5.5;       // 二连(默认)
-const ODDS_3 = 28;        // 三连(默认)
-// 二连带马=3.5, 不带马=4; 三连带马=8, 不带马=10
-const ODDS_N3 = 600;      // 三中三
-const ODDS_N2 = 65;       // 二中二
-
-// ===== 组合数学 =====
-function C(n,k){ if(k>n||k<0)return 0; if(k===0||k===n)return 1; let r=1; for(let i=1;i<=k;i++) r=r*(n-i+1)/i; return r; }
-var COMBO_EXPAND_MAX = 500;  // 复式组合展开数量上限
-function combinations(arr,k){
-  if(k===0)return [[]]; if(arr.length<k)return[];
-  const r=[]; for(let i=0;i<=arr.length-k;i++){ const f=arr[i]; combinations(arr.slice(i+1),k-1).forEach(c=>r.push([f,...c])); }
-  return r;
-}
-// 复式展开阈值: C(n,k)超过此值时不枚举，用数学公式计算
-function expandOrCompact(numsArr, k, type, val, unit) {
-  var n = numsArr.length;
-  if (C(n, k) > COMBO_EXPAND_MAX) {
-    return '@@COMBO@@ ' + type + ' ' + numsArr.join(' ') + ' 各组' + val + (unit || '');
-  }
-  var combos = combinations(numsArr, k);
-  return combos.map(function(c){ return c.join(' ') + ' ' + type + ' ' + val + (unit || ''); }).join('；');
-}
-
-// ===== 游戏状态 =====
-let betSummary = [];        // {display, bet, type:'nums'|'flat'|'combo'|'n3'|'n2', targets[], comboZodiacs?, comboType?, msgIndex?}
-let messageSummary = [];    // {index, text, totalBet}
-let numberBets = {};        // num -> total bet amount
-let flatBets = {};          // zodiac -> total bet amount
-let specialZodiacBets = {}; // 特肖 -> {bet, zodiac}
-let comboBets = [];         // combo entries (zodiac-based)
-let numComboBets = [];      // number combo entries (三中三/二中二)
-let subtractHistory = [];   // 扣除记录: [{text, total}]
-
-let liveResult = null;      // {numbers:[7], teMa, flatZodiacs:[], timestamp}
-let hkResult = null;        // {numbers:[7], teMa, flatZodiacs:[]} — 手动输入香港开奖
-let hkBetSummary = [];      // 香港盘投注 (独立于澳门盘)
-let hkNumberBets = {};      // 香港盘号码投注额
-let hkFlatBets = {};        // 香港盘平特投注
-let hkSpecialZodiacBets = {}; // 香港盘特肖
-let hkComboBets = [];       // 香港盘连肖
-let hkNumComboBets = [];    // 香港盘三中三/二中二
-let autoRefreshTimer = null;
-let autoRefreshOn = false;
-let currentTab = 'bets';
-let waterRate = 0;  // 抽水率 0-30%
-let settlementAllRows = [];  // 缓存结算明细数据用于导出 xlsx
-
 // parser.js — 投注解析共享模块 (Node + Browser)
 
 const ZODIAC_MAP = {
@@ -1839,23 +1756,7 @@ rawLines.forEach(function(rawLine, lineIdx){
 
   return { betSummary, messageSummary, grandTotal: Math.round(grandTotal * 100) / 100, groupedMessages, useNewFormat };
 }
-
-// ===== Node.js module export =====
-if (typeof module !== "undefined" && module.exports) {
-  var _exports = {
-    ZODIAC_MAP, ALL_ZODIACS, ZODIAC_CHARS, CN, CNK, KW,
-    cn, parseCNNum, isMsgDateLine,
-    stripSender, stripMacau, stripHK, expandDot,
-    norm, C, combinations,
-    clean, splitBets, getVal, getList, splitItems, getTargets,
-    expandDashGe, expandLine,
-    processRule, analyze
-  };
-  for (var _k in _exports) { global[_k] = _exports[_k]; }
-  module.exports = _exports;
-}
-
-// ===== AI 大脑解析 =====
+// ===== AI 大脑解析 =====
 var aiBusy = false;
 async function analyzeWithAI(){
   if (aiBusy) { toast('AI 正在解析中，请稍候...'); return; }
