@@ -892,6 +892,24 @@ function stripSender(s){ return s.replace(/^([^:：]+)[：:]\s*/,function(m,p){ 
 function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|澳特|澳|利来|门特|门|新)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function stripHK(s){ return s.replace(/^(?:香港|港|香)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function expandDot(s){ return s.replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 '); }
+// 二连/三连/四连多对拆分
+function splitMultiPairCombo(t) {
+  var re = "^([" + ZODIAC_CHARS + "]{4,})";
+  re += "(二连|三连|四连|五连)";
+  re += "\\s*各?\\s*";
+  re += "(\\d+(?:\\.\\d+)?)";
+  re += "\\s*(?:块|元|斤|米)?\\s*$";
+  var m = t.match(new RegExp(re));
+  if (!m) return t;
+  var zs = m[1], lx = m[2], v = m[3];
+  var k = lx === "二连" ? 2 : lx === "三连" ? 3 : lx === "四连" ? 4 : 5;
+  var parts = [];
+  for (var i = 0; i + k <= zs.length; i += k) {
+    parts.push(zs.slice(i, i + k) + lx + v);
+  }
+  return parts.join("；");
+}
+
 function norm(s){
   let t = s.replace(/[+＋]/g,'').replace(/。/g,'').replace(/^(.+)香港澳门$/g, '澳$1；港$1').replace(/(\d+(?:\.\d+)?\s*(?:斤|米|块|元|文)?)\s*[，]\s*(?=\d)/g, '$1；')
     .replace(/免/g,'兔').replace(/于一肖/g,'一肖')
@@ -984,25 +1002,6 @@ function norm(s){
   t = t.replace(new RegExp(`([${ZODIAC_CHARS}])\\s*，\\s*(?=[${ZODIAC_CHARS}])`, 'g'), '$1');  // 生肖间逗号直接移除
   t = t.replace(/，/g, ' ');  // 其余全角逗号→空格
   // 三中三/二中二后紧跟数字时插入空格: "三中三47"→"三中三 47"
-
-// 二连/三连/四连多对拆分
-function splitMultiPairCombo(t) {
-  var re = "^([" + ZODIAC_CHARS + "]{4,})";
-  re += "(二连|三连|四连|五连)";
-  re += "\\s*各?\\s*";
-  re += "(\\d+(?:\\.\\d+)?)";
-  re += "\\s*(?:块|元|斤|米)?\\s*$";
-  var m = t.match(new RegExp(re));
-  if (!m) return t;
-  var zs = m[1], lx = m[2], v = m[3];
-  var k = lx === "二连" ? 2 : lx === "三连" ? 3 : lx === "四连" ? 4 : 5;
-  var parts = [];
-  for (var i = 0; i + k <= zs.length; i += k) {
-    parts.push(zs.slice(i, i + k) + lx + v);
-  }
-  return parts.join("；");
-}
-
   t = t.replace(/(三中三|二中二)(\d)/g, '$1 $2');
   // "平特1尾下1200" → "平特1尾1200" (去掉数字前的下)
   t = t.replace(/(\d{1,2})\s*下\s*(\d+(?:\.\d+)?)/g,'$1各$2');
@@ -1944,7 +1943,7 @@ function analyze(){
   for(let i=1;i<=49;i++) { numberBets[i.toString().padStart(2,'0')]=0; hkNumberBets[i.toString().padStart(2,'0')]=0; }
   ALL_ZODIACS.forEach(z=>{flatBets[z]=0; hkFlatBets[z]=0;});
 
-    // 复X复Y展开: 仅替换匹配部分，保留rawLine其余内容
+    // 复X复Y展开
   for (var _fi = 0; _fi < rawLines.length; _fi++) {
     var _re = new RegExp("复(二|三|四|五)复(二|三|四|五)([" + ZODIAC_CHARS + "]+)各组([\\d一二三四五六七八九十百千万廿卅两百]+(?:\\.[\\d]+)?)", "g");
     rawLines[_fi] = rawLines[_fi].replace(_re, function(_m, _fa, _fb, _fzs, _fv) {
