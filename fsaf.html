@@ -7,61 +7,61 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 /* ============================================================
-   DESIGN TOKENS — 浅炭灰磨砂数据看板
-   浅炭灰底 + 高透白磨砂卡 + 浅灰淡蓝点缀
+   DESIGN TOKENS — 站酷 ZCOOL 风格
+   白底极简 + 橙红 #ff5e3b 点缀 + 无阴影卡片
    所有波色/数据底色规则完整保留，不受全局样式影响
    ============================================================ */
 :root {
-  --bg: #111318;
-  --text: #c4c8d0;
-  --text-secondary: #959aa3;
-  --text-muted: #858a93;
-  --text-heading: #d8dbe0;
-  --surface: rgba(255,255,255,.05);
-  --surface-hover: rgba(255,255,255,.08);
-  --card-bg: rgba(255,255,255,.04);
-  --card-border: rgba(255,255,255,.06);
-  --card-border-hover: rgba(255,255,255,.10);
-  --border-light: rgba(255,255,255,.12);
-  --input-bg: rgba(255,255,255,.04);
-  --input-border: rgba(255,255,255,.08);
-  --table-stripe: rgba(255,255,255,.02);
-  --table-hover: rgba(255,255,255,.04);
-  --tab-bg: rgba(255,255,255,.04);
-  --tab-hover: rgba(255,255,255,.06);
-  --tab-active-bg: rgba(120,152,180,.15);
-  --tab-active-color: #8baec8;
-  --btn-outline-border: rgba(255,255,255,.12);
-  --btn-outline-color: #959aa3;
-  --btn-outline-hover-bg: rgba(255,255,255,.04);
-  --btn-outline-hover-border: rgba(255,255,255,.20);
-  --btn-outline-hover-color: #c4c8d0;
-  --stat-card-bg: rgba(255,255,255,.04);
-  --stat-card-border: rgba(255,255,255,.05);
-  --modal-overlay: rgba(0,0,0,.6);
-  --modal-bg: #1a1d27;
-  --modal-border: rgba(255,255,255,.06);
-  --thead-bg: rgba(255,255,255,.04);
-  --tbody-divider: rgba(255,255,255,.04);
-  --shadow-card: rgba(0,0,0,.15);
+  --bg: #f7f8fa;
+  --text: #000000e6;
+  --text-secondary: #000000b3;
+  --text-muted: #00000080;
+  --text-heading: #191919;
+  --accent: #ff5e3b;
+  --accent-hover: #ff815e;
+  --surface: #f5f5f4;
+  --surface-hover: #ededed;
+  --card-bg: #ffffff;
+  --card-border: #0000000d;
+  --card-border-hover: #0000001a;
+  --border-light: #0000000d;
+  --input-bg: #f5f5f4;
+  --input-border: #00000014;
+  --table-stripe: #00000004;
+  --table-hover: #00000008;
+  --tab-bg: #00000004;
+  --tab-hover: #00000008;
+  --tab-active-bg: rgba(255,94,59,.10);
+  --tab-active-color: #ff5e3b;
+  --btn-outline-border: #00000014;
+  --btn-outline-color: #000000b3;
+  --btn-outline-hover-bg: #00000008;
+  --btn-outline-hover-border: #00000026;
+  --btn-outline-hover-color: #000000e6;
+  --modal-overlay: rgba(0,0,0,.45);
+  --modal-bg: #ffffff;
+  --modal-border: #0000000d;
+  --thead-bg: #00000004;
+  --tbody-divider: #00000006;
+  --shadow-card: rgba(0,0,0,.06);
 }
 body.light {
-  --bg: #e8ecf1; --text: #1a1a2e; --text-secondary: #374151;
-  --text-muted: #6b7280; --text-heading: #0f172a;
-  --surface: rgba(0,0,0,.04); --surface-hover: rgba(0,0,0,.08);
-  --card-bg: #ffffff; --card-border: rgba(0,0,0,.10);
-  --card-border-hover: rgba(0,0,0,.15); --border-light: rgba(0,0,0,.12);
-  --input-bg: #ffffff; --input-border: rgba(0,0,0,.15);
-  --table-stripe: rgba(0,0,0,.025); --table-hover: rgba(0,0,0,.04);
-  --tab-bg: rgba(0,0,0,.04); --tab-hover: rgba(0,0,0,.06);
-  --tab-active-bg: rgba(37,99,235,.12); --tab-active-color: #1d4ed8;
-  --btn-outline-border: rgba(0,0,0,.15); --btn-outline-color: #374151;
-  --btn-outline-hover-bg: rgba(0,0,0,.05);
-  --btn-outline-hover-border: rgba(0,0,0,.25); --btn-outline-hover-color: #111827;
-  --stat-card-bg: #ffffff; --stat-card-border: rgba(0,0,0,.08);
-  --modal-overlay: rgba(0,0,0,.45); --modal-bg: #ffffff;
-  --modal-border: rgba(0,0,0,.10); --thead-bg: rgba(0,0,0,.04);
-  --tbody-divider: rgba(0,0,0,.06); --shadow-card: rgba(0,0,0,.08);
+  --bg: #111318; --text: #c4c8d0; --text-secondary: #959aa3;
+  --text-muted: #858a93; --text-heading: #d8dbe0;
+  --surface: rgba(255,255,255,.05); --surface-hover: rgba(255,255,255,.08);
+  --card-bg: rgba(255,255,255,.04); --card-border: rgba(255,255,255,.06);
+  --card-border-hover: rgba(255,255,255,.10); --border-light: rgba(255,255,255,.12);
+  --input-bg: rgba(255,255,255,.04); --input-border: rgba(255,255,255,.08);
+  --table-stripe: rgba(255,255,255,.02); --table-hover: rgba(255,255,255,.04);
+  --tab-bg: rgba(255,255,255,.04); --tab-hover: rgba(255,255,255,.06);
+  --tab-active-bg: rgba(120,152,180,.15); --tab-active-color: #8baec8;
+  --btn-outline-border: rgba(255,255,255,.12); --btn-outline-color: #959aa3;
+  --btn-outline-hover-bg: rgba(255,255,255,.04);
+  --btn-outline-hover-border: rgba(255,255,255,.20); --btn-outline-hover-color: #c4c8d0;
+  --modal-overlay: rgba(0,0,0,.6); --modal-bg: #1a1d27;
+  --modal-border: rgba(255,255,255,.06); --thead-bg: rgba(255,255,255,.04);
+  --tbody-divider: rgba(255,255,255,.04); --shadow-card: rgba(0,0,0,.15);
+  --accent: #7a9ab8; --accent-hover: #8aa8c4;
 }
 .theme-toggle {
   width: 36px; height: 36px; border-radius: 8px;
@@ -74,32 +74,31 @@ body.light {
 	* { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
 body {
-  font-family:'Segoe UI','Microsoft YaHei',sans-serif;
+  font-family:'PingFang SC',-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Helvetica Neue',Arial,sans-serif;
   background:var(--bg);
   color:var(--text);
-  min-height:100vh; padding:16px;
+  min-height:100vh; padding:20px 24px;
   -webkit-font-smoothing:antialiased;
 }
 
 /* ---- 数据密集型区域：等宽数字对齐 ---- */
-.tbl, .stat-card .sv, .num-cell .n, .ball { font-variant-numeric:tabular-nums; }
+.tbl, .num-cell .n, .ball { font-variant-numeric:tabular-nums; }
 
-/* ---- 全局 focus 环 (淡蓝) ---- */
-:focus-visible { outline:2px solid #7a9ab8; outline-offset:2px; border-radius:2px; }
-textarea:focus-visible { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 2px rgba(120,152,180,.20); }
+/* ---- 全局 focus 环 (橙红) ---- */
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:2px; }
+textarea:focus-visible { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(255,94,59,.15); }
 
 .container { max-width:1300px; margin:0 auto; }
 
 /* ============================================================
-   开奖栏 — 高透磨砂卡片
+   开奖栏 — 白底极简卡片
    ============================================================ */
 .live-bar {
-  background:var(--surface);
-  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  background:var(--card-bg);
   border:1px solid var(--card-border);
-  border-radius:10px; padding:18px 24px; margin-bottom:14px;
+  border-radius:14px; padding:16px 24px; margin-bottom:12px;
   display:flex; align-items:center; gap:20px; flex-wrap:wrap;
-  transition:border-color .25s;
+  transition:border-color .2s;
 }
 .live-bar:hover { border-color:var(--card-border-hover); }
 .live-bar .status { display:flex; align-items:center; gap:8px; }
@@ -127,48 +126,44 @@ textarea:focus-visible { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 2p
 .ball.te { width:64px; height:64px; font-size:1.5rem; box-shadow:0 0 20px rgba(245,158,11,.5),0 0 4px rgba(245,158,11,.3); }
 .ball .zodiac-tag { position:absolute; bottom:-16px; font-size:.85rem; color:#fbbf24; white-space:nowrap; font-weight:500; }
 
-/* ---- 平特生肖标签 (数据色，保留) ---- */
-.flat-tags { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-.flat-tag { padding:4px 12px; border-radius:4px; font-size:.8rem; font-weight:600; background:#1e3a5f; color:#60a5fa; border:1px solid #3b82f6; }
 
-/* ---- 按钮 (浅灰淡蓝点缀) ---- */
+/* ---- 按钮 (橙红点缀) ---- */
 .refresh-row { display:flex; gap:8px; align-items:center; }
 .btn {
-  padding:7px 18px; border:1px solid transparent; border-radius:6px;
-  cursor:pointer; font-size:.8rem; font-weight:550;
-  transition:all .22s cubic-bezier(.4,0,.2,1); position:relative;
+  padding:7px 18px; border:1px solid transparent; border-radius:8px;
+  cursor:pointer; font-size:.8rem; font-weight:500;
+  transition:all .2s; position:relative;
   letter-spacing:.01em;
 }
 .btn:active { transform:scale(.97); }
 
-/* 主要按钮 — 淡蓝调 */
+/* 主要按钮 — 橙红调 */
 .btn-primary {
-  background:#7a9ab8; color:#fff; border-color:#7a9ab8;
-  box-shadow:0 1px 3px rgba(120,152,180,.15);
+  background:var(--accent); color:#fff; border-color:var(--accent);
 }
-.btn-primary:hover { background:#8aa8c4; box-shadow:0 2px 8px rgba(120,152,180,.22); }
+.btn-primary:hover { background:var(--accent-hover); }
 
 /* 描边按钮 */
 .btn-outline {
-  background:transparent; border-color:var(--border-light); color:var(--text-secondary);
+  background:transparent; border-color:var(--btn-outline-border); color:var(--btn-outline-color);
 }
 .btn-outline:hover { border-color:var(--btn-outline-hover-border); color:var(--text); background:var(--card-bg); }
 
 /* 成功按钮 — 极淡绿 */
 .btn-success {
-  background:rgba(34,197,94,.10); color:#2d8a4e; border-color:rgba(34,197,94,.20);
+  background:rgba(20,204,149,.10); color:#10b981; border-color:rgba(20,204,149,.20);
 }
-.btn-success:hover { background:rgba(34,197,94,.16); border-color:rgba(34,197,94,.32); }
+.btn-success:hover { background:rgba(20,204,149,.16); border-color:rgba(20,204,149,.32); }
 
 /* 危险按钮 — 极淡红 */
 .btn-danger {
-  background:rgba(239,68,68,.10); color:#b53535; border-color:rgba(239,68,68,.20);
+  background:rgba(239,68,68,.08); color:#ef4444; border-color:rgba(239,68,68,.15);
 }
-.btn-danger:hover { background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.32); }
+.btn-danger:hover { background:rgba(239,68,68,.14); border-color:rgba(239,68,68,.28); }
 
 /* 警告按钮 — 极淡琥珀 */
 .btn-amber {
-  background:rgba(245,158,11,.10); color:#a87020; border-color:rgba(245,158,11,.20);
+  background:rgba(245,158,11,.10); color:#b45309; border-color:rgba(245,158,11,.20);
 }
 .btn-amber:hover { background:rgba(245,158,11,.16); border-color:rgba(245,158,11,.32); }
 
@@ -181,25 +176,24 @@ textarea:focus-visible { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 2p
 .tab-btn {
   padding:10px 24px; border:none;
   background:var(--card-bg);
-  color:var(--text-muted); cursor:pointer; font-size:.82rem; font-weight:550;
+  color:var(--text-muted); cursor:pointer; font-size:.82rem; font-weight:500;
   border-bottom:2px solid transparent; transition:all .2s;
 }
-.tab-btn:first-child { border-radius:8px 0 0 0; }
-.tab-btn:last-child { border-radius:0 8px 0 0; }
-.tab-btn:hover { color:var(--text-secondary); background:var(--surface); }
-.tab-btn.active { background:rgba(120,152,180,.15); color:var(--tab-active-color); border-bottom-color:var(--tab-active-color); }
+.tab-btn:first-child { border-radius:10px 0 0 0; }
+.tab-btn:last-child { border-radius:0 10px 0 0; }
+.tab-btn:hover { color:var(--text); background:var(--surface); }
+.tab-btn.active { background:var(--tab-active-bg); color:var(--tab-active-color); border-bottom-color:var(--accent); }
 
 /* ============================================================
-   卡片容器 — 高透磨砂
+   卡片容器 — 白底无阴影
    ============================================================ */
 .card {
   background:var(--card-bg);
-  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
   border:1px solid var(--card-border);
-  border-radius:0 0 10px 10px; padding:22px; margin-bottom:14px;
-  transition:border-color .25s;
+  border-radius:0 0 10px 10px; padding:22px; margin-bottom:12px;
+  transition:border-color .2s;
 }
-.card:hover { border-color:rgba(255,255,255,.09); }
+.card:hover { border-color:var(--card-border-hover); }
 .card-first { border-radius:10px; }
 .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
 .card-title { font-size:1rem; font-weight:600; color:var(--text-heading); letter-spacing:.01em; }
@@ -209,13 +203,13 @@ textarea:focus-visible { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 2p
    ============================================================ */
 textarea {
   width:100%; height:160px; padding:14px;
-  background:var(--surface);
-  border:1px solid var(--card-border); border-radius:8px;
+  background:var(--input-bg);
+  border:1px solid var(--input-border); border-radius:10px;
   color:var(--text); font-size:.8rem; resize:vertical; line-height:1.7;
   font-family:'Cascadia Code','Consolas','Microsoft YaHei',monospace;
-  transition:border-color .22s,box-shadow .22s;
+  transition:border-color .2s,box-shadow .2s;
 }
-textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(120,152,180,.15); }
+textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(255,94,59,.12); }
 
 /* ============================================================
    号码网格 (按生肖分组)
@@ -266,51 +260,32 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
    ============================================================ */
 .tbl { width:100%; border-collapse:collapse; font-size:.78rem; }
 .tbl th {
-  background:var(--card-bg);
-  color:var(--text-secondary); padding:10px 12px; text-align:left; font-weight:550;
+  background:var(--thead-bg);
+  color:var(--text-secondary); padding:10px 12px; text-align:left; font-weight:500;
   border-bottom:1px solid var(--input-border);
   letter-spacing:.03em; text-transform:uppercase; font-size:.68rem;
 }
-.tbl td { padding:8px 12px; border-bottom:1px solid var(--card-bg); color:var(--text); }
-.tbl tr:hover td { background:rgba(255,255,255,.03); }
+.tbl td { padding:8px 12px; border-bottom:1px solid var(--tbody-divider); color:var(--text); }
+.tbl tr:hover td { background:var(--table-hover); }
 .tbl .td-r { text-align:center; }
-.tbl .td-win { text-align:center; color:#22c55e; font-weight:600; }
+.tbl .td-win { text-align:center; color:#10b981; font-weight:600; }
 .tbl .td-lose { text-align:center; color:#ef4444; }
 .tbl .td-net { text-align:center; font-weight:700; }
-.tbl .net-pos { color:#22c55e; }
+.tbl .net-pos { color:#10b981; }
 .tbl .net-neg { color:#ef4444; }
 .tbl tfoot td { font-weight:700; color:var(--text-heading); border-top:1px solid var(--card-border-hover); }
 
 /* ============================================================
-   统计卡片
-   ============================================================ */
-.stat-row { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:12px; }
-.stat-card {
-  background:var(--card-bg);
-  border:1px solid var(--surface);
-  border-radius:8px; padding:16px 12px; text-align:center;
-  transition:border-color .22s,transform .22s,box-shadow .22s;
-}
-.stat-card:hover { border-color:var(--card-border-hover); transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,.30); }
-.stat-card .sl { font-size:.69rem; color:var(--text-muted); letter-spacing:.04em; text-transform:uppercase; }
-.stat-card .sv { font-size:1.4rem; font-weight:700; margin-top:6px; }
-/* 统计数值色 (数据色，保留) */
-.sv-blue { color:#60a5fa; }
-.sv-green { color:#22c55e; }
-.sv-red { color:#ef4444; }
-.sv-amber { color:#f59e0b; }
-
-/* ============================================================
    赔率标签
    ============================================================ */
-.odds-bar { display:flex; gap:12px; flex-wrap:wrap; font-size:.75rem; color:var(--text-muted); margin-top:6px; }
-.odds-item { padding:3px 10px; background:var(--surface); border-radius:4px; border:1px solid var(--surface); }
-.odds-item strong { color:#fbbf24; }
+.odds-bar { display:flex; gap:12px; flex-wrap:wrap; font-size:.72rem; color:var(--text-muted); margin-top:6px; }
+.odds-item { padding:3px 10px; background:var(--surface); border-radius:6px; border:1px solid var(--card-border); }
+.odds-item strong { color:var(--accent); }
 
 /* ---- 折叠 ---- */
 .collapse-toggle { cursor:pointer; user-select:none; }
 .collapse-toggle::before { content:'▸ '; font-size:.7rem; color:var(--text-muted); transition:color .2s; }
-.collapse-toggle:hover::before { color:var(--text-secondary); }
+.collapse-toggle:hover::before { color:var(--text); }
 .collapse-toggle.open::before { content:'▾ '; }
 .collapse-body { display:none; }
 .collapse-body.show { display:block; }
@@ -318,14 +293,13 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 /* ============================================================
    弹窗
    ============================================================ */
-.modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.60); backdrop-filter:blur(4px); z-index:100; align-items:center; justify-content:center; }
+.modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.45); backdrop-filter:blur(4px); z-index:100; align-items:center; justify-content:center; }
 .modal-overlay.show { display:flex; }
 .modal-box {
-  background:rgba(22,24,30,.95);
-  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
-  border:1px solid var(--input-border);
-  border-radius:12px; padding:28px; max-width:400px; width:90%;
-  box-shadow:0 12px 24px rgba(0,0,0,.30);
+  background:var(--modal-bg);
+  border:1px solid var(--modal-border);
+  border-radius:14px; padding:28px; max-width:400px; width:90%;
+  box-shadow:0 6px 16px rgba(0,0,0,.08);
 }
 .modal-box h3 { color:var(--text-heading); margin-bottom:10px; font-size:1.05rem; }
 .modal-box p { color:var(--text-secondary); font-size:.82rem; margin-bottom:18px; line-height:1.5; }
@@ -334,42 +308,42 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 /* ---- Toast ---- */
 .toast {
   position:fixed; top:16px; right:16px;
-  background:rgba(22,24,30,.95); color:var(--text);
-  padding:8px 16px; border-radius:6px; font-size:.8rem; z-index:200;
-  border:1px solid var(--input-border);
-  opacity:0; transform:translateX(100%); transition:all .3s cubic-bezier(.4,0,.2,1);
+  background:var(--modal-bg); color:var(--text-heading);
+  padding:10px 18px; border-radius:10px; font-size:.8rem; z-index:200;
+  border:1px solid var(--modal-border);
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+  opacity:0; transform:translateX(100%); transition:all .3s;
 }
 .toast.show { opacity:1; transform:translateX(0); }
 
 /* ---- 球上平特命中标记 (数据色，保留) ---- */
-.ball .flat-hit { position:absolute; top:-6px; right:-6px; width:14px; height:14px; border-radius:50%; background:#22c55e; border:2px solid #111318; }
+.ball .flat-hit { position:absolute; top:-6px; right:-6px; width:14px; height:14px; border-radius:50%; background:#10b981; border:2px solid var(--card-bg); }
 
 /* ============================================================
    密码门禁
    ============================================================ */
 .login-overlay {
   position:fixed; top:0; left:0; width:100%; height:100%;
-  background:#0a0c10; z-index:9999;
+  background:var(--bg); z-index:9999;
   display:flex; align-items:center; justify-content:center;
 }
 .login-box {
-  background:rgba(22,24,30,.95);
-  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
-  border:1px solid var(--input-border);
-  border-radius:12px; padding:40px; text-align:center;
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:14px; padding:40px; text-align:center;
   max-width:400px; width:90%;
-  box-shadow:0 16px 32px rgba(0,0,0,.40);
+  box-shadow:0 6px 16px var(--shadow-card);
 }
 .login-box h2 { color:var(--text-heading); margin-bottom:8px; font-size:1.4rem; }
 .login-box .subtitle { color:var(--text-muted); font-size:.8rem; margin-bottom:24px; }
 .login-box input {
   width:100%; padding:12px 16px;
-  background:var(--card-border);
-  border:1px solid var(--card-border-hover); border-radius:6px;
-  color:var(--text); font-size:1.2rem; text-align:center; letter-spacing:4px;
+  background:var(--input-bg);
+  border:1px solid var(--input-border); border-radius:8px;
+  color:var(--text-heading); font-size:1.2rem; text-align:center; letter-spacing:4px;
   outline:none; margin-bottom:8px; transition:border-color .2s;
 }
-.login-box input:focus { border-color:#7a9ab8; }
+.login-box input:focus { border-color:var(--accent); }
 .login-box .btn { width:100%; padding:12px; margin-top:8px; }
 .login-box .error { color:#ef4444; font-size:.8rem; margin-top:8px; min-height:20px; }
 
@@ -379,11 +353,6 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 @media (max-width:768px) {
   body { padding:10px; }
   .container { padding:0; }
-
-  .stat-row { grid-template-columns:repeat(3,1fr); gap:5px; }
-  .stat-card { padding:10px 6px; }
-  .stat-card .sl { font-size:.65rem; }
-  .stat-card .sv { font-size:1rem; }
 
   .balls { gap:5px; }
   .ball { width:36px; height:36px; font-size:.85rem; }
@@ -418,18 +387,13 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 @media (max-width:480px) {
   body { padding:6px; }
 
-  .stat-row { grid-template-columns:1fr; gap:4px; }
-  .stat-card { padding:10px 8px; }
-  .stat-card .sl { font-size:.6rem; }
-  .stat-card .sv { font-size:.9rem; }
-
   .balls { gap:3px; flex-wrap:wrap; justify-content:center; }
   .ball { width:28px; height:28px; font-size:.68rem; }
   .ball.te { width:34px; height:34px; font-size:.8rem; }
   .ball .zodiac-tag { bottom:-12px; font-size:.5rem; }
 
   #liveBar { flex-direction:column !important; align-items:stretch !important; gap:8px !important; padding:12px !important; }
-  #liveBar > div[style*="flex:1"] { display:none; }
+  
   #liveBar .refresh-row { justify-content:flex-end; flex-wrap:wrap; }
 
   #hkLiveBar { flex-wrap:wrap !important; gap:6px !important; padding:10px !important; }
@@ -483,7 +447,6 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
   .card-header { margin-bottom:8px; }
   .card-title { font-size:.8rem; }
 
-  .collapse-toggle { font-size:.8rem; }
 }
 </style>
 </head>
@@ -500,98 +463,68 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
 </div>
 <div class="container">
 
-<!-- ===== 实时开奖显示 ===== -->
-<div class="live-bar" id="liveBar" style="padding:18px 24px; gap:20px;">
+<!-- ===== 实时开奖 + 赔率设置 ===== -->
+<div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start;flex-wrap:wrap;">
+<!-- 左侧：澳门 + 香港开奖 -->
+<div style="flex:1;min-width:320px;display:flex;flex-direction:column;gap:10px;">
+<div class="live-bar" id="liveBar" style="margin-bottom:0;padding:16px 24px;gap:16px;">
   <div class="status">
     <div class="live-dot" id="liveDot"></div>
-    <span class="label" id="liveStatus" style="font-size:1rem; font-weight:600;">等待数据...</span>
+    <span class="label" id="liveStatus" style="font-size:1rem;font-weight:600;">等待数据...</span>
   </div>
   <div class="balls" id="liveBalls">
     <span class="info">--</span>
   </div>
   <div style="flex:1;"></div>
-  <div class="flat-tags" id="liveFlatTags"></div>
   <div class="refresh-row">
-    <span class="info" id="liveTime" style="font-size:.9rem;">--</span>
-    <button class="btn btn-outline btn-sm" onclick="toggleAutoRefresh()" id="btnAuto" title="开始自动刷新">开始自动刷新</button>
-    <button class="btn btn-outline btn-sm" onclick="manualFetch()" title="立即刷新一次">立即刷新</button>
-	    <button class="theme-toggle" onclick="toggleTheme()" id="btnTheme" title="切换白天/黑夜模式">☀️</button>
+    <span class="info" id="liveTime" style="font-size:.82rem;">--</span>
+    <button class="btn btn-outline btn-sm" onclick="toggleAutoRefresh()" id="btnAuto" title="自动刷新">自动刷新</button>
+    <button class="btn btn-outline btn-sm" onclick="manualFetch()" title="刷新一次">刷新</button>
+    <button class="theme-toggle" onclick="toggleTheme()" id="btnTheme" title="切换白天/黑夜模式">🌙</button>
   </div>
 </div>
-
-<!-- ===== 香港开奖显示 ===== -->
-<div class="live-bar" id="hkLiveBar" style="padding:18px 24px; gap:20px; border-color:rgba(245,158,11,.20);">
+<div class="live-bar" id="hkLiveBar" style="margin-bottom:0;padding:16px 24px;gap:16px;border-color:rgba(245,158,11,.20);">
   <div class="status">
     <div class="live-dot" id="hkLiveDot"></div>
-    <span class="label" id="hkLiveStatus" style="font-size:1rem; font-weight:600; color:#fbbf24;">香港开奖</span>
+    <span class="label" id="hkLiveStatus" style="font-size:1rem;font-weight:600;color:#f59e0b;">香港开奖</span>
   </div>
   <div class="balls" id="hkLiveBalls">
     <span class="info">点击"获取开奖"填号</span>
   </div>
   <div style="flex:1;"></div>
-  <div class="flat-tags" id="hkLiveFlatTags"></div>
   <div class="refresh-row">
-    <span class="info" id="hkLiveTime" style="font-size:.9rem;">--</span>
-    <button class="btn btn-amber btn-sm" onclick="fetchHKLatest()" id="hkFetchBtn">&#x1f504; 获取开奖</button>
+    <span class="info" id="hkLiveTime" style="font-size:.82rem;">--</span>
+    <button class="btn btn-amber btn-sm" onclick="fetchHKLatest()" id="hkFetchBtn">获取开奖</button>
     <button class="btn btn-outline btn-sm" onclick="clearHKResult()" style="margin-left:4px;">清除</button>
   </div>
 </div>
-
-<!-- ===== 汇总统计 (默认折叠) ===== -->
-<div class="card card-first" style="margin-bottom:8px;">
-  <div class="card-header collapse-toggle" onclick="toggleCollapse('statRowBody')" style="margin-bottom:0;">
-    <span class="card-title">汇总统计</span>
-    <span style="font-size:.7rem;color:var(--text-muted);" id="statRowToggleLabel">点击展开</span>
-  </div>
-  <div class="collapse-body" id="statRowBody">
-<div class="stat-row" id="statRow">
-  <div class="stat-card"><div class="sl">总收注 (澳+港)</div><div class="sv sv-blue" id="sumTotalBet">0</div></div>
-  <div class="stat-card"><div class="sl">应付派彩</div><div class="sv sv-red" id="sumTotalPayout">0</div></div>
-  <div class="stat-card"><div class="sl">庄家净收益</div><div class="sv sv-green" id="sumNetProfit">0</div></div>
-  <div class="stat-card"><div class="sl">抽水后净收益</div><div class="sv sv-green" id="sumNetAfterWater">0</div></div>
-  <div class="stat-card"><div class="sl">命中总数额</div><div class="sv sv-amber" id="sumHitCount">0</div></div>
-  <div class="stat-card"><div class="sl">中奖金额</div><div class="sv sv-red" id="sumWinAmount">0</div></div>
 </div>
-<!-- 波色投注统计 -->
-<div class="stat-row" id="waveStatRow" style="display:none;">
-  <div class="stat-card" style="border-left:3px solid #ef4444;"><div class="sl">红波投注额</div><div class="sv" style="color:#ef4444;" id="waveRedBet">0</div></div>
-  <div class="stat-card" style="border-left:3px solid #22c55e;"><div class="sl">绿波投注额</div><div class="sv" style="color:#22c55e;" id="waveGreenBet">0</div></div>
-  <div class="stat-card" style="border-left:3px solid #3b82f6;"><div class="sl">蓝波投注额</div><div class="sv" style="color:#3b82f6;" id="waveBlueBet">0</div></div>
-  <div class="stat-card" style="border-left:3px solid #22c55e;"><div class="sl">平特中奖额</div><div class="sv sv-green" id="flatHitAmount">0</div></div>
-  <div class="stat-card" style="border-left:3px solid #ef4444;"><div class="sl">特码中奖额</div><div class="sv sv-red" id="numsHitAmount">0</div></div>
-  <div class="stat-card" style="border-left:3px solid #a78bfa;"><div class="sl">连肖中奖额</div><div class="sv" style="color:#a78bfa;" id="comboHitAmount">0</div></div>
-</div>
+<div class="card card-first" id="settingsCard" style="margin-bottom:0;padding:14px 18px;max-width:360px;flex-shrink:0;">
+  <div class="card-header" style="margin-bottom:8px;">
+    <span class="card-title" style="font-size:.85rem;">赔率 & 抽水</span>
+    <button class="btn btn-outline btn-sm" onclick="toggleSettings()" id="btnSettingsToggle" title="隐藏设置" style="padding:3px 8px;font-size:.65rem;">−</button>
   </div>
-</div>
-<!-- 赔率 & 抽水设置 (可折叠) -->
-<div class="card card-first" style="margin-bottom:12px;" id="settingsCard">
-  <div class="card-header collapse-toggle open" onclick="toggleCollapse('settingsBody')" style="margin-bottom:0;">
-    <span class="card-title">赔率 & 抽水设置</span>
-    <span style="font-size:.7rem;color:var(--text-muted);">点击折叠</span>
-  </div>
-  <div class="collapse-body show" id="settingsBody">
-    <div class="odds-bar" style="margin-bottom:8px;">
-      <span class="odds-item">特码赔率 <strong>1:47</strong></span>
-      <span class="odds-item">平特马赔率 <strong>1:1.8</strong></span>
-      <span class="odds-item">其他平特赔率 <strong>1:2.0</strong></span>
+  <div id="settingsBody">
+    <div class="odds-bar" style="margin-bottom:8px;gap:6px;">
+      <span class="odds-item">特码 <strong>1:47</strong></span>
+      <span class="odds-item">平特马 <strong>1:1.8</strong></span>
+      <span class="odds-item">其他平特 <strong>1:2.0</strong></span>
       <span class="odds-item">二连带马 <strong>1:3.5</strong></span>
       <span class="odds-item">二连不带马 <strong>1:4</strong></span>
-      <span class="odds-item">三连带马 <strong>1:8</strong></span>
-      <span class="odds-item">三连不带马 <strong>1:10</strong></span>
-      <span class="odds-item">四连带马 <strong>1:25</strong></span>
-      <span class="odds-item">四连不带马 <strong>1:30</strong></span>
-      <span class="odds-item">五连带马 <strong>1:80</strong></span>
-      <span class="odds-item">五连不带马 <strong>1:100</strong></span>
+      <span class="odds-item">三连 <strong>1:8/10</strong></span>
+      <span class="odds-item">四连 <strong>1:25/30</strong></span>
+      <span class="odds-item">五连 <strong>1:80/100</strong></span>
       <span class="odds-item">三中三 <strong>1:600</strong></span>
       <span class="odds-item">二中二 <strong>1:65</strong></span>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--card-border);border-radius:6px;padding:8px 14px;flex-wrap:wrap;">
-      <span style="font-size:.8rem;color:var(--text-secondary);white-space:nowrap;">抽水率:</span>
-      <input type="range" id="waterSlider" min="0" max="30" value="0" step="0.5" oninput="updateWater(this.value)" style="flex:1;min-width:100px;accent-color:#f59e0b;">
-      <span style="font-size:.85rem;color:#fbbf24;font-weight:600;min-width:42px;" id="waterRateDisplay">0%</span>
-      <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap;" id="waterInfo">抽水: 0</span>
+    <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--card-border);border-radius:6px;padding:6px 12px;">
+      <span style="font-size:.75rem;color:var(--text-secondary);white-space:nowrap;">抽水率:</span>
+      <input type="number" id="waterInput" min="0" max="30" value="0" step="0.5" oninput="updateWater(this.value)" style="width:56px;padding:4px 6px;background:var(--card-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text);font-size:.8rem;text-align:center;" onkeydown="if(event.key==='Enter')this.blur()">
+      <span style="font-size:.8rem;color:var(--text-muted);">%</span>
+      <span style="font-size:.7rem;color:var(--text-muted);min-width:42px;" id="waterInfo">抽水: 0</span>
     </div>
   </div>
+</div>
 </div>
 
 <!-- ===== Tabs ===== -->
@@ -612,7 +545,7 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
     <div style="text-align:center;padding:40px;color:var(--text-muted);" id="adminAuthArea">
       <div style="font-size:1.5rem;margin-bottom:12px;">&#x1f512;</div>
       <input type="password" id="adminPasswordInput" placeholder="输入管理密码"
-        style="padding:8px 16px;background:var(--surface);border:1px solid var(--input-border);border-radius:4px;color:var(--text-heading);font-size:.9rem;width:220px;text-align:center;"
+        style="padding:8px 16px;background:var(--surface);border:1px solid var(--input-border);border-radius:4px;color:var(--text-heading);font-size:.82rem;width:220px;text-align:center;"
         onkeydown="if(event.key==='Enter')adminLogin()">
       <div style="margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="adminLogin()">认证</button></div>
       <div style="margin-top:6px;font-size:.7rem;color:#ef4444;display:none;" id="adminAuthErr"></div>
@@ -620,7 +553,7 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
     <div id="adminMainArea" style="display:none;">
       <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
         <span style="color:var(--text-secondary);font-size:.8rem;">在线设备:</span>
-        <span style="color:#4ade80;font-weight:600;font-size:.9rem;" id="adminClientCount">0</span>
+        <span style="color:#4ade80;font-weight:600;font-size:.82rem;" id="adminClientCount">0</span>
         <span style="flex:1;"></span>
         <button class="btn btn-outline btn-sm" onclick="adminRefreshClients()">刷新</button>
         <button class="btn btn-outline btn-sm" onclick="adminLogout()">退出</button>
@@ -660,13 +593,11 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
       <tbody id="msgSummaryTbody"><tr><td colspan="4" style="text-align:center;color:var(--text-muted);">等待分析...</td></tr></tbody>
       <tfoot><tr><td></td><td style="text-align:right;">合计</td><td style="text-align:center;font-weight:700;color:#60a5fa;" id="msgSummaryGrandTotal">0</td><td></td></tr></tfoot>
     </table>
-    <div id="msgSummaryStats" style="display:none; background:var(--surface); border:1px solid var(--input-border); border-radius:6px; padding:10px 14px; margin-top:8px; font-size:.78rem;">
-      <span style="margin-right:20px;">总收注: <b style="color:#60a5fa;" id="msgSumTotalBet">0</b></span>
-      <span style="margin-right:20px;">特码中奖额: <b style="color:#ef4444;" id="msgSumNumsHit">0</b></span>
-      <span style="margin-right:20px;">平特中奖额: <b style="color:#22c55e;" id="msgSumFlatHit">0</b></span>
-      <span style="margin-right:20px;">连肖中奖: <span style="color:#a78bfa;" id="msgSumComboHit">-</span></span>
-      <span style="margin-right:20px;">抽水率: <b style="color:#f59e0b;" id="msgSumWaterRate">0%</b></span>
-      <span>抽水后净收益: <b style="color:#22c55e;" id="msgSumNetAfter">0</b></span>
+    <div id="msgSummaryStats" style="display:none; background:var(--surface); border:1px solid var(--input-border); border-radius:8px; padding:10px 14px; margin-top:10px; font-size:.78rem; line-height:1.8;">
+      <span>总收注: <b style="color:var(--accent);" id="msgSumTotalBet">0</b></span>
+      <span id="msgSumWinBreakdown" style="margin-left:8px;"></span>
+      <span style="margin-left:12px;">抽水率: <b style="color:#f59e0b;" id="msgSumWaterRate">0%</b></span>
+      <span style="margin-left:8px;">净收益: <b style="color:var(--accent);" id="msgSumNetAfter">0</b></span>
     </div>
   </div>
 </div>
@@ -738,9 +669,9 @@ textarea:focus { outline:none; border-color:#7a9ab8; box-shadow:0 0 0 3px rgba(1
   </div>
   <div class="collapse-body show" id="settlementBody">
     <table class="tbl">
-      <thead><tr><th>投注内容</th><th style="width:60px;">投注额</th><th style="width:50px;">类型</th><th style="width:60px;">赔率</th><th style="width:70px;">中奖额</th><th style="width:70px;">净结果</th></tr></thead>
-      <tbody id="settlementBody_tbody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);">等待投注...</td></tr></tbody>
-      <tfoot><tr><td>合计</td><td style="text-align:center;" id="footBet">0</td><td></td><td></td><td style="text-align:center;color:#22c55e;" id="footPayout">0</td><td style="text-align:center;font-weight:700;" id="footNet">0</td></tr></tfoot>
+      <thead><tr><th>投注内容</th><th style="width:60px;">投注额</th><th style="width:50px;">类型</th></tr></thead>
+      <tbody id="settlementBody_tbody"><tr><td colspan="3" style="text-align:center;color:var(--text-muted);">等待投注...</td></tr></tbody>
+      <tfoot><tr><td>合计</td><td style="text-align:center;" id="footBet">0</td><td></td></tr></tfoot>
     </table>
   </div>
 </div>
@@ -806,8 +737,8 @@ const SIZE_PARITY_MAP = {单:ODD,双:EVEN,大:BIG,小:SMALL};
 
 // ===== 庄家固定赔率 =====
 const ODDS_TM = 47;       // 特码
-const ODDS_PT_MA = 1.8;   // 平特马
-const ODDS_PT_OTHER = 2;  // 其他平特
+let ODDS_PT_MA = 1.8;   // 平特马 (admin可调)
+let ODDS_PT_OTHER = 2;  // 其他平特 (admin可调)
 	const ODDS_TX_MA = 10;    // 特肖马
 	const ODDS_TX_OTHER = 11; // 特肖其他
 const ODDS_2 = 5.5;       // 二连(默认)
@@ -1608,7 +1539,7 @@ function processRule(rawRule){
 function splitByModeMarkers(sl){
   // Split sub-line at inline mode markers, returning [{text, isHK}] segments
   // Handles: "澳门内容  香港内容" or "内容香港 内容"
-  var re = /(?:^|[\s，：:。、])(香港|澳门|澳門)(?=[\s，：:。、]|[一-鿿\d]|$)/g;
+  var re = /(?:^|[\s，：:。、；;])(香港|澳门|澳門)(?=[\s，：:。、；;]|[一-鿿\d]|$)/g;
   var matches = [];
   var m;
   while ((m = re.exec(sl)) !== null) {
@@ -1627,7 +1558,8 @@ function splitByModeMarkers(sl){
   // Last segment
   var after = sl.substring(prev).trim();
   if (after) segs.push({ text: after, isHK: isHKMarker(matches[matches.length-1].marker) });
-  return segs.length > 1 ? segs : null;
+  // 只要检测到模式标记就返回，单分段也要处理（如"香港：xxx"）
+  return segs.length > 0 ? segs : null;
 }
 function isHKMarker(m){ return /香港|港|香/.test(m); }
 
@@ -1683,17 +1615,17 @@ function groupNewFormatMessages(lines){
 
 function initTheme() {
   var saved = localStorage.getItem('theme');
-  if (saved === 'light') {
+  if (saved === 'dark') {
     document.body.classList.add('light');
     var btn = document.getElementById('btnTheme');
-    if (btn) btn.innerHTML = '🌙';
+    if (btn) btn.innerHTML = '☀️';
   }
 }
 function toggleTheme() {
-  var isLight = document.body.classList.toggle('light');
-  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  var isDark = document.body.classList.toggle('light');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
   var btn = document.getElementById('btnTheme');
-  if (btn) btn.innerHTML = isLight ? '🌙' : '☀️';
+  if (btn) btn.innerHTML = isDark ? '☀️' : '🌙';
 }
 // ===== preprocessComboMessage — 三中三/二中二结构预处理 =====
 // 将"各组VAL"分发到每个数字组，生成规范化"N1 N2 N3 三中三 VAL"行
@@ -1805,7 +1737,7 @@ async function analyzeWithAI(){
     }
 
     // Step 2: 清空全局状态
-    betSummary = []; hkBetSummary = [];
+    betSummary = []; hkBetSummary = []; settlementAllRows = [];
     messageSummary = [];
     subtractHistory = []; renderSubtractHistory();
     numberBets = {}; flatBets = {}; specialZodiacBets = {}; comboBets = []; numComboBets = [];
@@ -1935,7 +1867,7 @@ function analyze(){
     }
   }
 
-  betSummary=[]; hkBetSummary=[];
+  betSummary=[]; hkBetSummary=[]; settlementAllRows=[];
   messageSummary=[];
   subtractHistory=[]; renderSubtractHistory();
   numberBets={}; flatBets={}; specialZodiacBets={}; comboBets=[]; numComboBets=[];
@@ -1972,6 +1904,9 @@ function analyze(){
   }
 
 rawLines.forEach(function(rawLine, lineIdx){
+
+  // 预处理 "xxx香港澳门" → "澳xxx；港xxx"（必须在子行分割之前，避免 expandLine 递归丢失市场标记）
+  rawLine = rawLine.replace(/^(.+)(?:香港澳门|澳门香港|港澳)$/g, '澳$1；港$1');
     if ((lineIdx + 1) % 20 === 0) console.log('analyze progress:', lineIdx + 1, '/', rawLines.length);
     try {
     var msgBet = 0;
@@ -2051,6 +1986,7 @@ rawLines.forEach(function(rawLine, lineIdx){
       if (segs) {
         segs.forEach(function(seg) {
           var mode = seg.isHK;
+          curHKMode = mode;  // 更新状态，后续子行继承
           expandLine(seg.text).forEach(function(sr){
             var r = processRule(sr);
             if (r) {
@@ -2225,8 +2161,7 @@ function calcAll(){
     return {...s, win:Math.round(win*100)/100, odds, net:Math.round(net*100)/100, note, hitBet:Math.round(hitBet*100)/100};
   }
 
-  let totalBet = 0, totalPayout = 0, hitAmount = 0;
-  let flatHitAmount = 0, numsHitAmount = 0, comboHitAmount = 0;
+  let totalBet = 0, totalPayout = 0, hitCount = 0;
   const macauRows = [], hkRows = [];
 
   // 结算澳门盘
@@ -2235,12 +2170,7 @@ function calcAll(){
       const r = settleRow(s, winNums, teMa, winFlat);
       totalBet += r.bet;
       totalPayout += r.win;
-      if(r.note) {
-        hitAmount += r.hitBet;
-        if(r.type === 'flat' || r.type === 'flat_tail') flatHitAmount += r.hitBet;
-        else if(r.type === 'nums') numsHitAmount += r.hitBet;
-        else comboHitAmount += r.hitBet;
-      }
+      if(r.note) hitCount++;
       macauRows.push(r);
     });
   }
@@ -2251,12 +2181,7 @@ function calcAll(){
       const r = settleRow(s, hkWinNums, hkTeMa, hkWinFlat);
       totalBet += r.bet;
       totalPayout += r.win;
-      if(r.note) {
-        hitAmount += r.hitBet;
-        if(r.type === 'flat' || r.type === 'flat_tail') flatHitAmount += r.hitBet;
-        else if(r.type === 'nums') numsHitAmount += r.hitBet;
-        else comboHitAmount += r.hitBet;
-      }
+      if(r.note) hitCount++;
       hkRows.push(r);
     });
   }
@@ -2264,41 +2189,9 @@ function calcAll(){
   const netProfit = totalBet - totalPayout;
   const waterAmount = totalBet * waterRate / 100;
   const netAfterWater = netProfit - waterAmount;
-
-  // Update stat cards
-  document.getElementById('sumTotalBet').textContent = totalBet;
-  document.getElementById('sumTotalPayout').textContent = Math.round(totalPayout*100)/100;
-  document.getElementById('sumNetProfit').textContent = (netProfit>=0?'+':'')+Math.round(netProfit);
-  document.getElementById('sumNetProfit').style.color = netProfit>=0?'#22c55e':'#ef4444';
-  document.getElementById('sumNetAfterWater').textContent = (netAfterWater>=0?'+':'')+Math.round(netAfterWater);
-  document.getElementById('sumNetAfterWater').style.color = netAfterWater>=0?'#22c55e':'#ef4444';
   document.getElementById('waterInfo').textContent = '抽水: '+Math.round(waterAmount);
-  document.getElementById('sumHitCount').textContent = Math.round(hitAmount*100)/100;
-  document.getElementById('sumWinAmount').textContent = Math.round(totalPayout*100)/100;
 
-  // Wave color bet stats
-  let waveBets = {红波:0, 绿波:0, 蓝波:0};
-  let waveHits = {红波:0, 绿波:0, 蓝波:0};
-  Object.entries(numberBets).forEach(function(e){
-    const n=e[0], v=e[1];
-    const w = NUM_TO_WAVE[n];
-    if (w && v > 0) waveBets[w] = (waveBets[w] || 0) + v;
-  });
-  if (winNums && winNums.length) {
-    winNums.forEach(function(n){
-      const w = NUM_TO_WAVE[n];
-      if (w) waveHits[w] = (waveHits[w] || 0) + 1;
-    });
-  }
-  document.getElementById('waveRedBet').textContent = Math.round(waveBets['红波'] * 100) / 100;
-  document.getElementById('waveGreenBet').textContent = Math.round(waveBets['绿波'] * 100) / 100;
-  document.getElementById('waveBlueBet').textContent = Math.round(waveBets['蓝波'] * 100) / 100;
-  document.getElementById('flatHitAmount').textContent = Math.round(flatHitAmount*100)/100;
-  document.getElementById('numsHitAmount').textContent = Math.round(numsHitAmount*100)/100;
-  document.getElementById('comboHitAmount').textContent = Math.round(comboHitAmount*100)/100;
-  document.getElementById('waveStatRow').style.display = '';
-
-  // 澳门 + 香港合并结算表
+  // 澳门 + 香港合并结算表 (简化：只显示投注内容/投注额/类型)
   const tbody = document.getElementById('settlementBody_tbody');
   var allRows = macauRows.concat(hkRows);
   settlementAllRows = allRows;  // 缓存用于 xlsx 导出
@@ -2306,19 +2199,13 @@ function calcAll(){
     var typeName = r.type==='nums'?'特码':r.type==='flat'?'平特':r.type==='flat_tail'?'平特尾':r.type==='special_zodiac'?'特肖':r.type==='n3'?'三中三':r.type==='n2'?'二中二':r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
     var hkTag = r.hk ? ' <span style="color:#f59e0b;font-size:.65rem;">HK</span>' : '';
     return '<tr>'+
-      '<td>'+esc(r.display)+hkTag+(r.note?' <span style="color:#22c55e;font-size:.7rem;">'+r.note+'</span>':'')+'</td>'+
+      '<td>'+esc(r.display)+hkTag+(r.note?' <span style="color:#10b981;font-size:.7rem;">'+r.note+'</span>':'')+'</td>'+
       '<td class="td-r">'+r.bet+'</td>'+
       '<td class="td-r" style="color:var(--text-muted);">'+typeName+'</td>'+
-      '<td class="td-r" style="color:#fbbf24;">'+(r.odds||'-')+'</td>'+
-      '<td class="td-win">'+(r.win>0?r.win:'-')+'</td>'+
-      '<td class="td-net '+(r.net>=0?'net-pos':'net-neg')+'">'+(r.net>=0?'+':'')+r.net+'</td>'+
       '</tr>';
   }).join('');
 
   document.getElementById('footBet').textContent = totalBet;
-  document.getElementById('footPayout').textContent = Math.round(totalPayout*100)/100;
-  document.getElementById('footNet').textContent = (netProfit>=0?'+':'')+Math.round(netProfit*100)/100;
-  document.getElementById('footNet').style.color = netProfit>=0?'#22c55e':'#ef4444';
 
   // 澳门号码网格用澳门开奖
   if(canCalcMacau){
@@ -2332,7 +2219,7 @@ function calcAll(){
   toast('结算完成 | 收'+totalBet+' 派'+Math.round(totalPayout*100)/100+' | 庄家'+(netProfit>=0?'盈利':'亏损')+Math.abs(Math.round(netProfit*100)/100)+hkNote);
 
   // 上报到后端
-  wsReportBets({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, waterRate: waterRate, hitAmount: Math.round(hitAmount*100)/100, itemCount: allRows.length });
+  wsReportBets({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, waterRate: waterRate, hitCount: hitCount, itemCount: allRows.length });
   wsReportSettlement({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100, rows: allRows.slice(0, 20) });
 
   // 汇总每条消息的中奖内容到消息投注汇总
@@ -2362,7 +2249,7 @@ function calcAll(){
       netProfit: Math.round(netProfit*100)/100,
       netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100,
       waterRate: waterRate,
-      hitAmount: Math.round(hitAmount*100)/100,
+      hitCount: hitCount,
       itemCount: allRows.length
     },
     messageSummary: messageSummary,
@@ -2370,18 +2257,10 @@ function calcAll(){
   });
 
 
-  // 填充消息汇总统计栏
-  var statsBar = document.getElementById('msgSummaryStats');
-  if(statsBar){
-    statsBar.style.display = '';
-    document.getElementById('msgSumTotalBet').textContent = totalBet;
-    document.getElementById('msgSumNumsHit').textContent = Math.round(numsHitAmount*100)/100;
-    document.getElementById('msgSumFlatHit').textContent = Math.round(flatHitAmount*100)/100;
-    document.getElementById('msgSumComboHit').innerHTML = comboWinDetails.length > 0 ? comboWinDetails.join('; ') : '-';
-    document.getElementById('msgSumWaterRate').textContent = waterRate + '%';
-    document.getElementById('msgSumNetAfter').textContent = (netAfterWater>=0?'+':'')+Math.round(netAfterWater);
-  }
-}// ===== Rendering =====
+  renderBetTypeStats();
+  document.getElementById('msgSumNetAfter').textContent = (netAfterWater>=0?'+':'')+Math.round(netAfterWater);
+}
+// ===== Rendering =====
 
 // 解析扣除文本，返回 {num: amount} 映射（仅影响号码明细显示，不干预投注分析）
 function parseSubtractMap(text){
@@ -2701,6 +2580,51 @@ function renderAll(){
   renderN2Stats(wn, tm);
 }
 
+// 统计栏：分析后显示总收注，计算输赢后显示中奖分类+净收益
+function renderBetTypeStats(){
+  var bar = document.getElementById('msgSummaryStats');
+  if(!bar) return;
+  if(!betSummary.length && !hkBetSummary.length){ bar.style.display = 'none'; return; }
+  bar.style.display = '';
+
+  // 总收注
+  var allBets = betSummary.concat(hkBetSummary);
+  var totalBet = 0;
+  allBets.forEach(function(r){ totalBet += r.bet || 0; });
+  document.getElementById('msgSumTotalBet').textContent = Math.round(totalBet*100)/100;
+
+  // 中奖分类 — 用 hitBet（命中本金），不是 win（赔付金额）
+  var winEl = document.getElementById('msgSumWinBreakdown');
+  if(settlementAllRows.length > 0){
+    var hitSums = {};
+    settlementAllRows.forEach(function(r){
+      if(!r.hitBet || r.hitBet <= 0) return;
+      var key;
+      if(r.type==='nums') key = '特';
+      else if(r.type==='flat'||r.type==='flat_tail') key = '平';
+      else if(r.type==='special_zodiac') key = '肖';
+      else if(r.type==='combo'){
+        if(r.comboType==='double') key = '二连';
+        else if(r.comboType==='triple') key = '三连';
+        else if(r.comboType==='quadruple') key = '四连';
+        else key = '五连';
+      }
+      else if(r.type==='n3') key = '三中三';
+      else if(r.type==='n2') key = '二中二';
+      else return;
+      hitSums[key] = (hitSums[key]||0) + r.hitBet;
+    });
+    var parts = [];
+    Object.keys(hitSums).forEach(function(k){
+      parts.push(k + Math.round(hitSums[k]*100)/100);
+    });
+    winEl.textContent = parts.join(' ');
+  } else {
+    winEl.textContent = '';
+  }
+  document.getElementById('msgSumWaterRate').textContent = waterRate + '%';
+}
+
 function renderMsgSummary(){
   var card = document.getElementById('msgSummaryCard');
   var tbody = document.getElementById('msgSummaryTbody');
@@ -2728,6 +2652,7 @@ function renderMsgSummary(){
   }).join('');
 
   grandEl.textContent = Math.round(grandTotal * 100) / 100;
+  renderBetTypeStats();
 }
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -2736,7 +2661,6 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 function renderLiveBar(){
   if(!liveResult || !liveResult.numbers){
     document.getElementById('liveBalls').innerHTML='<span class="info">等待实时数据...</span>';
-    document.getElementById('liveFlatTags').innerHTML='';
     document.getElementById('liveTime').textContent='--';
     document.getElementById('liveDot').classList.remove('online');
     document.getElementById('liveStatus').textContent='等待数据...';
@@ -2744,7 +2668,7 @@ function renderLiveBar(){
   }
 
   const r=liveResult;
-  const nums=r.numbers, tm=r.teMa, fz=r.flatZodiacs;
+  const nums=r.numbers;
 
   // Balls with wave color (全部按实际波色，特码加大)
   const waveClassMap = {红波:'red', 绿波:'green', 蓝波:'blue'};
@@ -2759,21 +2683,11 @@ function renderLiveBar(){
     return '<div class="' + cls + '">' + n + '<span class="zodiac-tag">' + z + '</span></div>';
   }).join('');
 
-  // Flat tags
-  document.getElementById('liveFlatTags').innerHTML = fz.map(z=>{
-    const odds=z==='马'?ODDS_PT_MA:ODDS_PT_OTHER;
-    return `<span class="flat-tag">${z} (1:${odds})</span>`;
-  }).join('');
 
-  // Wave color summary (只统计有效号码)
-  const waveCount = {}; nums.forEach(n=>{ if(!n) return; const w=NUM_TO_WAVE[n]||''; waveCount[w]=(waveCount[w]||0)+1; });
-  const waveSummary = Object.entries(waveCount).map(([k,v])=>'<span style="color:'+(k==='红波'?'#ef4444':k==='绿波'?'#22c55e':'#3b82f6')+';">'+k+' x '+v+'</span>').join(' ');
-  const drawnCount = nums.filter(function(n){ return n !== ''; }).length;
-
-  document.getElementById('liveTime').innerHTML = (r.timestamp||'--') + ' | 已开 <b>' + drawnCount + '</b>/7 球 | 波色: ' + (waveSummary||'--');
+  document.getElementById('liveTime').innerHTML = (r.timestamp||'--');
   document.getElementById('liveDot').classList.add('online');
   document.getElementById('liveStatus').textContent = r.expect ? '第' + r.expect + '期' : '在线';
-  document.getElementById('liveStatus').style.color = '#22c55e';
+  document.getElementById('liveStatus').style.color = '#10b981'; document.getElementById('hkLiveStatus').style.color = '#10b981';
 }
 
 // ===== 实时数据获取：优先直接调用API，失败时回退到本地文件 =====
@@ -2856,9 +2770,6 @@ function loadResultFromJs(callback){
         renderLiveBar();
         if(liveResult.validCount >= 7){ renderAll(); }
         wsReportLottery(liveResult);
-        if(liveResult.flatZodiacs && liveResult.flatZodiacs.length){
-          document.getElementById('sumHitCount').textContent = liveResult.flatZodiacs.length+'肖';
-        }
       }
       if(callback) callback(true);
     } else {
@@ -2904,7 +2815,7 @@ function handleServerLottery(data){
 
   document.getElementById('liveDot').classList.add('online');
   document.getElementById('liveStatus').textContent = '在线 (服务端推送)';
-  document.getElementById('liveStatus').style.color = '#22c55e';
+  document.getElementById('liveStatus').style.color = '#10b981';
 }
 
 // 统一入口：先API，后本地文件
@@ -2924,7 +2835,7 @@ async function fetchLatestResult(){
     }
     document.getElementById('liveDot').classList.add('online');
     document.getElementById('liveStatus').textContent = '在线 (直连)';
-    document.getElementById('liveStatus').style.color = '#22c55e';
+    document.getElementById('liveStatus').style.color = '#10b981';
     return true;
   }
 
@@ -2968,9 +2879,9 @@ function stopAutoRefresh(){
   }
   var btn = document.getElementById('btnAuto');
   if(btn){
-    btn.textContent = '开始自动刷新';
+    btn.textContent = '自动刷新';
     btn.className = 'btn btn-outline btn-sm';
-    btn.title = '开始自动刷新';
+    btn.title = '自动刷新';
     btn.onclick = startAutoRefresh;
   }
 }
@@ -2994,12 +2905,10 @@ function renderHKLiveBar(){
   var dot = document.getElementById('hkLiveDot');
   var status = document.getElementById('hkLiveStatus');
   var balls = document.getElementById('hkLiveBalls');
-  var flatTags = document.getElementById('hkLiveFlatTags');
   var time = document.getElementById('hkLiveTime');
 
   if(!hkResult || !hkResult.numbers || !hkResult.numbers[0]){
     balls.innerHTML = '<span class="info">点击"获取开奖"填号</span>';
-    flatTags.innerHTML = '';
     time.textContent = '--';
     dot.classList.remove('online');
     status.textContent = '香港开奖';
@@ -3016,24 +2925,12 @@ function renderHKLiveBar(){
     return '<div class="' + cls + '">' + n + '<span class="zodiac-tag">' + z + '</span></div>';
   }).join('');
 
-  flatTags.innerHTML = r.flatZodiacs.map(function(z){
-    var odds = z === '马' ? ODDS_PT_MA : ODDS_PT_OTHER;
-    return '<span class="flat-tag">' + z + ' (1:' + odds + ')</span>';
-  }).join('');
 
-  var waveCount = {};
-  r.numbers.forEach(function(n){
-    var w = NUM_TO_WAVE[n] || '';
-    waveCount[w] = (waveCount[w] || 0) + 1;
-  });
-  var waveSummary = Object.entries(waveCount).map(function(e){
-    return '<span style="color:' + (e[0]==='红波'?'#ef4444':e[0]==='绿波'?'#22c55e':'#3b82f6') + ';">' + e[0] + ' x ' + e[1] + '</span>';
-  }).join(' ');
 
-  time.innerHTML = (r.timestamp || '--') + ' | 波色: ' + (waveSummary || '--') + (hkNextOpenTime ? ' | 下期: ' + hkNextOpenTime : '');
+  time.innerHTML = (r.timestamp || '--') + (hkNextOpenTime ? ' | 下期: ' + hkNextOpenTime : '');
   dot.classList.add('online');
   status.textContent = '第' + (hkLastExpect || '--') + '期';
-  status.style.color = '#22c55e';
+  status.style.color = '#10b981';
 }
 
 function clearHKResult(){
@@ -3189,21 +3086,37 @@ async function pasteFromClipboard(){
   }
 }
 
+function toggleSettings() {
+  var body = document.getElementById('settingsBody');
+  var btn = document.getElementById('btnSettingsToggle');
+  if (body.style.display === 'none') {
+    body.style.display = '';
+    btn.textContent = '−';
+    btn.title = '隐藏设置';
+  } else {
+    body.style.display = 'none';
+    btn.textContent = '+';
+    btn.title = '显示设置';
+  }
+}
 function updateWater(val){
-  waterRate = parseFloat(val);
-  document.getElementById('waterRateDisplay').textContent = waterRate+'%';
-  if(betSummary.length && document.getElementById('sumTotalBet').textContent !== '0'){
-    const totalBet = parseFloat(document.getElementById('sumTotalBet').textContent);
-    const waterAmount = totalBet * waterRate / 100;
-    document.getElementById('waterInfo').textContent = '抽水: '+Math.round(waterAmount*100)/100;
-    const netProfit = parseFloat(document.getElementById('sumNetProfit').textContent);
-    const netAfterWater = netProfit - waterAmount;
-    document.getElementById('sumNetAfterWater').textContent = (netAfterWater>=0?'+':'')+Math.round(netAfterWater);
-    document.getElementById('sumNetAfterWater').style.color = netAfterWater>=0?'#22c55e':'#ef4444';
+  waterRate = parseFloat(val) || 0;
+  if (waterRate < 0) waterRate = 0;
+  if (waterRate > 30) waterRate = 30;
+  if (betSummary.length || hkBetSummary.length) {
+    var totalBet = 0;
+    betSummary.forEach(function(s) { totalBet += s.bet || 0; });
+    hkBetSummary.forEach(function(s) { totalBet += s.bet || 0; });
+    var waterAmount = totalBet * waterRate / 100;
+    document.getElementById('waterInfo').textContent = '抽水: ' + Math.round(waterAmount * 100) / 100;
+    document.getElementById('msgSumWaterRate').textContent = waterRate + '%';
+    renderBetTypeStats();
+
   } else {
     document.getElementById('waterInfo').textContent = '抽水: 0';
-    document.getElementById('sumNetAfterWater').textContent = '0';
-    document.getElementById('sumNetAfterWater').style.color = '#22c55e';
+    document.getElementById('msgSumWaterRate').textContent = '0%';
+    document.getElementById('msgSumNetAfter').textContent = '0';
+    document.getElementById('msgSumWinBreakdown').textContent = '';
   }
 }
 
@@ -3361,37 +3274,15 @@ function doReset(){
   ALL_ZODIACS.forEach(z=>{flatBets[z]=0; hkFlatBets[z]=0;});
   liveResult=null; hkResult=null;
   document.getElementById('inputRule').value='';
-  document.getElementById('settlementBody_tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">等待投注...</td></tr>';
-  document.getElementById('sumTotalBet').textContent='0';
-  document.getElementById('sumTotalPayout').textContent='0';
-  document.getElementById('sumNetProfit').textContent='0';
-  document.getElementById('sumNetProfit').style.color='#22c55e';
-  document.getElementById('sumHitCount').textContent='0';
-  document.getElementById('sumWinAmount').textContent='0';
+  document.getElementById('settlementBody_tbody').innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">等待投注...</td></tr>';
   document.getElementById('footBet').textContent='0';
-  document.getElementById('footPayout').textContent='0';
-  document.getElementById('footNet').textContent='0';
-  document.getElementById('waterSlider').value = 0;
-  document.getElementById('waterRateDisplay').textContent = '0%';
+  document.getElementById('waterInput').value = 0;
   document.getElementById('waterInfo').textContent = '抽水: 0';
-  document.getElementById('sumNetAfterWater').textContent = '0';
-  document.getElementById('sumNetAfterWater').style.color = '#22c55e';
   waterRate = 0;
-  document.getElementById('waveStatRow').style.display = 'none';
-  document.getElementById('waveRedBet').textContent = '0';
-  document.getElementById('waveGreenBet').textContent = '0';
-  document.getElementById('waveBlueBet').textContent = '0';
-  document.getElementById('flatHitAmount').textContent = '0';
-  document.getElementById('numsHitAmount').textContent = '0';
-  document.getElementById('comboHitAmount').textContent = '0';
   var statsBar = document.getElementById('msgSummaryStats');
   if(statsBar){ statsBar.style.display = 'none'; }
-  document.getElementById('msgSumTotalBet').textContent = '0';
-  document.getElementById('msgSumNumsHit').textContent = '0';
-  document.getElementById('msgSumFlatHit').textContent = '0';
-  document.getElementById('msgSumComboHit').textContent = '-';
-  document.getElementById('msgSumWaterRate').textContent = '0%';
   document.getElementById('msgSumNetAfter').textContent = '0';
+  document.getElementById('msgSumWinBreakdown').textContent = '';
   renderLiveBar();
   renderAll();
   renderMsgSummary();
@@ -3483,8 +3374,7 @@ function handleAdminCommand(command, params){
     case 'set_water':
       if(params.value !== undefined){
         updateWater(params.value);
-        document.getElementById('waterSlider').value = params.value;
-        document.getElementById('waterRateDisplay').textContent = params.value + '%';
+        document.getElementById('waterInput').value = params.value;
         toast('管理员已调整抽水率为 ' + params.value + '%');
       }
       break;

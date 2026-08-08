@@ -629,7 +629,7 @@ function processRule(rawRule){
 function isHKMarker(m){ return m==='香港'; }
 
 function splitByModeMarkers(sl){
-  var re = /(?:^|[\s，：:。、])(香港|澳门|澳門)(?=[\s，：:。、]|[一-鿿\d]|$)/g;
+  var re = /(?:^|[\s，：:。、；;])(香港|澳门|澳門)(?=[\s，：:。、；;]|[一-鿿\d]|$)/g;
   var matches = [];
   var m;
   while ((m = re.exec(sl)) !== null) {
@@ -645,7 +645,8 @@ function splitByModeMarkers(sl){
   }
   var after = sl.substring(prev).trim();
   if (after) segs.push({ text: after, isHK: isHKMarker(matches[matches.length-1].marker) });
-  return segs.length > 1 ? segs : null;
+  // 只要检测到模式标记就返回，单分段也要处理（如"香港：xxx"）
+  return segs.length > 0 ? segs : null;
 }
 
 // ===== groupNewFormatMessages — 复刻 fsaf.html 1365行 =====
@@ -848,6 +849,8 @@ function analyze(inputText){
     });
   }
 rawLines.forEach(function(rawLine, lineIdx){
+    // 预处理 "xxx香港澳门" → "澳xxx；港xxx"（必须在子行分割之前）
+    rawLine = rawLine.replace(/^(.+)(?:香港澳门|澳门香港|港澳)$/g, '澳$1；港$1');
     var msgBet = 0;
     const subLines = rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
     // 合并续行: 前一行只有号码/生肖但无金额标记时，与后一行合并
@@ -915,6 +918,7 @@ rawLines.forEach(function(rawLine, lineIdx){
       if (segs) {
         segs.forEach(function(seg) {
           var mode = seg.isHK;
+          curHKMode = mode;  // 更新状态，后续子行继承
           expandLine(seg.text).forEach(function(sr){
             var r = processRule(sr);
             if (r) {
