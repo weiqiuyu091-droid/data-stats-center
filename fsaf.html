@@ -858,7 +858,22 @@ let currentTab = 'bets';
 let waterRate = 0;  // 抽水率 0-30%
 let settlementAllRows = [];  // 缓存结算明细数据用于导出 xlsx
 
-// ===== 中文数字 =====
+// parser.js — 投注解析共享模块 (Node + Browser)
+
+const ZODIAC_MAP = {
+  马:["01","13","25","37","49"],蛇:["02","14","26","38"],龙:["03","15","27","39"],
+  兔:["04","16","28","40"],虎:["05","17","29","41"],牛:["06","18","30","42"],
+  鼠:["07","19","31","43"],猪:["08","20","32","44"],狗:["09","21","33","45"],
+  鸡:["10","22","34","46"],猴:["11","23","35","47"],羊:["12","24","36","48"]
+};
+const ALL_ZODIACS = ["马","蛇","龙","兔","虎","牛","鼠","猪","狗","鸡","猴","羊"];
+const ZODIAC_CHARS = ALL_ZODIACS.join('');
+const WAVE_RED = ["01","02","07","08","12","13","18","19","23","24","29","30","34","35","40","45","46"];
+const WAVE_BLUE = ["03","04","09","10","14","15","20","25","26","31","36","37","41","42","47","48"];
+const WAVE_GREEN = ["05","06","11","16","17","21","22","27","28","32","33","38","39","43","44","49"];
+const EVEN_NUMS = []; for (var _ei = 2; _ei <= 48; _ei += 2) EVEN_NUMS.push(_ei.toString().padStart(2,'0'));
+const ODD_NUMS = []; for (var _oi = 1; _oi <= 49; _oi += 2) ODD_NUMS.push(_oi.toString().padStart(2,'0'));
+
 const CN = {
   一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,
   十一:11,十二:12,十三:13,十四:14,十五:15,十六:16,十七:17,十八:18,十九:19,
@@ -874,7 +889,6 @@ const CN = {
 };
 const CNK = Object.keys(CN).sort((a,b)=>b.length-a.length);
 
-// ===== Parsing helpers =====
 function cn(s){ for(let k of CNK) if(s===k) return CN[k]; for(let k of CNK) if(s.startsWith(k)){ var rest=s.slice(k.length); if(!/^[一二三四五六七八九十百千万廿卅两百]$/.test(rest[0]||'')) return CN[k]; } return 0; }
 function parseCNNum(s){
   if(CN[s]) return CN[s];
@@ -887,84 +901,98 @@ function parseCNNum(s){
   }
   return total+tmp;
 }
-function isHK(r){ return /香港|香|港/.test(r); }
+function isMsgDateLine(s){ return /^\d{4}年\d{1,2}月\d{1,2}日\s*\d{1,2}:\d{2}/.test(s); }
 function stripSender(s){ return s.replace(/^([^:：]+)[：:]\s*/,function(m,p){ if(/[\d\.。,，、\-\—\－]/.test(p))return m; if(/^(?:复[试式]|[三二]中[三二]|平特|特肖|门特|香|港|香港|澳|门|[二三四五]连)/.test(p))return m; if(p.length>5)return m; var zc=(p.match(/[猴鸡狗猪鼠牛虎兔龙蛇马羊]/g)||[]).length; return zc>2?m:''; }).trim(); }
-function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|澳特|澳|利来|门特|门|新)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
+function stripMacau(s){ return s.replace(/^(?:新澳门|新奥|新澳|澳门|澳門|澳特|澳|奥|利来|门特|门|新)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function stripHK(s){ return s.replace(/^(?:香港|港|香)\s*[:：]?\s*/i,'').replace(/^[：:,，\s]+/,'').trim(); }
 function expandDot(s){ return s.replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 '); }
-function norm(s){
-  let t = s.replace(/[+＋]/g,'').replace(/。/g,'')
+
+// 二连/三连/四连多对拆分: "猴兔猴蛇兔蛇二连 50" -> "猴兔二连50;猴蛇二连50;兔蛇二连50"
+function splitMultiPairCombo(t) {
+  var re = '^([' + ZODIAC_CHARS + ']{4,})';
+  re += '(二连|三连|四连|五连)';
+  re += '\\s*各?\\s*';
+  re += '(\\d+(?:\\.\\d+)?)';
+  re += '\\s*(?:块|元|斤|米)?\\s*$';
+  var m = t.match(new RegExp(re));
+  if (!m) return t;
+  var zs = m[1], lx = m[2], v = m[3];
+  var k = lx === '二连' ? 2 : lx === '三连' ? 3 : lx === '四连' ? 4 : 5;
+  var parts = [];
+  for (var i = 0; i + k <= zs.length; i += k) {
+    parts.push(zs.slice(i, i + k) + lx + v);
+  }
+  return parts.join('；');
+}
+
+function norm(s, debug){
+  var t = s;
+  if (debug) console.log('[norm] 输入:', JSON.stringify(t));
+  t = t.replace(/[+＋]/g,'').replace(/。/g,'').replace(/^(.+)香港澳门$/g, '澳$1；港$1').replace(/(\d+(?:\.\d+)?\s*(?:斤|米|块|元|文))\s*[，]\s*(?=\d)/g, '$1；')
     .replace(/免/g,'兔').replace(/于一肖/g,'一肖')
-    .replace(/候/g,'猴')  // 候→猴 纠错
-    .replace(/[（(]\s*\d+\s*[码个]?\s*[）)]/g,'')  // 过滤括号注释如（24码）
-    .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')  // 【】→， 展开 （必须在破折号→空格之前）
-    .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })  // 每组→各组 归一化
-    .replace(/元/g,'块')  // 元→块 归一化
-    .replace(/复试/g,'复式').replace(/两连/g,'二连')  // 复试→复式 归一化
-    .replace(/(二连|三连|四连|五连)复式/g, '复式$1')  // "二连复式"→"复式二连"，确保expandLine fuShortRe能匹配展开
-    .replace(/\d+期\s*/g,'')  // 去掉 "173期" 等期号前缀
-    .replace(/号个/g,'号各').replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1').replace(/个组/g,'各组').replace(/个\//g,'各')  // "09号各30" → "09各数30", 名数→各数, 每个号→各数, 个组→各组, 个/→各
-    .replace(/蚊/g,'')  // 蚊→去掉 (粤语元)
-    .replace(/[嘛呀啊呢吧哦噢哟唉]+/g, '')  // 去掉语气词
-    // 到 范围展开: 01到12 → 01 02 03 ... 12
-    .replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
+    .replace(/候/g,'猴').replace(/㺅/g,'猴')
+    .replace(/[，,]/g,' ')
+    .replace(/[（(]\s*\d+\s*[码个]?\s*[）)]/g,'')
+    .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')
+    .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })
+    .replace(/元/g,'块').replace(/(\d)文/g,'$1块')
+    .replace(/复(二|三|四|五)复(二|三|四|五)([' + ZODIAC_CHARS + ']+)各组([\\d一二三四五六七八九十百千万廿卅两百]+(?:\.[\\d]+)?)/g, function(m, a, b, zs, v){ var map={二:'二连',三:'三连',四:'四连',五:'五连'}; var nv = cn(v) || parseCNNum(v) || v; var ka = map[a]==='二连'?2:map[a]==='三连'?3:map[a]==='四连'?4:5; var kb = map[b]==='二连'?2:map[b]==='三连'?3:map[b]==='四连'?4:5; return zs+'复式'+map[a]+' '+nv+' 各'+ka+'组;'+zs+'复式'+map[b]+' '+nv+' 各'+kb+'组'; }).replace(/复(二|三|四|五)复(二|三|四|五)/g, function(m, a, b){ var map={二:'二连',三:'三连',四:'四连',五:'五连'}; return '复试'+map[a]+';复试'+map[b]; }).replace(/复试/g,'复式').replace(/两连/g,'二连').replace(/二友/g,'二连').replace(/三友/g,'三连')
+    .replace(/(二连|三连|四连|五连)复式/g, '复式$1')
+    .replace(/\d+期\s*/g,'').replace(/(\d+)\s*百(?!\d)/g, function(m, n){ return String(parseInt(n) * 100); }).replace(/(\d+)\s*千(?!\d)/g, function(m, n){ return String(parseInt(n) * 1000); })
+    .replace(/号个/g,'号各').replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1').replace(/个组/g,'各组').replace(/个\//g,'各').replace(/一个\s*$/g,'')
+    .replace(/蚊/g,'')
+    .replace(/[嘛呀啊呢吧哦噢哟唉]+/g, '')
+    .replace(/(\d(?:[-—－]+\d)+)尾/g, function(m, nums){ return nums.split(/[-—－]+/).map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{2,})尾/g, function(m, digits){ return digits.split('').map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); }).replace(/尾数(\d)尾/g, '$1尾').replace(/(\d)尾/g, function(m, d){ var r=[]; for(var i=0;i<=4;i++){ var n=i*10+parseInt(d); if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
+    // 红波/蓝波/绿波+单/双组合展开
+    .replace(/(红波|蓝波|绿波)(单|双)/g, function(m, wave, od) {
+      var base = wave==='红波'?WAVE_RED:wave==='蓝波'?WAVE_BLUE:WAVE_GREEN;
+      var filtered = od==='双' ? base.filter(function(n){ return parseInt(n)%2===0; }) : base.filter(function(n){ return parseInt(n)%2===1; });
+      return filtered.join(' ');
+    })
+    // 独立"双"/"单"展开为所有双数/单数 (红波双等已在前面展开,此处处理剩余的独立双/单)
+    .replace(/双各/g, EVEN_NUMS.join(' ')+'各')
+    .replace(/单各/g, ODD_NUMS.join(' ')+'各')
+    // 纯波色展开(不带单双): "红波各数十"→17个红波号码各10
+    .replace(/(红波|蓝波|绿波)各/g, function(m, wave){ var base = wave==='红波'?WAVE_RED:wave==='蓝波'?WAVE_BLUE:WAVE_GREEN; return base.join(' ')+'各'; })
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
-    // 个数<中文>斤 → 各数<数字>斤
-    .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; }).replace(/尾数(\d)尾/g, '$1尾')
-    .replace(/个字/g,'各数').replace(/各字/g,'各数')  // "猴个字十"→"猴各数十"
-    .replace(/字/g,'各数')  // "05字三十"→"05各数30", "龙字二十嘛"→"龙各数20嘛"
-    .replace(/号个/g,'各数')  // "狗号个25米"→"狗各数25米"
-    .replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/=/g,'各').replace(/数十/g,'10')  // =各 → 各 (避免各各), 数十→10
-    .replace(/单数/g,'单').replace(/双数/g,'双')  // 单数→单, 双数→双 (用于大小单双匹配)
-    .replace(/各\.(\d)/g,'各$1')  // "各.10" → "各10"
+    .replace(/个数([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return '各数'+(v||'')+n2; })
+    .replace(/个字/g,'各数').replace(/各字/g,'各数')
+    .replace(/字([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, n){ return '各' + (cn(n) || parseCNNum(n) || '') + ';'; }).replace(/字/g,'各数')
+    .replace(/号个/g,'各数')
+    .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各')
+    .replace(/单数/g,'单').replace(/双数/g,'双')
+    .replace(/各\.(\d)/g,'各$1')
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
     .replace(/(?<!各)数十斤/g,'各10斤').replace(/(?<!各)数十米/g,'各10米').replace(/(?<!各)数十块/g,'各10块')
     .replace(/平特\s*一肖/g,'平特')
     .replace(/平特(三连|二连|四连|五连)肖/g, '$1')
     .replace(/平特(三连|二连|四连|五连)(?!肖)/g, '$1')
     .replace(/(\d)[Oo](\d)/g,'$10$2').replace(/(\d+)[A-Za-z]+/g,'$1')
-    .replace(/门\s*$/g,'')  // 去掉末尾的 "门"
-    .replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 ').replace(/(\d{1,2})\.(?![\d]{1,2})/g,'$1 ')  // "5.05"→"5 05", "25.35"→"25 35", and "10.绿"→"10 绿"
-    .replace(new RegExp(`([${ZODIAC_CHARS}])\\.(?=[${ZODIAC_CHARS}])`, 'g'), '$1 ')  // 生肖间点号转空格: 兔.马→兔 马
-    .replace(/\.(?=\s*各)/g, ' ')  // "狗.各10"→"狗 各10"
+    .replace(/门\s*$/g,'')
+    .replace(/(\d{1,2})\.(?=\d{1,2})/g,'$1 ').replace(/(\d{1,2})\.(?![\d]{1,2})/g,'$1 ')
+    .replace(new RegExp(`([${ZODIAC_CHARS}])\\.(?=[${ZODIAC_CHARS}])`, 'g'), '$1 ')
+    .replace(/\.(?=\s*各)/g, ' ')
     // "特肖猪狗各号5" → "特肖猪 5 特肖狗 5" (澳特/门特转换后展开)
-    .replace(new RegExp(`特肖([${ZODIAC_CHARS}]+)各号(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
+    .replace(new RegExp(`特肖([${ZODIAC_CHARS}]+)各号(\\d+(?:\\\.\\d+)?)`,'g'), function(m, zs, v){
       return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
     })
-
-    // "各肖"→平特(flat bet per zodiac): "狗马各肖45" → "平特狗45 平特马45"
     .replace(new RegExp(`([${ZODIAC_CHARS}]+)各肖各?(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
       return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
     })
-    // "X肖" → "X" (strip 肖 after zodiac char): "虎肖" → "虎"
     .replace(new RegExp(`([${ZODIAC_CHARS}])肖`,'g'), '$1')
-    // 连码肖→连码: "三连肖"→"三连", "二连肖"→"二连" 等
     .replace(/(二连|三连|四连|五连)肖/g, '$1')
     .replace(/(\d{1,2})\s*([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, (m,n1,n2,n3)=>n1+'各'+cn(n2)+n3)
     .replace(/(\d{1,2})\s*[-—－]+\s*(\d+(?:\.\d+)?)\s*(斤|米|块)/g,'$1各$2$3')
-    .replace(/--/g,'-');  // 双横线→单横线: "07--13"→"07-13"（避免13被误当金额）
-  // 三中三/二中二 N组 各组V + 显式组合列表: "三中三 15组 各组2斤 01-10-20，02-05-23，..." → 逐组展开
-  t = t.replace(/^(三中三|二中二)\s+(\d+)组\s+各组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s+(.+)$/g, function(m, type, cntStr, val, unit, groupsStr){
-    var triplets = groupsStr.split(/[，,、]/).filter(Boolean);
-    var expanded = [];
-    var k = type === '三中三' ? 3 : 2;
-    for (var t = 0; t < triplets.length; t++) {
-      var nums = triplets[t].trim().split(/[\s\.\-\－\—]+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
-      for (var ni = 0; ni + k <= nums.length; ni += k) {
-        expanded.push(nums.slice(ni, ni + k).join(' ') + ' ' + type + ' ' + val + (unit || ''));
-      }
-    }
-    return expanded.length > 0 ? expanded.join('；') : m;
-  });
-  t = t.replace(/(\d{1,2})\s*[-—－]{2,}\s*(\d+(?:\.\d+)?)(?!\.?\d)(?!\s*各)/g,'$1各$2').replace(/[*、]+/g,' ').replace(/[-—－]+/g,' ')
+    .replace(/--/g,'-')
+    .replace(/(\d{1,2})\s*[-—－]{2,}\s*(\d+(?:\.\d+)?)(?!\.?\d)(?!\s*各)/g,'$1各$2').replace(/[*、]+/g,' ').replace(/[-—－]+/g,' ').replace(/(\d)\/(?=\d)/g,'$1 ')
     .replace(/([斤米块])\s*，/g, '$1；')
-    // 连码分隔符归一化: / . 各 阻断连码正则匹配
-    .replace(/(二连|三连|四连|五连)[.\/]/g,'$1 ').replace(/\/(二连|三连|四连|五连)/g,' $1')
-    .replace(/\/(\d+(?:\.\d+)?)\s*(二连|三连|四连|五连)/g,'$2$1')  // "狗蛇虎/30三连"→"狗蛇虎三连30"
-    .replace(/\s*\/\s*各/g,'各')  // " /各号"→"各号"
-    .replace(new RegExp('([' + ZODIAC_CHARS + '])\\s+(?=[' + ZODIAC_CHARS + '])', 'g'), '$1')  // 连肖生肖间空格移除: "龙 狗"→"龙狗"
-    .replace(/(二连|三连|四连|五连)各(\d)/g,'$1 $2')
+	    .replace(/(二连|三连|四连|五连)[.\/]/g,'$1 ').replace(/\/(二连|三连|四连|五连)/g,' $1')
+	    .replace(/\/(\d+(?:\.\d+)?)\s*(二连|三连|四连|五连)/g,'$2$1')
+	    .replace(/\s*\/\s*各/g,'各')
+	    .replace(new RegExp('([' + ZODIAC_CHARS + '])\\s+(?=[' + ZODIAC_CHARS + '])', 'g'), '$1')
+	    .replace(/(二连|三连|四连|五连)各(\d)/g,'$1 $2')
     .replace(/(\d)([A-Za-z])?[，、](?=[红绿蓝单双大小平特特肖])/g,'$1$2 ').replace(/\s+(各(?!组))/g,'$1').replace(/(各)\s+/g,'$1').replace(/\s+/g,' ').trim();
+  t = splitMultiPairCombo(t);
   // 展开无分隔符连肖: "二连狗猴30狗虎30猴虎30" → "狗猴二连30；狗虎二连30；猴虎二连30"
   t = t.replace(new RegExp('^(二连|三连|四连|五连)([' + ZODIAC_CHARS + ']+)(\\d+(?:\\.\\d+)?)((?:[' + ZODIAC_CHARS + ']+\\d+(?:\\.\\d+)?)+)$'), function(m, comboType, firstZodiacs, firstVal, rest) {
     var k = comboType === '二连' ? 2 : comboType === '三连' ? 3 : comboType === '四连' ? 4 : 5;
@@ -980,53 +1008,71 @@ function norm(s){
     if (groups.length <= 1) return m;
     return groups.join('；');
   });
-  t = t.replace(new RegExp(`([${ZODIAC_CHARS}])\\s*，\\s*(?=[${ZODIAC_CHARS}])`, 'g'), '$1');  // 生肖间逗号直接移除
-  t = t.replace(/，/g, ' ');  // 其余全角逗号→空格
-  // 三中三/二中二后紧跟数字时插入空格: "三中三47"→"三中三 47"
   t = t.replace(/(三中三|二中二)(\d)/g, '$1 $2');
-  // "平特1尾下1200" → "平特1尾1200" (去掉数字前的下)
   t = t.replace(/(\d{1,2})\s*下\s*(\d+(?:\.\d+)?)/g,'$1各$2');
   t = t.replace(/下(\d+(?:\.\d+)?)/g,'$1');
-  // 修复: 三中三/二中二后直接跟中文数字+单位 → 先转换数字，防止被下面第865行破坏
-  // "三中三十斤" → "三中三10斤", "二中二十五斤" → "二中二15斤"
   t = t.replace(/(三中三|二中二)([一二三四五六七八九十百千万廿卅两百]+)(斤|米|块)/g, function(m, type, cnVal, unit) {
     var v = cn(cnVal) || parseCNNum(cnVal);
     return type + (v || '') + unit;
   });
-  // 纯中文数字+单位 → 数字+单位: "五十斤"→"50斤", "五十米"→"50米", "五十块"→"50块"
   t = t.replace(/([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, function(m, n1, n2){ var v=cn(n1)||parseCNNum(n1); return (v||'')+n2; });
-  // 各组五十 → 各组50 (中文数字转换)
   t = t.replace(/各组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, cnVal){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return '各组' + (v || '');
   });
-  // 复式三连各组10 → 复式三连 10 (避免各组被分发)
-  t = t.replace(/复式(二连|三连|四连|五连)\s*各组(\d+(?:\.\d+)?)/g, '复式$1 $2');
-  // 复式三中三/复式二中二 号码在前: "40 45 46 26复式三中三各组5" → 生成所有C(n,k)组合
   t = t.replace(/([\d\s]+)复式(三中三|二中二)\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, type, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     var k = type === '三中三' ? 3 : 2;
     if (numsArr.length < k) return m;
     return expandOrCompact(numsArr, k, type, val, unit);
   });
-  // 复式三中三/复式二中二 号码在后: "复式三中三 47 12 36 34 32 19各组2斤"（各组紧跟数字，不留空格）
   t = t.replace(/复式(三中三|二中二)\s*([\d\s]*\d)各组(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, type, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     var k = type === '三中三' ? 3 : 2;
     if (numsArr.length < k) return m;
     return expandOrCompact(numsArr, k, type, val, unit);
   });
-  // 三中三复式各: "01.05.06.25.37.38.45.46三中三复式各100" → 生成所有C(n,3)组合
+  t = t.replace(/([\d\s]+)复式(三中三|二中二)\s*各(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, type, val, unit){
+    var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+    var k = type === '三中三' ? 3 : 2;
+    if (numsArr.length < k) return m;
+    return expandOrCompact(numsArr, k, type, val, unit);
+  });
   t = t.replace(/([\d\s]+)三中三复式各(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     if (numsArr.length < 3) return m;
     return expandOrCompact(numsArr, 3, '三中三', val, unit);
   });
-  // 二中二复式各: "01.05.06.25二中二复式各100" → 生成所有C(n,2)组合
   t = t.replace(/([\d\s]+)二中二复式各(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, val, unit){
     var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
     if (numsArr.length < 2) return m;
     return expandOrCompact(numsArr, 2, '二中二', val, unit);
+  });
+  // 二中二复式: N1 N2 N3...各组V  (复式关键词在前)
+  t = t.replace(/二中二复式\s*([\d\s]+)各组(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, nums, val, unit){
+    var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+    if (numsArr.length < 2) return m;
+    return expandOrCompact(numsArr, 2, '二中二', val, unit);
+  });
+  t = t.replace(/复式(二连|三连|四连|五连)\s*各组(\d+(?:\.\d+)?)/g, '复式$1 $2');
+  // 三中三/二中二多行合并: "三中三 N1 N2 N3...组V" → 展开为独立组合
+  t = t.replace(/三中三\s+([\d\s]+?)组(\d+(?:\.\d+)?)\s*$/g, function(m, nums, val){
+    var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+    if (numsArr.length < 3 || numsArr.length % 3 !== 0) return m;
+    var triplets = [];
+    for (var i = 0; i < numsArr.length; i += 3) {
+      triplets.push(numsArr.slice(i, i+3).join(' ') + ' 三中三 ' + val);
+    }
+    return triplets.join('；');
+  });
+  t = t.replace(/二中二\s+([\d\s]+?)组(\d+(?:\.\d+)?)\s*$/g, function(m, nums, val){
+    var numsArr = nums.trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+    if (numsArr.length < 2 || numsArr.length % 2 !== 0) return m;
+    var pairs = [];
+    for (var i = 0; i < numsArr.length; i += 2) {
+      pairs.push(numsArr.slice(i, i+2).join(' ') + ' 二中二 ' + val);
+    }
+    return pairs.join('；');
   });
     // 三中三/二中二显式多组(数字在前): "N1 N2 N3 N4...三中三各组V" → 拆分为独立组合
     t = t.replace(/([\d\s]+)三中三\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, nums, val, unit){
@@ -1047,17 +1093,25 @@ function norm(s){
       }
       return pairs.join("；");
     });
-  // 修复"各十7"粘连：各+中文数字后紧跟阿拉伯数字时，转换后插入空格
   t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)(\d)/g, function(m, cnVal, nextDigit){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return '各' + (v || '') + ' ' + nextDigit;
   });
-  // 各+中文数字 → 各+阿拉伯数字: "各一百"→"各100"
   t = t.replace(/各([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, cnVal){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return '各' + (v || '');
   });
-  // 结尾中文数字 → 阿拉伯数字: "平特鸡一百"→"平特鸡100"
+  // 数字+中文数字结尾（如"36十"→"36各10"），先处理
+  t = t.replace(/(\d)\s*([一二三四五六七八九十百千万廿卅两百]+)$/, function(m, digit, cnVal){
+    var v = cn(cnVal) || parseCNNum(cnVal);
+    return digit + '各' + (v || '');
+  });
+  // 生肖+中文数字结尾（如"平牛十"→"平牛各10"）
+  t = t.replace(new RegExp(`([${ZODIAC_CHARS}])([一二三四五六七八九十百千万廿卅两百]+)$`), function(m, zo, cnVal){
+    var v = cn(cnVal) || parseCNNum(cnVal);
+    return zo + '各' + (v || '');
+  });
+  // 其余中文数字结尾（如"二十斤"已由前面处理，这里做最后兜底）
   t = t.replace(/([一二三四五六七八九十百千万廿卅两百]+)$/, function(m, cnVal){
     var v = cn(cnVal) || parseCNNum(cnVal);
     return (v || cnVal).toString();
@@ -1103,44 +1157,50 @@ function norm(s){
   t = t.replace(/\x00SZS\x00/g, '三中三');
   t = t.replace(/\x00EZE\x00/g, '二中二');
   t = t.replace(/\x00(二连|三连|四连|五连)\x00/g, '$1');
-  // 各组X → 分布式: "三连A 四连B 五连C各组50" → "三连A50 四连B50 五连C50"
-  // 注意: norm中的\s+(各)可能已把各组前的空格吃掉, 所以这里用\s*而非\s+
   // 各组\d+后跟其他投注内容时插入分号分隔，确保各组传播能正确工作
   t = t.replace(/(各组\d+(?:\.\d+)?)\s+(?=\S)/g, '$1；');
-  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+?)\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s*(?:；|$)/g, function(m, prefix, val, unit){
+  t = t.replace(/^(?!.*(?:三中三|二中二|复式(?:二连|三连|四连|五连)))(.+?)\s*各组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s*(?:；|$)/, function(m, prefix, val, unit){
     var items = prefix.split(/\s+/).filter(function(seg){ return seg.length > 0; });
     return items.map(function(seg){ return seg + '各' + val + (unit||''); }).join(' ');
   });
-  // 连肖前缀去除: "连肖 A复式B连肖C一组" → "A复式B连肖C一组"
   t = t.replace(/^连肖\s*/g, '');
-  // 复式X连肖 → 规范化: "A复式三连肖20一组共10组" → "A复式三连20各10组"
   t = t.replace(/复式(二连|三连|四连|五连)肖\s*(\d+(?:\.\d+)?)\s*一组(?:共(\d+)组)?/g, function(m, lx, v, cnt){
     return '复式' + lx + ' ' + v + '各' + (cnt || '?') + '组';
   });
-  // 一组共X组简化 → 各X组
   t = t.replace(/(\d+(?:\.\d+)?)\s*一组共(\d+)组/g, '$1各$2组');
-  // 前置三中三/二中二: "三中三12-23-21，16-47-37各11米" → "12.23.21三中三11；16.47.37三中三11"
-  // 也支持"组"替代"各": "三中三...组11米"
+  t = t.replace(/^(三中三|二中二)\s+(\d+)组\s+各组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s+(.+)$/g, function(m, type, cntStr, val, unit, groupsStr){
+    var triplets = groupsStr.split(/[，,、]/).filter(Boolean);
+    var expanded = [];
+    var k = type === '三中三' ? 3 : 2;
+    for (var t = 0; t < triplets.length; t++) {
+      var nums = triplets[t].trim().split(/[\s\.\-\－\—]+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+      for (var ni = 0; ni + k <= nums.length; ni += k) {
+        expanded.push(nums.slice(ni, ni + k).join(' ') + ' ' + type + ' ' + val + (unit || ''));
+      }
+    }
+    return expanded.length > 0 ? expanded.join('；') : m;
+  });
   t = t.replace(/^(三中三|二中二)\s*([\d\s\.\-\－\—，,、]+?)(?:各?组?)(\d+(?:\.\d+)?)\s*(斤|米|块)?$/g, function(m, type, groups, val, unit) {
     var groupList = groups.split(/[，,、]/).filter(Boolean);
-    // 如果逗号分隔后只有一组但含空格，说明逗号已被提前替换为空格，按k个号码一组切分
     if (groupList.length === 1 && /\s/.test(groupList[0])) {
       var flatNums = groupList[0].trim().split(/\s+/);
       var k = type === '三中三' ? 3 : 2;
       groupList = [];
       for (var i = 0; i < flatNums.length; i += k) {
-        groupList.push(flatNums.slice(i, i + k).join(' '));
+        groupList.push(flatNums.slice(i, i + k).join('.'));
       }
     }
     return groupList.map(function(g) {
-      var nums = g.trim().replace(/[-\－\—\s]+/g, ' ').replace(/\s+/g, ' ').trim();
-      return nums + ' ' + type + ' ' + val + (unit || '');
+      var nums = g.trim().replace(/[-\－\—\s]+/g, '.').replace(/\.+/g, '.').replace(/^\.|\.$/g, '');
+      return nums + type + val + (unit || '');
     }).join('；');
   });
   t = t.replace(/(\d{1,2})\s*\/\s*(\d+(?:\.\d+)?)\s*(?=[斤米块，；。\s]|$)/g, '$1各$2');
+  if (debug) console.log('[norm] 输出:', JSON.stringify(t));
   return t;
 }
-function clean(s){ return s.replace(/^[、，,\s\-－—ㅤ]+/,'').replace(/[、，,。.\s\-－—ㅤ]+$/,'').replace(/[。]/g,'').trim(); }
+
+function clean(s){ return s.replace(/^[、，,\s\-—－ㅤ]+/,'').replace(/[、，,。.\s\-—－ㅤ]+$/,'').replace(/[。]/g,'').trim(); }
 
 const KW = '(?:各数|个数|各号|号|个(?!组)|各(?!组))';
 
@@ -1173,9 +1233,25 @@ function expandDashGe(l){
   return rest.length<3?parts:null;
 }
 
+function C(n,k){ if(k>n||k<0)return 0; if(k===0||k===n)return 1; let r=1; for(let i=1;i<=k;i++) r=r*(n-i+1)/i; return r; }
+function combinations(arr,k){
+  if(k===0)return[[]]; if(arr.length<k)return[];
+  const r=[]; for(let i=0;i<=arr.length-k;i++){ const f=arr[i]; combinations(arr.slice(i+1),k-1).forEach(c=>r.push([f,...c])); }
+  return r;
+}
+// 复式展开阈值: C(n,k)超过此值时不枚举，用数学公式计算
+var COMBO_EXPAND_MAX = 500;
+function expandOrCompact(numsArr, k, type, val, unit) {
+  var n = numsArr.length;
+  if (C(n, k) > COMBO_EXPAND_MAX) {
+    return '@@COMBO@@ ' + type + ' ' + numsArr.join(' ') + ' 各组' + val + (unit || '');
+  }
+  var combos = combinations(numsArr, k);
+  return combos.map(function(c){ return c.join(' ') + ' ' + type + ' ' + val + (unit || ''); }).join('；');
+}
+
 function expandLine(l){
   const s=norm(stripHK(stripMacau(stripSender(l))));
-  // norm() 可能将前置三中三/二中二转为分号分隔的多段，逐段递归处理
   if(s.includes('；')||s.includes(';')){
     const parts=s.split(/[；;]/).filter(Boolean);
     const all=[]; parts.forEach(function(p){ expandLine(p).forEach(function(sr){ all.push(sr); }); });
@@ -1183,7 +1259,6 @@ function expandLine(l){
   }
   const dr=expandDashGe(s);
   if(dr){ return dr.map(d=>{ const c=clean(d); return c||null; }).filter(Boolean); }
-  // 复式连肖展开: "狗猴兔鸡虎复式三连 20各10组" → C(5,3)=10条
   const fuRe = new RegExp(`^([${ZODIAC_CHARS}]+)复式(二连|三连|四连|五连)\\s+(\\d+(?:\\.\\d+)?)\\s*各(\\d+)组`);
   const fuM = s.match(fuRe);
   if(fuM){
@@ -1194,7 +1269,6 @@ function expandLine(l){
     const cb = combinations(zs, k);
     return cb.map(function(c){ return c.join('') + lxType + perVal; });
   }
-  // 复式连肖快捷(无明确组数): "狗猴兔鸡虎复式三连肖20" → 自动计算C(5,3)=10组
   const fuShortRe = new RegExp(`^([${ZODIAC_CHARS}]+)\\s*复式(二连|三连|四连|五连)肖?\\s*(\\d+(?:\\.\\d+)?)\\s*$`);
   const fuShortM = s.match(fuShortRe);
   if(fuShortM){
@@ -1207,23 +1281,34 @@ function expandLine(l){
       return cb.map(function(c){ return c.join('') + lxType + perVal; });
     }
   }
-  // Split multi-bet lines on 平特/特肖 boundaries
   const flatMarker = s.includes('平特') ? '平特' : (s.includes('特肖') ? '特肖' : null);
   if(flatMarker){
     const parts=[]; let idx=s.indexOf(flatMarker), prev=0;
     while((idx=s.indexOf(flatMarker,prev+2))!==-1){ parts.push(s.slice(prev,idx).trim()); prev=idx; }
     parts.push(s.slice(prev).trim());
-    // Merge separated HK prefixes back into the following segment
     const merged=[]; for(var pi=0;pi<parts.length;pi++){
       if(/^(?:香港|港|香)$/.test(parts[pi])&&pi+1<parts.length){ parts[pi+1]=parts[pi]+parts[pi+1]; }
       else{ merged.push(parts[pi]); }
     }
     if(merged.length>1){
-      const all=[]; merged.forEach(function(p){ splitBets(p).forEach(function(sp){ var c=clean(sp); if(c) all.push(c); }); });
+      const all=[]; merged.forEach(function(p){ splitBets(p).forEach(function(sp){ var c=clean(sp); if(c){ var s2=splitMultiPairCombo(c); if(s2.indexOf("；")>=0||s2.indexOf(";")>=0) s2.split(/[；;]/).forEach(function(x){ var cx=clean(x); if(cx) all.push(cx); }); else all.push(s2); } }); });
       return all;
     }
   }
   var sparts = splitBets(s);
+  // 二连多对拆分
+  var _newSpats = [];
+  for (var _si = 0; _si < sparts.length; _si++) {
+    var _split = splitMultiPairCombo(sparts[_si]);
+    if (_split.indexOf("；") >= 0 || _split.indexOf(";") >= 0) {
+      var _subs = _split.split(/[；;]/);
+      for (var _sj = 0; _sj < _subs.length; _sj++) { _newSpats.push(_subs[_sj]); }
+    } else {
+      _newSpats.push(_split);
+    }
+  }
+  sparts = _newSpats;
+
   // 金额继承: 尾部只有号码无金额时，继承前一段的"各<金额><单位>"
   var lastKW = null;
   for (var si = 0; si < sparts.length; si++) {
@@ -1252,7 +1337,7 @@ function getVal(txt){
   if(m) return parseFloat(m[1]);
   if(!/各/.test(n)){
     var numToks_gv = n.match(/\b\d{1,2}\b/g) || [];
-    if (!/[斤米块]/.test(n) && numToks_gv.length >= 3) return 0;
+    if (!/[斤米块]/.test(n) && numToks_gv.length >= 3 && !/二中二|三中三/.test(n)) return 0;
     m=n.match(/(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/);
     if(m){ const b=n.slice(0,m.index).trim(); if(b.length>0) return parseFloat(m[1]); }
     m=n.match(/^(.+?)([一二三四五六七八九十百千万廿卅两]+)\s*(?:斤|米|块)?\s*$/);
@@ -1287,7 +1372,7 @@ function getList(txt){
 
 function splitItems(lp){
   const ex=expandDot(lp);
-  const items=ex.split(/[.\/、,\s，\-－—]+/).filter(i=>i!=='');
+  const items=ex.split(/[.\/、,\s，\-—－]+/).filter(i=>i!=='');
   const fi=[];
   items.forEach(item=>{
     if(new RegExp(`^[${ZODIAC_CHARS}]+$`).test(item)){ for(let c of item) fi.push(c); }
@@ -1301,319 +1386,133 @@ function getTargets(items){
   items.forEach(item=>{
     if(/^\d{1,2}$/.test(item)){ const n=parseInt(item); if(n>=1&&n<=49) t.push(n.toString().padStart(2,'0')); }
     else if(ZODIAC_MAP[item]) ZODIAC_MAP[item].forEach(n=>t.push(n));
-    else if(WAVE_COLOR_MAP[item]) WAVE_COLOR_MAP[item].forEach(n=>t.push(n));
   });
   return t;
 }
 
-// ===== Core: process one rule =====
+// ===== processRule — 按优先级 P1(最高)→P5(最低) 匹配 =====
 function processRule(rawRule){
   const rule=clean(rawRule); if(!rule) return null;
-  const hk=isHK(rule);
   const txt=norm(stripHK(stripMacau(stripSender(rule))));
   const txtNoHK=txt.replace(/香港|香|港/g,'').trim();
 
-  // Size/Parity
-  const spm=txtNoHK.match(new RegExp(`^(大|小|单|双)\\s*${KW}\\s*([\\d\\u4e00-\\u9fa5]+)\\s*(?:斤|米|块)?\\s*$`));
-  if(spm){
-    const v=/^\d/.test(spm[2])?parseFloat(spm[2]):cn(spm[2])||parseCNNum(spm[2]);
-    if(v){ const pool={大:BIG,小:SMALL,单:ODD,双:EVEN}; const nums=pool[spm[1]]||[];
-      nums.forEach(n=>{ numberBets[n]=(numberBets[n]||0)+v; });
-      return {display:`${hk?'香港':''}${spm[1]}各数${v}(${nums.length}码)`, bet:v*nums.length, type:'nums', targets:nums};
-    }
+  // ==== P0: 复式组合集 (紧凑格式, 超过阈值未展开) ====
+  var csm = txt.match(/^@@COMBO@@ (三中三|二中二) (.+) 各组(\d+(?:\.\d+)?)\s*(斤|米|块)?$/);
+  if (csm) {
+    var csNums = csm[2].split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+    var csPerVal = parseFloat(csm[3]);
+    var csK = csm[1] === '三中三' ? 3 : 2;
+    var csCount = C(csNums.length, csK);
+    return {display: csNums.length + '个号' + csm[1] + '复式 各组' + csPerVal + ' (共' + csCount + '组)', bet: csCount * csPerVal, type: csK===3?'n3':'n2', numbers: csNums, k: csK, perUnit: csPerVal, comboCount: csCount};
   }
 
-  // Wave color + size/parity - 双组: "绿双蓝单各数5" → (绿∩双)∪(蓝∩单)
-  const wc2Re = new RegExp(
-    '^([红绿蓝]{1,3})([单双大小]+)([红绿蓝]{1,3})([单双大小]+)\\s*' + KW + '\\s*(\\d+(?:\\.\\d+)?)([A-Za-z])?\\s*(?:斤|米|块)?\\s*$'
-  );
-  const wc2m = txtNoHK.match(wc2Re);
-  if (wc2m) {
-    const val = parseFloat(wc2m[5]);
-    if (val) {
-      const waveSet = new Set();
-      // Group 1: color1 ∩ attr1
-      const ck1 = WAVE_COLORS[wc2m[1]];
-      if (ck1 && WAVE_COLOR_MAP[ck1]) {
-        const attrNums1 = SIZE_PARITY_MAP[wc2m[2]];
-        if (attrNums1) {
-          const attrSet1 = new Set(attrNums1);
-          WAVE_COLOR_MAP[ck1].forEach(function(n){ if(attrSet1.has(n)) waveSet.add(n); });
-        }
-      }
-      // Group 2: color2 ∩ attr2
-      const ck2 = WAVE_COLORS[wc2m[3]];
-      if (ck2 && WAVE_COLOR_MAP[ck2]) {
-        const attrNums2 = SIZE_PARITY_MAP[wc2m[4]];
-        if (attrNums2) {
-          const attrSet2 = new Set(attrNums2);
-          WAVE_COLOR_MAP[ck2].forEach(function(n){ if(attrSet2.has(n)) waveSet.add(n); });
-        }
-      }
-      const targets = [...waveSet].sort(function(a,b){ return parseInt(a)-parseInt(b); });
-      if (targets.length) {
-        targets.forEach(function(n){ numberBets[n] = (numberBets[n] || 0) + val; });
-        const hkPrefix = hk ? '香港' : '';
-        return {display: hkPrefix + wc2m[1]+wc2m[2]+wc2m[3]+wc2m[4]+'各数'+val+'('+targets.length+'码)', bet: val * targets.length, type: 'nums', targets: targets};
-      }
-    }
-  }
-
-  // Wave color only (pure color, no size/parity): "红波蓝波各50"
-  var wcPureRe = new RegExp('^((?:[红绿蓝]波?\\s*)+)' + KW + '\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$');
-  var wcPureM = txtNoHK.match(wcPureRe);
-  if(wcPureM){
-    var colorChars = wcPureM[1].match(/[红绿蓝]/g) || [];
-    var val = parseFloat(wcPureM[2]);
-    if(val && colorChars.length){
-      var waveSet = new Set();
-      colorChars.forEach(function(c){ var ck = WAVE_COLORS[c]; if(ck && WAVE_COLOR_MAP[ck]) WAVE_COLOR_MAP[ck].forEach(function(n){ waveSet.add(n); }); });
-      var pureTargets = [...waveSet].sort(function(a,b){ return parseInt(a)-parseInt(b); });
-      if(pureTargets.length){ return {display:(hk?'HK':'')+colorChars.join('')+'波各'+val, bet:val*pureTargets.length, type:'nums', targets:pureTargets}; }
-    }
-  }
-
-  // Wave color + size/parity combined (波色+单双大小, 支持多属性组合)
-  // Examples: "红双各数8"→红∩双9码, "红蓝大双各数10"→(红∪蓝)∩大∩双8码
-  const wcRe = new RegExp(
-    '^([红绿蓝]{1,3})\\s*波?\\s*([单双大小]+)\\s*' + KW + '\\s*(\\d+(?:\\.\\d+)?)([A-Za-z])?\\s*(?:斤|米|块)?\\s*$'
-  );
-  const wcm = txtNoHK.match(wcRe);
-  if (wcm) {
-    const colors = wcm[1];       // e.g. "红蓝" or "红"
-    const attrs = wcm[2];        // e.g. "单" or "大双" or "小单"
-    const val = parseFloat(wcm[3]);
-    if (val) {
-      // Union all mentioned wave colors
-      let waveSet = new Set();
-      for (let c of colors) {
-        const ck = WAVE_COLORS[c];
-        if (ck && WAVE_COLOR_MAP[ck]) WAVE_COLOR_MAP[ck].forEach(n => waveSet.add(n));
-      }
-      // Intersect ALL mentioned size/parity attributes
-      for (let a of attrs) {
-        const attrNums = SIZE_PARITY_MAP[a];
-        if (!attrNums) continue;
-        const attrSet = new Set(attrNums);
-        waveSet = new Set([...waveSet].filter(n => attrSet.has(n)));
-      }
-      const targets = [...waveSet].sort((a,b)=>parseInt(a)-parseInt(b));
-      if (targets.length) {
-        targets.forEach(n => { numberBets[n] = (numberBets[n] || 0) + val; });
-        const hkPrefix = hk ? '香港' : '';
-        return {display: hkPrefix + colors + attrs + '各数' + val + '(' + targets.length + '码)', bet: val * targets.length, type: 'nums', targets: targets};
-      }
-    }
-  }
-
-  // 平特X尾: flat bet on tail position, total amount (not per-number)
-  var ptTailM = txtNoHK.match(new RegExp(`^平特\\s*(\\d)尾\\s*下?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
-  if(ptTailM){
-    var tailDigit = ptTailM[1];
-    var flatTotal = parseFloat(ptTailM[2]);
-    var tailNums = TAIL_MAP[tailDigit] || [];
-    if(tailNums.length){
-      tailNums.forEach(function(n){ numberBets[n] = (numberBets[n]||0) + flatTotal; });
-      return {display: '平特'+tailDigit+'尾 '+flatTotal+'('+tailNums.length+'码)', bet:flatTotal, type:'flat_tail', targets:tailNums};
-    }
-  }
-
-  // Tail bet (尾) - maps tail digits to numbers: 7尾→07,17,27,37,47
-  if(txtNoHK.includes('尾')){
-    const tailList = getList(txtNoHK);
-    const tailVal = getVal(txtNoHK);
-    if(tailList && tailVal){
-      // 优先提取(\d)尾模式: "平特1尾下"→["1"], "2尾5尾各5"→["2","5"]
-      const tailDigitMatches = tailList.match(/(\d)尾/g);
-      let tailDigits = tailDigitMatches ? tailDigitMatches.map(function(m){ return m.replace('尾',''); }) : [];
-      // 补抓连写与分隔链尾数: "1856尾"的1/8/5, "7-5-4-3尾"的7/5/4, "3.6尾"的3
-      // (只抓紧贴"尾"字的数字段, 不再全文扫数字, 避免把合并进来的独立号码投注的十位吸进尾数列表)
-      const extraDigits = [];
-      (tailList.match(/(\d+)尾/g) || []).forEach(function(m){
-        var ds = m.replace('尾','');
-        for (var di = 0; di < ds.length - 1; di++) extraDigits.push(ds[di]);
-      });
-      (tailList.match(/(?:\d[\s\.\-,，、]+)+\d+尾/g) || []).forEach(function(seg){
-        var ds = seg.match(/\d/g) || [];
-        ds.pop();
-        ds.forEach(function(d){ extraDigits.push(d); });
-      });
-      tailDigits = [...new Set([...tailDigits, ...extraDigits])];
-      const tailTargets = [];
-      tailDigits.forEach(function(d){ if(TAIL_MAP[d]) tailTargets.push(...TAIL_MAP[d]); });
-      // 尾数段之外的独立号码保留为普通投注(合并行场景: "9尾...0尾 29 19...各数10")
-      var remainder = tailList.replace(/(?:\d[\s\.\-,，、]+)+\d+尾/g, ' ').replace(/(\d+)尾/g, ' ').replace(/尾/g, ' ');
-      (remainder.match(/\d{1,2}/g) || []).forEach(function(n){ var v = parseInt(n); if (v >= 1 && v <= 49) tailTargets.push(n.padStart(2, '0')); });
-      if(tailTargets.length){
-        tailTargets.forEach(function(n){ numberBets[n] = (numberBets[n]||0) + tailVal; });
-        return {display: tailDigits.join('-')+'尾各'+tailVal+'('+tailTargets.length+'码)', bet:tailVal*tailTargets.length, type:'nums', targets:tailTargets};
-      }
-    }
-  }
-
-  // Number combo (三中三/二中二)
-  if(txtNoHK.includes('三中三') || txtNoHK.includes('二中二')){
-    const ncm=txtNoHK.match(/([\d]{1,2}(?:[.\s,]+[\d]{1,2})*)\s*(?:[复復]试|[复復]式)?\s*(三中三|二中二)\s*(?:各组?\s*)?(.+)$/);
-    if(ncm){
-      const nums=[...new Set(ncm[1].split(/[.\s,]+/).filter(n=>/^\d{1,2}$/.test(n)).map(n=>n.padStart(2,'0')))];
-      const k=ncm[2]==='三中三'?3:2;
-      if(nums.length>=k){
-        let vs=ncm[3].replace(/^[个各]组?\s*/,'').replace(/\s*(?:斤|米|块)\s*$/,'').trim();
-        let val=/^\d+(?:\.\d+)?$/.test(vs)?parseFloat(vs):(cn(vs)||parseCNNum(vs)||0);
-        if(val>0){
-          const cc=C(nums.length,k);
-          const tb=cc*val;
-          const odds=k===3?ODDS_N3:ODDS_N2;
-          numComboBets.push({numbers:nums,perUnit:val,count:cc,k,type:k===3?'n3':'n2'});
-          nums.forEach(n=>{ numberBets[n]=(numberBets[n]||0)+val; });
-          return {display:`${hk?'香港':''}${ncm[1]}${k===3?'三中三':'二中二'} ${val}(${cc}组)`, bet:tb, type:k===3?'n3':'n2', numbers:nums, comboCount:cc, perUnit:val, k, odds};
-        }
-      }
-    }
-  }
-
-  // Combo
-  let cm=txtNoHK.match(new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*([${ZODIAC_CHARS}]+)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
-  if(!cm) cm=txtNoHK.match(new RegExp(`([${ZODIAC_CHARS}]+)\\s*(?:五连|四连|三连|二连)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
+  // ==== P1: 连肖组合 (二连/三连/四连/五连) ====
+  // 先合并相邻生肖之间的空格（"鼠 牛 兔"→"鼠牛兔"），否则正则只捕获最后一个
+  let comboZodiacSpaceRe = new RegExp(`([${ZODIAC_CHARS}])\\s+([${ZODIAC_CHARS}])`, 'g');
+  let txtCombo = txtNoHK;
+  let prevCombo;
+  do { prevCombo = txtCombo; txtCombo = txtCombo.replace(comboZodiacSpaceRe, '$1$2'); } while (txtCombo !== prevCombo);
+  let cm=txtCombo.match(new RegExp(`(?:二连|三连|四连|五连)\\s*平?\\s*([${ZODIAC_CHARS}]+)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
+  if(!cm) cm=txtCombo.match(new RegExp(`([${ZODIAC_CHARS}]+)\\s*(?:五连|四连|三连|二连)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?`));
   if(cm){
     const zStr=cm[1], cv=parseFloat(cm[2]);
     let ct='double';
     if(txtNoHK.includes('五连')||(zStr.length===5&&!txtNoHK.includes('三连')&&!txtNoHK.includes('四连'))) ct='quintuple';
     else if(txtNoHK.includes('四连')||(zStr.length===4&&!txtNoHK.includes('三连')&&!txtNoHK.includes('五连'))) ct='quadruple';
     else if(txtNoHK.includes('三连')) ct='triple';
-    const zs=zStr.split('');
-    comboBets.push({zodiacs:zs,value:cv,type:ct,isHK:hk});
     const typeName=ct==='quintuple'?'五连':ct==='quadruple'?'四连':ct==='triple'?'三连':'二连';
-    return {display:`${hk?'香港':''}${zStr}${typeName} ${cv}`, bet:cv, type:'combo', comboZodiacs:zStr, comboType:ct};
+    return {display:`${zStr}${typeName} ${cv}`, bet:cv, type:'combo', comboZodiacs:zStr, comboType:ct};
   }
 
-  // Flat zodiac reverse: 虎平200 → 平特虎200
-  var frm = txtNoHK.match(new RegExp(`^([${ZODIAC_CHARS}])\\s*平\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
-  if(frm){
-    var zs=[frm[1]], v=parseFloat(frm[2]);
-    zs.forEach(function(z){ flatBets[z]=(flatBets[z]||0)+v; });
-    return {display:`${hk?'香港':''}平特${frm[1]} ${v}`, bet:v, type:'flat', targets:zs};
+  // ==== P2: 三中三/二中二显式数字组 ====
+  let ssm = txtNoHK.match(new RegExp(`^(\\d{1,2}(?:\\s+\\d{1,2}){1,})\\s*(三中三|二中二)\\s+(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if (ssm) {
+    const nums = ssm[1].split(/\s+/).filter(Boolean);
+    const sstype = ssm[2], ssval = parseFloat(ssm[3]);
+    const k = sstype === '三中三' ? 3 : 2;
+    if (nums.length === k) return {display:`${nums.join(' ')}${sstype} ${ssval}`, bet:ssval, type:sstype==='三中三'?'n3':'n2', numbers:nums, k:k, perUnit:ssval};
   }
 
-  // Flat zodiac (平特)
-  let fm=txtNoHK.match(new RegExp(`^平特[，,\\s]*([${ZODIAC_CHARS}]+)\\s*[，,、]?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
-  if(!fm) fm=txtNoHK.match(new RegExp(`^平特[，,\\s]*([${ZODIAC_CHARS}]+)\\s*${KW}\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
-  if(!fm) fm=txtNoHK.match(new RegExp(`^平特[，,\\s]*([${ZODIAC_CHARS}]+)\\s+(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
-  if(fm){
-    const zs=[...fm[1]], v=parseFloat(fm[2]);
-    zs.forEach(z=>{ flatBets[z]=(flatBets[z]||0)+v; });
-    return {display:`${hk?'香港':''}平特${fm[1]} ${v}`, bet:v*zs.length, type:'flat', targets:zs};
-  }
-
-  // 特肖 (special zodiac): "特肖狗 45" → type='special_zodiac'
+  // ==== P3: 特肖 ====
   let txm = txtNoHK.match(new RegExp(`^特肖([${ZODIAC_CHARS}])\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
   if(!txm) txm = txtNoHK.match(new RegExp(`^特肖\\s*([${ZODIAC_CHARS}](?:\\s*[${ZODIAC_CHARS}])*)\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
-  if(!txm) txm = txtNoHK.match(new RegExp(`^特肖\\s*([${ZODIAC_CHARS}](?:\\s*[${ZODIAC_CHARS}])*)\\s*${KW}\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
   if(txm){
     const zs = txm[1].replace(/\s+/g,'').split(''), v = txm[2] ? parseFloat(txm[2]) : getVal(txtNoHK);
     if(!v) return null;
-    zs.forEach(z => { specialZodiacBets[z] = (specialZodiacBets[z] || 0) + v; });
-    const odds = zs.map(z => z === '马' ? ODDS_TX_MA : ODDS_TX_OTHER).join(',');
-    return {display: `特肖${zs.join('')}各${v}(赔率${odds})`, bet: v * zs.length, type: 'special_zodiac', targets: zs};
+    return {display:`特肖${zs.join('')}各${v}`, bet:v*zs.length, type:'special_zodiac', targets:zs};
   }
 
-  // Flat shorthand with 各: 平蛇虎各500 → 平特蛇500 + 平特虎500
+  // ==== P4: 平特 (flat bet) — 单平/平特/平特尾 ====
+  var frm = txtNoHK.match(new RegExp(`^([${ZODIAC_CHARS}])\\s*平\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(frm){ return {display:`平特${frm[1]} ${parseFloat(frm[2])}`, bet:parseFloat(frm[2]), type:'flat', targets:[frm[1]]}; }
+  // <zodiacs>平特<val> — "牛平特800" → 平特牛 800
+  var frmt = txtNoHK.match(new RegExp(`^([${ZODIAC_CHARS}]+)\\s*平特\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(frmt){ const zs2=[...frmt[1]], v2=parseFloat(frmt[2]); return {display:`平特${frmt[1]} ${v2}`, bet:v2*zs2.length, type:'flat', targets:zs2}; }
+
+  let fm=txtNoHK.match(new RegExp(`^平特[，,\\s]*([${ZODIAC_CHARS}]+)\\s*[，,、]?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(!fm) fm=txtNoHK.match(new RegExp(`^平特[，,\\s]*([${ZODIAC_CHARS}]+)\\s*${KW}\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(!fm) fm=txtNoHK.match(new RegExp(`^平特[，,\\s]*([${ZODIAC_CHARS}]+)\\s+(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
+  if(fm){ const zs=[...fm[1]], v=parseFloat(fm[2]); return {display:`平特${fm[1]} ${v}`, bet:v*zs.length, type:'flat', targets:zs}; }
+
   let fgm=txtNoHK.match(new RegExp(`^平\\s*([${ZODIAC_CHARS}]+)\\s*[各/]\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
-  if(fgm){
-    var fgzs=[...fgm[1]], fgv=parseFloat(fgm[2]);
-    fgzs.forEach(function(z){ flatBets[z]=(flatBets[z]||0)+fgv; });
-    return {display:`${hk?'香港':''}平特${fgm[1]} ${fgv}`, bet:fgv*fgzs.length, type:'flat', targets:fgzs};
-  }
+  if(fgm){ var fgzs=[...fgm[1]], fgv=parseFloat(fgm[2]); return {display:`平特${fgm[1]} ${fgv}`, bet:fgv*fgzs.length, type:'flat', targets:fgzs}; }
 
-  // Flat shorthand (平X and 平X Y)
   let fms=txtNoHK.match(new RegExp(`^平([${ZODIAC_CHARS}])\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
   if(!fms) fms=txtNoHK.match(new RegExp(`^平\\s*([${ZODIAC_CHARS}](?:\\s*[${ZODIAC_CHARS}])*)\\s*(\\d+(?:\\.\\d+)?)?\\s*(?:斤|米|块)?\\s*$`));
-  if(fms){
-    const zs=fms[1].replace(/\s+/g,'').split(''), v=fms[2]?parseFloat(fms[2]):getVal(txtNoHK);
-    if(!v) return null;
-    zs.forEach(z=>{ flatBets[z]=(flatBets[z]||0)+v; });
-    return {display:`${hk?'香港':''}平${fms[1]}各${v}`, bet:v*zs.length, type:'flat', targets:zs};
+  if(fms){ const zs=fms[1].replace(/\s+/g,'').split(''), v=fms[2]?parseFloat(fms[2]):getVal(txtNoHK); if(!v) return null; return {display:`平${fms[1]}各${v}`, bet:v*zs.length, type:'flat', targets:zs}; }
+
+  // 平特尾: 平特+号码列表 flat bet, 金额不乘号码数
+  var ptnm = txtNoHK.match(/^平特\s*(\d{1,2}(?:\s+\d{1,2})*)\s*各?\s*(\d+(?:\.\d+)?)\s*(?:斤|米|块)?\s*$/);
+  if (ptnm) {
+    var ptNums = ptnm[1].trim().split(/\s+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+    var ptVal = parseFloat(ptnm[2]);
+    if (ptNums.length > 0) return {display:`平特${ptNums.join('.')} ${ptVal}`, bet:ptVal, type:'flat_tail', targets:ptNums};
   }
 
-  // Implicit combo (2-5 zodiacs + number without keyword)
+  // ==== P5: 隐式连肖 (纯生肖串+金额, 如"狗猴30"=二连) ====
   const icm=txtNoHK.match(new RegExp(`^([${ZODIAC_CHARS}]{2,5})\\s*(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
   if(icm){
     const zStr=icm[1], zv=parseFloat(icm[2]);
     let ct='double';
     if(zStr.length===5) ct='quintuple'; else if(zStr.length===4) ct='quadruple'; else if(zStr.length===3) ct='triple';
-    const zs=zStr.split('');
-    comboBets.push({zodiacs:zs,value:zv,type:ct,isHK:hk});
     const typeName=ct==='quintuple'?'五连':ct==='quadruple'?'四连':ct==='triple'?'三连':'二连';
-    return {display:`${hk?'香港':''}${zStr}${typeName} ${zv}`, bet:zv, type:'combo', comboZodiacs:zStr, comboType:ct};
-  }
-
-  // 三中三/二中二 explicit numeric groups: "47 12 36 三中三 2斤"
-  let ssm = txtNoHK.match(new RegExp(`^(\\d{1,2}(?:\\s+\\d{1,2}){1,})\\s*(三中三|二中二)\\s+(\\d+(?:\\.\\d+)?)\\s*(?:斤|米|块)?\\s*$`));
-  if (ssm) {
-    const nums = ssm[1].split(/\s+/).filter(Boolean);
-    const sstype = ssm[2];
-    const ssval = parseFloat(ssm[3]);
-    const k = sstype === '三中三' ? 3 : 2;
-    if (nums.length === k) return {display:`${hk?'香港':''}${nums.join(' ')}${sstype} ${ssval}`, bet:ssval, type:sstype==='三中三'?'n3':'n2', numbers:nums, k:k, perUnit:ssval};
+    return {display:`${zStr}${typeName} ${zv}`, bet:zv, type:'combo', comboZodiacs:zStr, comboType:ct};
   }
 
   const value=getVal(txtNoHK); if(!value) return null;
-
-  if(txtNoHK.includes('平特')){
-    const zs=ALL_ZODIACS.filter(z=>txtNoHK.includes(z));
-    if(zs.length>0){ zs.forEach(z=>{ flatBets[z]=(flatBets[z]||0)+value; });
-    return {display:`${hk?'香港':''}平特${zs.join('')} ${value}`, bet:value*zs.length, type:'flat', targets:zs}; }
-    return null;
-  }
-
   const lp=getList(txtNoHK), items=splitItems(lp), targets=getTargets(items);
   if(!targets.length) return null;
-  targets.forEach(n=>{ numberBets[n]=(numberBets[n]||0)+value; });
-  return {display:`${hk?'香港':''}${targets.join('.')} 各${value}(${targets.length}码)`, bet:value*targets.length, type:'nums', targets};
+  return {display:`${targets.join('.')} 各${value}(${targets.length}码)`, bet:value*targets.length, type:'nums', targets};
 }
 
-// ===== Analyze =====
+// ===== splitByModeMarkers — 复刻 fsaf.html 1328行 =====
+function isHKMarker(m){ return m==='香港'; }
+
 function splitByModeMarkers(sl){
-  // Split sub-line at inline mode markers, returning [{text, isHK}] segments
-  // Handles: "澳门内容  香港内容" or "内容香港 内容"
   var re = /(?:^|[\s，：:。、])(香港|澳门|澳門)(?=[\s，：:。、]|[一-鿿\d]|$)/g;
   var matches = [];
   var m;
   while ((m = re.exec(sl)) !== null) {
     matches.push({ marker: m[1], idx: m.index + m[0].indexOf(m[1]) });
   }
-  if (matches.length === 0) return null; // no inline mode switch
-
+  if (matches.length === 0) return null;
   var segs = [];
   var prev = 0;
-  // First segment (before any marker) = default Macau
   for (var i = 0; i < matches.length; i++) {
     var before = sl.substring(prev, matches[i].idx).trim();
     if (before) segs.push({ text: before, isHK: i > 0 ? isHKMarker(matches[i-1].marker) : false });
     prev = matches[i].idx;
   }
-  // Last segment
   var after = sl.substring(prev).trim();
   if (after) segs.push({ text: after, isHK: isHKMarker(matches[matches.length-1].marker) });
   return segs.length > 1 ? segs : null;
 }
-function isHKMarker(m){ return /香港|港|香/.test(m); }
 
-// 检测新格式日期行（如 "2026年07月04日 21:16"）
-function isMsgDateLine(s){
-  return /^\d{4}年\d{2}月\d{2}日\s+\d{2}:\d{2}$/.test(s.trim());
-}
-
-// 将新格式（带发送者+日期头部）的多行消息合并为逻辑消息
-// 新格式示例：
-//   利来
-//   2026年07月04日 21:16
-//   08.32.09.21.11.47各20
-// 返回: [{content:"08.32.09.21.11.47各20", displayText:"08.32.09.21.11.47各20"}, ...]
+// ===== groupNewFormatMessages — 复刻 fsaf.html 1365行 =====
 function groupNewFormatMessages(lines){
   var dateCount = 0;
   for(var i=0;i<lines.length;i++){ if(isMsgDateLine(lines[i])) dateCount++; }
-  if(dateCount===0) return null; // 旧格式，无需分组
+  if(dateCount===0) return null;
 
   var messages = [];
   var current = [];
@@ -1634,7 +1533,6 @@ function groupNewFormatMessages(lines){
 
     if(!collecting) continue;
 
-    // 跳过发送者名称行（纯文字、短、不带冒号、后跟日期行）
     if(i+1<lines.length && isMsgDateLine(lines[i+1].trim()) && !/[:：]/.test(line) && !/\d/.test(line)){
       continue;
     }
@@ -1649,23 +1547,10 @@ function groupNewFormatMessages(lines){
   return messages.length>0 ? messages : null;
 }
 
-function initTheme() {
-  var saved = localStorage.getItem('theme');
-  if (saved === 'light') {
-    document.body.classList.add('light');
-    var btn = document.getElementById('btnTheme');
-    if (btn) btn.innerHTML = '🌙';
-  }
-}
-function toggleTheme() {
-  var isLight = document.body.classList.toggle('light');
-  localStorage.setItem('theme', isLight ? 'light' : 'dark');
-  var btn = document.getElementById('btnTheme');
-  if (btn) btn.innerHTML = isLight ? '🌙' : '☀️';
-}
 // ===== preprocessComboMessage — 三中三/二中二结构预处理 =====
 // 将"各组VAL"分发到每个数字组，生成规范化"N1 N2 N3 三中三 VAL"行
 function preprocessComboMessage(subLines) {
+  // 确定组合类型
   var k = 0, comboTypeName = '';
   for (var i = 0; i < subLines.length; i++) {
     var sl = subLines[i].trim();
@@ -1691,11 +1576,13 @@ function preprocessComboMessage(subLines) {
   }
   if (k === 0) return null;
 
+  // 分类每个子行
   var items = [];
   for (var i = 0; i < subLines.length; i++) {
     var sl = subLines[i].trim();
     if (!sl || /^三中三$/.test(sl) || /^二中二$/.test(sl)) continue;
 
+    // 数字组带金额: "31-12-26组10米"
     var groupWithBet = sl.match(/^([\d\s\.\-\－\—]+)组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s*$/);
     if (groupWithBet) {
       var nums = groupWithBet[1].split(/[\s\.\-\－\—]+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
@@ -1705,12 +1592,14 @@ function preprocessComboMessage(subLines) {
       continue;
     }
 
+    // 各组标记: "各组20米"
     var markerMatch = sl.match(/^各组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s*$/);
     if (markerMatch) {
       items.push({type: 'marker', bet: parseFloat(markerMatch[1])});
       continue;
     }
 
+    // 纯数字组
     var bareGroup = sl.match(/^([\d\s\.\-\－\—]+)$/);
     if (bareGroup) {
       var nums2 = bareGroup[1].split(/[\s\.\-\－\—]+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
@@ -1720,9 +1609,11 @@ function preprocessComboMessage(subLines) {
       }
     }
 
+    // 其他内容保留给常规处理
     items.push({type: 'other', text: sl});
   }
 
+  // 反向传播: 各组标记→前方未赋值组, 有值组→更前方未赋值组
   var pendingBet = 0;
   for (var i = items.length - 1; i >= 0; i--) {
     if (items[i].type === 'marker') {
@@ -1735,6 +1626,7 @@ function preprocessComboMessage(subLines) {
     }
   }
 
+  // 生成规范化行
   var result = [];
   for (var i = 0; i < items.length; i++) {
     if (items[i].consumed) continue;
@@ -1746,6 +1638,221 @@ function preprocessComboMessage(subLines) {
   }
 
   return result;
+}
+
+// ===== analyze() — 复刻 fsaf.html 1404行行为 =====
+function analyze(inputText){
+  const text = inputText.replace(/\r\n/g,'\n').replace(/　/g,' ').replace(/[ \t]+/g,' ');
+  var rawLines = text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+
+  var groupedMessages = groupNewFormatMessages(rawLines);
+  var useNewFormat = groupedMessages !== null;
+  if(useNewFormat){
+    rawLines = groupedMessages.map(function(m){ return m.content; });
+  }
+
+  // 多行三中三/二中二预合并: 独立标题行吸入后续数字组行(裸粘贴无发送者头时)
+  for (var mi = 0; mi < rawLines.length; mi++) {
+    var titleT = stripSender(rawLines[mi]).trim();
+    var ck = /^三中三$/.test(titleT) ? 3 : (/^二中二$/.test(titleT) ? 2 : 0);
+    if (!ck) continue;
+    var absorbed = 0;
+    while (mi + 1 + absorbed < rawLines.length) {
+      var nl = rawLines[mi + 1 + absorbed].trim();
+      var absorbOk = false;
+      if (/^各组\d+(\.\d+)?\s*(斤|米|块)?$/.test(nl)) absorbOk = true;
+      else if (/^[\d\s\.\-\－\—]+组\d+(\.\d+)?\s*(斤|米|块)?$/.test(nl)) absorbOk = true;
+      else if (/^[\d\s\.\-\－\—]+$/.test(nl)) {
+        var ns = nl.split(/[\s\.\-\－\—]+/).filter(function(n){ return /^\d{1,2}$/.test(n); });
+        if (ns.length === ck) absorbOk = true;
+      }
+      if (!absorbOk) break;
+      absorbed++;
+    }
+    if (absorbed > 0) {
+      rawLines[mi] = rawLines[mi] + '；' + rawLines.slice(mi + 1, mi + 1 + absorbed).join('；');
+      rawLines.splice(mi + 1, absorbed);
+    }
+  }
+
+  var betSummary = [];
+  var messageSummary = [];
+  var grandTotal = 0;
+
+  
+  // 复X复Y展开: 直接生成所有组合行
+  for (var _fi = 0; _fi < rawLines.length; _fi++) {
+    var _fm = rawLines[_fi].match(new RegExp('复(二|三|四|五)复(二|三|四|五)([' + ZODIAC_CHARS + ']+)各组([\\d一二三四五六七八九十百千万廿卅两百]+(?:\\.[\\d]+)?)'));
+    if (_fm) {
+      var _fa = _fm[1], _fb = _fm[2], _fzs = _fm[3], _fv = _fm[4];
+      var _map = {二:'二连',三:'三连',四:'四连',五:'五连'};
+      var _nv = cn(_fv) || parseCNNum(_fv) || _fv;
+      var _kA = _map[_fa] === '二连' ? 2 : _map[_fa] === '三连' ? 3 : _map[_fa] === '四连' ? 4 : 5;
+      var _kB = _map[_fb] === '二连' ? 2 : _map[_fb] === '三连' ? 3 : _map[_fb] === '四连' ? 4 : 5;
+      var _zArr = _fzs.split('');
+      var _lines = [];
+      // 生成所有 kA-连组合
+      for (var _ci = 0; _ci < (1 << _zArr.length); _ci++) {
+        var _sel = [];
+        for (var _cj = 0; _cj < _zArr.length; _cj++) {
+          if (_ci & (1 << _cj)) _sel.push(_zArr[_cj]);
+        }
+        if (_sel.length === _kA) _lines.push(_sel.join('') + _map[_fa] + _nv);
+      }
+      // 生成所有 kB-连组合
+      for (var _ci = 0; _ci < (1 << _zArr.length); _ci++) {
+        var _sel = [];
+        for (var _cj = 0; _cj < _zArr.length; _cj++) {
+          if (_ci & (1 << _cj)) _sel.push(_zArr[_cj]);
+        }
+        if (_sel.length === _kB) _lines.push(_sel.join('') + _map[_fb] + _nv);
+      }
+      rawLines[_fi] = rawLines[_fi].replace(new RegExp('复(二|三|四|五)复(二|三|四|五)([' + ZODIAC_CHARS + ']+)各组([\d一二三四五六七八九十百千万廿卅两百]+(?:\.[\d]+)?)', 'g'), function(_m2, _fa2, _fb2, _fzs2, _fv2) {
+      var _map2 = {二:'二连',三:'三连',四:'四连',五:'五连'};
+      var _nv2 = cn(_fv2) || parseCNNum(_fv2) || _fv2;
+      var _kA2 = _map2[_fa2] === '二连' ? 2 : _map2[_fa2] === '三连' ? 3 : _map2[_fa2] === '四连' ? 4 : 5;
+      var _kB2 = _map2[_fb2] === '二连' ? 2 : _map2[_fb2] === '三连' ? 3 : _map2[_fb2] === '四连' ? 4 : 5;
+      var _zArr2 = _fzs2.split('');
+      var _lines2 = [];
+      for (var _ci2 = 0; _ci2 < (1 << _zArr2.length); _ci2++) {
+        var _sel2 = [];
+        for (var _cj2 = 0; _cj2 < _zArr2.length; _cj2++) {
+          if (_ci2 & (1 << _cj2)) _sel2.push(_zArr2[_cj2]);
+        }
+        if (_sel2.length === _kA2) _lines2.push(_sel2.join('') + _map2[_fa2] + _nv2);
+      }
+      for (var _ci2 = 0; _ci2 < (1 << _zArr2.length); _ci2++) {
+        var _sel2 = [];
+        for (var _cj2 = 0; _cj2 < _zArr2.length; _cj2++) {
+          if (_ci2 & (1 << _cj2)) _sel2.push(_zArr2[_cj2]);
+        }
+        if (_sel2.length === _kB2) _lines2.push(_sel2.join('') + _map2[_fb2] + _nv2);
+      }
+      return _lines2.join('；');
+    });
+    }
+  }
+rawLines.forEach(function(rawLine, lineIdx){
+    var msgBet = 0;
+    const subLines = rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
+    // 合并续行: 前一行只有号码/生肖但无金额标记时，与后一行合并
+    // 检测消息中是否有三中三/二中二结构（防止级联破坏独立投注行）
+    var hasComboStruct = subLines.some(function(sl) {
+      return /三中三|二中二/.test(stripSender(sl));
+    });
+    // 三中三/二中二结构预处理: 将"各组VAL"按组分配，生成规范化行
+    var preprocessedCombo = false;
+    if (hasComboStruct) {
+      var preprocessed = preprocessComboMessage(subLines);
+      if (preprocessed !== null) {
+        // 替换subLines，跳过后续合并逻辑（规范化行已有完整金额）
+        subLines.length = 0;
+        Array.prototype.push.apply(subLines, preprocessed);
+        hasComboStruct = false; // 规范化后不需要hasComboStruct特殊合并
+        preprocessedCombo = true;
+      }
+    }
+    if (!preprocessedCombo) {
+    for (var si = 0; si < subLines.length - 1; si++) {
+      var slNorm = norm(stripHK(stripMacau(stripSender(subLines[si]))));
+      if (getVal(slNorm) === 0) {
+        var listPart = getList(slNorm);
+        if (listPart && (/[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(listPart) || /三中三|二中二/.test(listPart))) {
+          if (hasComboStruct) {
+            // 结构化投注: 级联合并，有金额行(getVal>0)自动停止
+            // (getVal 已修复可识别各组\d+，级联不会穿透有值行)
+            subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
+            subLines[si] = '';
+          } else {
+            // 普通数字列表: 正常级联合并
+            subLines[si+1] = subLines[si] + ' ' + subLines[si+1];
+            subLines[si] = '';
+          }
+        }
+      }
+    }
+    // 反向合并: 后一行无金额时，合并到前一行 (处理三中三显式组合)
+    for (var si = 1; si < subLines.length; si++) {
+      if (!subLines[si]) continue;
+      var slNormR = norm(stripHK(stripMacau(stripSender(subLines[si]))));
+      if (getVal(slNormR) === 0) {
+        var listPartR = getList(slNormR);
+        // 允许纯数字行或末尾带"组\d+"的行被合并（如三中三的"06-17-39组12"）
+        if (listPartR && (/^[\d\s\.\-\－\—，,、]+$/.test(listPartR) || /组\d+\s*$/.test(slNormR))) {
+          for (var pi = si - 1; pi >= 0; pi--) {
+            if (subLines[pi]) {
+              subLines[pi] = subLines[pi] + '，' + subLines[si];
+              subLines[si] = '';
+              break;
+            }
+          }
+        }
+      }
+    }
+    // 过滤被合并掉的空行
+    for (var si = subLines.length - 1; si >= 0; si--) {
+      if (!subLines[si]) subLines.splice(si, 1);
+    }
+    } // end if (!preprocessedCombo)
+    var curHKMode = false;
+    subLines.forEach(function(sl){
+      var segs = splitByModeMarkers(sl);
+      if (segs) {
+        segs.forEach(function(seg) {
+          var mode = seg.isHK;
+          expandLine(seg.text).forEach(function(sr){
+            var r = processRule(sr);
+            if (r) {
+              r.msgIndex = lineIdx;
+              r.hk = mode;
+              msgBet += r.bet;
+              betSummary.push(r);
+            }
+          });
+        });
+        return;
+      }
+      // Default: prefix-based mode detection
+      var slNoSender = sl.replace(/^[^\d]{1,15}?[：:]\s*/, '').trim();
+      if (/^(?:香港|港|香)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /香港/.test(slNoSender) || /(?:[\s\d]|^)(?:港|香)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender) || /^(?:香港|港|香)[：:\s]*$/.test(sl)) curHKMode = true;
+      else if (/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /澳门|澳門/.test(slNoSender) || /(?:[\s\d]|^)(?:澳特|利来|门特|新澳|新奥)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = false;
+      expandLine(sl).forEach(function(sr){
+        var r = processRule(sr);
+        if (r) {
+          r.msgIndex = lineIdx;
+          r.hk = curHKMode;
+          msgBet += r.bet;
+          betSummary.push(r);
+        }
+      });
+    });
+    var rawDisplay = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
+    var displayText = rawDisplay.replace(/\n/g, '；');
+    messageSummary.push({
+      index: lineIdx + 1,
+      text: displayText.length > 80 ? displayText.substring(0, 80) + '...' : displayText,
+      fullText: displayText,
+      totalBet: Math.round(msgBet * 100) / 100
+    });
+    grandTotal += msgBet;
+  });
+
+  return { betSummary, messageSummary, grandTotal: Math.round(grandTotal * 100) / 100, groupedMessages, useNewFormat };
+}
+
+// ===== Node.js module export =====
+if (typeof module !== "undefined" && module.exports) {
+  var _exports = {
+    ZODIAC_MAP, ALL_ZODIACS, ZODIAC_CHARS, CN, CNK, KW,
+    cn, parseCNNum, isMsgDateLine,
+    stripSender, stripMacau, stripHK, expandDot,
+    norm, C, combinations,
+    clean, splitBets, getVal, getList, splitItems, getTargets,
+    expandDashGe, expandLine,
+    processRule, analyze
+  };
+  for (var _k in _exports) { global[_k] = _exports[_k]; }
+  module.exports = _exports;
 }
 
 // ===== AI 大脑解析 =====
