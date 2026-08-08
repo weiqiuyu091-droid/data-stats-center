@@ -2167,18 +2167,20 @@ function calcAll(){
       });
       if(hitZs.length){ note = `中${hitZs.join(',')} (平特${odds})`; }
     } else if(s.type==='flat_tail'){
-      // 平特尾数: 每码投注额=bet(不按targets均分)，匹配所有正码(含特码)，用平特赔率
+      // 平特尾数: 多个号码共享一份投注额，命中任意号码即赢(只计一次)
       const perBet = s.bet;
       let hitNums = [];
       s.targets.forEach(t=>{
         if(theWinNums.includes(t)){
-          odds = ODDS_PT_MA;
-          win += perBet * odds;
-          hitBet += perBet;
           hitNums.push(t);
         }
       });
-      if(hitNums.length){ note = `中${hitNums.join(',')} (平特尾${odds})`; }
+      if(hitNums.length){
+        odds = ODDS_PT_MA;
+        win += perBet * odds;
+        hitBet += perBet;
+        note = `中${hitNums.join(',')} (平特尾${odds})`;
+      }
     } else if(s.type==='special_zodiac'){
       // 特肖仅匹配特码的生肖，与前面6个正码生肖无关
       const teMaZodiac = NUM_TO_ZODIAC[theTeMa];
