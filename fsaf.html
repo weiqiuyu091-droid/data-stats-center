@@ -842,7 +842,8 @@ function splitMultiPairCombo(t) {
 }
 
 function norm(s){
-  let t = s.replace(/[+＋]/g,'').replace(/。/g,'').replace(/^(.+)香港澳门$/g, '澳$1；港$1').replace(/(\d+(?:\.\d+)?\s*(?:斤|米|块|元|文))\s*[，]\s*(?=\d)/g, '$1；')
+  let t = s.replace(/(各\d+(?:\.\d+)?)\s*[-—－]{2,}/g, '$1 ') // 保护: "各50----1" 破折号先转空格, 防 "号码----金额" 规则吞号
+    .replace(/[+＋]/g,'').replace(/。/g,'').replace(/^(.+)香港澳门$/g, '澳$1；港$1').replace(/(\d+(?:\.\d+)?\s*(?:斤|米|块|元|文))\s*[，]\s*(?=\d)/g, '$1；')
     .replace(/免/g,'兔').replace(/于一肖/g,'一肖')
     .replace(/候/g,'猴')  // 候→猴 纠错
     .replace(/[（(]\s*\d+\s*[码个]?\s*[）)]/g,'')  // 过滤括号注释如（24码）
@@ -869,6 +870,7 @@ function norm(s){
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
     .replace(/(?<!各)数十斤/g,'各10斤').replace(/(?<!各)数十米/g,'各10米').replace(/(?<!各)数十块/g,'各10块')
     .replace(/平特\s*一肖/g,'平特')
+    .replace(/一肖\s*平特/g,'平特').replace(new RegExp('一肖\\s*平(?=[' + ZODIAC_CHARS + '])','g'),'平特')
     .replace(/平特(三连|二连|四连|五连)肖/g, '$1')
     .replace(/平特(三连|二连|四连|五连)(?!肖)/g, '$1')
     .replace(/(\d)[Oo](\d)/g,'$10$2').replace(/(\d+)[A-Za-z]+/g,'$1')
@@ -1910,7 +1912,7 @@ rawLines.forEach(function(rawLine, lineIdx){
     if ((lineIdx + 1) % 20 === 0) console.log('analyze progress:', lineIdx + 1, '/', rawLines.length);
     try {
     var msgBet = 0;
-    const subLines=rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
+    const subLines=rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').replace(/。(\s*各)/g, ' 各').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
     // 合并【】三中三行: 将【开头的行合并到前面最近的"三中三...每组..."行
     for (var si = 0; si < subLines.length; si++) {
       if (/^【/.test(subLines[si])) {

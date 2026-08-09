@@ -68,6 +68,8 @@ function splitMultiPairCombo(t) {
 function norm(s, debug){
   var t = s;
   if (debug) console.log('[norm] 输入:', JSON.stringify(t));
+  // 保护: "各50----1" 的破折号先转空格, 防止后面 "号码----金额" 规则把金额后跟的号码吞掉
+  t = t.replace(/(各\d+(?:\.\d+)?)\s*[-—－]{2,}/g, '$1 ')
   t = t.replace(/[+＋]/g,'').replace(/。/g,'').replace(/^(.+)香港澳门$/g, '澳$1；港$1').replace(/(\d+(?:\.\d+)?\s*(?:斤|米|块|元|文))\s*[，]\s*(?=\d)/g, '$1；')
     .replace(/免/g,'兔').replace(/于一肖/g,'一肖')
     .replace(/候/g,'猴').replace(/㺅/g,'猴')
@@ -105,6 +107,7 @@ function norm(s, debug){
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
     .replace(/(?<!各)数十斤/g,'各10斤').replace(/(?<!各)数十米/g,'各10米').replace(/(?<!各)数十块/g,'各10块')
     .replace(/平特\s*一肖/g,'平特')
+    .replace(/一肖\s*平特/g,'平特').replace(new RegExp('一肖\\s*平(?=[' + ZODIAC_CHARS + '])','g'),'平特')
     .replace(/平特(三连|二连|四连|五连)肖/g, '$1')
     .replace(/平特(三连|二连|四连|五连)(?!肖)/g, '$1')
     .replace(/(\d)[Oo](\d)/g,'$10$2').replace(/(\d+)[A-Za-z]+/g,'$1')
@@ -852,7 +855,7 @@ rawLines.forEach(function(rawLine, lineIdx){
     // 预处理 "xxx香港澳门" → "澳xxx；港xxx"（必须在子行分割之前）
     rawLine = rawLine.replace(/^(.+)(?:香港澳门|澳门香港|港澳)$/g, '澳$1；港$1');
     var msgBet = 0;
-    const subLines = rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
+    const subLines = rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').replace(/。(\s*各)/g, ' 各').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
     // 合并续行: 前一行只有号码/生肖但无金额标记时，与后一行合并
     // 检测消息中是否有三中三/二中二结构（防止级联破坏独立投注行）
     var hasComboStruct = subLines.some(function(sl) {
