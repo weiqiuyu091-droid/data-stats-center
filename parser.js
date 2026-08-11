@@ -68,8 +68,8 @@ function splitMultiPairCombo(t) {
 function norm(s, debug){
   var t = s;
   if (debug) console.log('[norm] 输入:', JSON.stringify(t));
-  // 保护: "各50----1" 的破折号先转空格, 防止后面 "号码----金额" 规则把金额后跟的号码吞掉
-  t = t.replace(/(各\d+(?:\.\d+)?)\s*[-—－]{2,}/g, '$1 ')
+  // 保护: "各50----1"/"各号70----4" 的破折号先转空格, 防止后面 "号码----金额" 规则把金额后跟的号码吞掉
+  t = t.replace(/(各(?:号|数)?\d+(?:\.\d+)?)\s*[-—－]{2,}/g, '$1 ')
   t = t.replace(/[+＋]/g,'').replace(/。/g,'').replace(/^(.+)香港澳门$/g, '澳$1；港$1').replace(/(\d+(?:\.\d+)?\s*(?:斤|米|块|元|文))\s*[，]\s*(?=\d)/g, '$1；')
     .replace(/免/g,'兔').replace(/于一肖/g,'一肖')
     .replace(/候/g,'猴').replace(/㺅/g,'猴')
@@ -78,12 +78,23 @@ function norm(s, debug){
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')
     .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })
     .replace(/元/g,'块').replace(/(\d)文/g,'$1块')
+    // 市场标记后缀剥离: "各10澳"/"各五十斤新澳"/"…五十，澳门" → 澳/新澳/澳门在行尾时是澳门系统标记
+    .replace(/(?:新澳|澳门|澳)$/g,'')
+    // "落"=落注(下注): "13落五澳"→"13各五" (落→各后由"各[中文]"规则转数字)
+    .replace(/落/g,'各')
     .replace(/复试/g,'复式').replace(/两连/g,'二连').replace(/二友/g,'二连').replace(/三友/g,'三连')
     .replace(/(二连|三连|四连|五连)复式/g, '复式$1')
     .replace(/\d+期\s*/g,'').replace(/(\d+)\s*百(?!\d)/g, function(m, n){ return String(parseInt(n) * 100); }).replace(/(\d+)\s*千(?!\d)/g, function(m, n){ return String(parseInt(n) * 1000); })
     .replace(/号个/g,'号各').replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1').replace(/个组/g,'各组').replace(/个\//g,'各').replace(/一个\s*$/g,'')
+    // 口语助词"号"夹在数字间: "39号18号34号各10元"→"39 18 34各10元" (否则被KW"号"误拆成"39号18"→39投18)
+    .replace(/(\d{1,2})号(?=\d{1,2})/g, '$1 ')
     .replace(/蚊/g,'')
     .replace(/[嘛呀啊呢吧哦噢哟唉]+/g, '')
+    // 平特尾X尾金额: "平特尾0尾500元"→"平特10 20 30 40 各500元" (必须在尾数展开之前; "各"分隔防止P4贪婪把500拆成50/0)
+    .replace(/(平特尾)\s*(\d)尾\s*(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, pt, d, v, unit){
+      var r=[]; for(var i=0;i<=4;i++){ var n=i*10+parseInt(d); if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); }
+      return '平特' + r.join(' ') + ' 各' + v + (unit||'');
+    })
     .replace(/(\d(?:[-—－]+\d)+)尾/g, function(m, nums){ return nums.split(/[-—－]+/).map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{2,})尾/g, function(m, digits){ return digits.split('').map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); }).replace(/尾数(\d)尾/g, '$1尾').replace(/(\d)尾/g, function(m, d){ var r=[]; for(var i=0;i<=4;i++){ var n=i*10+parseInt(d); if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     // 红波/蓝波/绿波+单/双组合展开
     .replace(/(红波|蓝波|绿波)(单|双)/g, function(m, wave, od) {
@@ -126,6 +137,8 @@ function norm(s, debug){
     .replace(/(二连|三连|四连|五连)肖/g, '$1')
     .replace(/(\d{1,2})\s*([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, (m,n1,n2,n3)=>n1+'各'+cn(n2)+n3)
     .replace(/(\d{1,2})\s*[-—－]+\s*(\d+(?:\.\d+)?)\s*(斤|米|块)/g,'$1各$2$3')
+    // 数字+单位紧跟斜杠后=金额: "20/10斤27/31各20斤"→"20各10斤；27/31各20斤" (分号防止金额数字被当成号码; 必须在斜杠转空格之前)
+    .replace(/(\d{1,2})\/(\d{1,2})(斤|米|块)/g,'$1各$2$3；')
     .replace(/--/g,'-')
     .replace(/(\d{1,2})\s*[-—－]{2,}\s*(\d+(?:\.\d+)?)(?!\.?\d)(?!\s*各)/g,'$1各$2').replace(/[*、]+/g,' ').replace(/[-—－]+/g,' ').replace(/(\d)\/(?=\d)/g,'$1 ')
     .replace(/([斤米块])\s*，/g, '$1；')

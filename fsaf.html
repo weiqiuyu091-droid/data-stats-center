@@ -12,27 +12,27 @@
    所有波色/数据底色规则完整保留，不受全局样式影响
    ============================================================ */
 :root {
-  --bg: #f7f8fa;
-  --text: #000000e6;
-  --text-secondary: #000000b3;
-  --text-muted: #00000080;
-  --text-heading: #191919;
-  --accent: #ff5e3b;
-  --accent-hover: #ff815e;
+  --bg: #ecedee;
+  --text: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+  --text-heading: #18181b;
+  --accent: #18181b;
+  --accent-hover: #3f3f46;
   --surface: #f5f5f4;
   --surface-hover: #ededed;
   --card-bg: #ffffff;
   --card-border: #0000000d;
   --card-border-hover: #0000001a;
-  --border-light: #0000000d;
+  --border-light: #d6d7da;
   --input-bg: #f5f5f4;
   --input-border: #00000014;
   --table-stripe: #00000004;
   --table-hover: #00000008;
   --tab-bg: #00000004;
   --tab-hover: #00000008;
-  --tab-active-bg: rgba(255,94,59,.10);
-  --tab-active-color: #ff5e3b;
+  --tab-active-bg: rgba(24,24,27,.08);
+  --tab-active-color: #18181b;
   --btn-outline-border: #00000014;
   --btn-outline-color: #000000b3;
   --btn-outline-hover-bg: #00000008;
@@ -44,24 +44,30 @@
   --thead-bg: #00000004;
   --tbody-divider: #00000006;
   --shadow-card: rgba(0,0,0,.06);
+  --red: #dc2626;
+  --green: #16a34a;
+  --blue: #2563eb;
 }
 body.light {
-  --bg: #111318; --text: #c4c8d0; --text-secondary: #959aa3;
-  --text-muted: #858a93; --text-heading: #d8dbe0;
+  --bg: #14161a; --text: #e5e7eb; --text-secondary: #a0a4ad;
+  --text-muted: #6b7280; --text-heading: #e5e7eb;
   --surface: rgba(255,255,255,.05); --surface-hover: rgba(255,255,255,.08);
-  --card-bg: rgba(255,255,255,.04); --card-border: rgba(255,255,255,.06);
+  --card-bg: #1b1e24; --card-border: rgba(255,255,255,.06);
   --card-border-hover: rgba(255,255,255,.10); --border-light: rgba(255,255,255,.12);
   --input-bg: rgba(255,255,255,.04); --input-border: rgba(255,255,255,.08);
   --table-stripe: rgba(255,255,255,.02); --table-hover: rgba(255,255,255,.04);
   --tab-bg: rgba(255,255,255,.04); --tab-hover: rgba(255,255,255,.06);
-  --tab-active-bg: rgba(120,152,180,.15); --tab-active-color: #8baec8;
-  --btn-outline-border: rgba(255,255,255,.12); --btn-outline-color: #959aa3;
+  --tab-active-bg: rgba(255,255,255,.08); --tab-active-color: #e5e7eb;
+  --btn-outline-border: rgba(255,255,255,.12); --btn-outline-color: #a0a4ad;
   --btn-outline-hover-bg: rgba(255,255,255,.04);
-  --btn-outline-hover-border: rgba(255,255,255,.20); --btn-outline-hover-color: #c4c8d0;
-  --modal-overlay: rgba(0,0,0,.6); --modal-bg: #1a1d27;
+  --btn-outline-hover-border: rgba(255,255,255,.20); --btn-outline-hover-color: #e5e7eb;
+  --modal-overlay: rgba(0,0,0,.6); --modal-bg: #1b1e24;
   --modal-border: rgba(255,255,255,.06); --thead-bg: rgba(255,255,255,.04);
   --tbody-divider: rgba(255,255,255,.04); --shadow-card: rgba(0,0,0,.15);
-  --accent: #7a9ab8; --accent-hover: #8aa8c4;
+  --accent: #c9cdd4; --accent-hover: #a8adb8;
+  --red: #dc2626;
+  --green: #16a34a;
+  --blue: #2563eb;
 }
 .theme-toggle {
   width: 36px; height: 36px; border-radius: 8px;
@@ -83,6 +89,7 @@ body {
 
 /* ---- 数据密集型区域：等宽数字对齐 ---- */
 .tbl, .num-cell .n, .ball { font-variant-numeric:tabular-nums; }
+.fmt-num { font-variant-numeric:tabular-nums; font-family:Consolas,"SF Mono","Roboto Mono",monospace; }
 
 /* ---- 全局 focus 环 (橙红) ---- */
 :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:2px; }
@@ -96,17 +103,16 @@ textarea:focus-visible { outline:none; border-color:var(--accent); box-shadow:0 
 .live-bar {
   background:var(--card-bg);
   border:1px solid var(--card-border);
-  border-radius:14px; padding:16px 24px; margin-bottom:12px;
+  border-radius:6px; padding:14px 20px; margin-bottom:10px;
   display:flex; align-items:center; gap:20px; flex-wrap:wrap;
   transition:border-color .2s;
 }
 .live-bar:hover { border-color:var(--card-border-hover); }
 .live-bar .status { display:flex; align-items:center; gap:8px; }
 
-/* 状态指示灯 (数据色，保留) */
-.live-dot { width:9px; height:9px; border-radius:50%; background:#ef4444; animation:blink 1s infinite; box-shadow:0 0 6px rgba(239,68,68,.5); }
-.live-dot.online { background:#22c55e; box-shadow:0 0 6px rgba(34,197,94,.5); }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+/* 状态指示灯 (静态实心点，无闪烁无光晕) */
+.live-dot { width:7px; height:7px; border-radius:50%; background:#ef4444; }
+.live-dot.online { background:#22c55e; }
 
 .live-bar .label { font-size:.78rem; color:var(--text-secondary); white-space:nowrap; font-weight:500; }
 .live-bar .info { font-size:.8rem; color:var(--text-secondary); }
@@ -114,23 +120,22 @@ textarea:focus-visible { outline:none; border-color:var(--accent); box-shadow:0 
 /* ---- 号码球 (波色完整保留) ---- */
 .balls { display:flex; gap:10px; align-items:center; }
 .ball {
-  width:52px; height:52px; border-radius:50%;
+  width:40px; height:40px; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
-  font-weight:700; font-size:1.2rem; color:#fff;
-  position:relative; transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+  font-weight:700; font-size:1rem; color:#fff;
+  position:relative;
 }
-.ball:hover { transform:scale(1.08); }
-.ball.red { background:linear-gradient(135deg,#ef4444,#b91c1c); box-shadow:0 3px 10px rgba(239,68,68,.35); }
-.ball.green { background:linear-gradient(135deg,#22c55e,#15803d); box-shadow:0 3px 10px rgba(34,197,94,.35); }
-.ball.blue { background:linear-gradient(135deg,#3b82f6,#1d4ed8); box-shadow:0 3px 10px rgba(59,130,246,.35); }
-.ball.te { width:64px; height:64px; font-size:1.5rem; box-shadow:0 0 20px rgba(245,158,11,.5),0 0 4px rgba(245,158,11,.3); }
-.ball .zodiac-tag { position:absolute; bottom:-16px; font-size:.85rem; color:#fbbf24; white-space:nowrap; font-weight:500; }
+.ball.red { background:#dc2626; }
+.ball.green { background:#16a34a; }
+.ball.blue { background:#2563eb; }
+.ball.te { width:46px; height:46px; font-size:1.15rem; outline:2px solid var(--card-bg); outline-offset:-4px; }
+.ball .zodiac-tag { position:absolute; bottom:-16px; font-size:.8rem; color:var(--text-muted); white-space:nowrap; font-weight:500; }
 
 
 /* ---- 按钮 (橙红点缀) ---- */
 .refresh-row { display:flex; gap:8px; align-items:center; }
 .btn {
-  padding:7px 18px; border:1px solid transparent; border-radius:8px;
+  padding:7px 18px; border:1px solid transparent; border-radius:4px;
   cursor:pointer; font-size:.8rem; font-weight:500;
   transition:all .2s; position:relative;
   letter-spacing:.01em;
@@ -190,11 +195,20 @@ textarea:focus-visible { outline:none; border-color:var(--accent); box-shadow:0 
 .card {
   background:var(--card-bg);
   border:1px solid var(--card-border);
-  border-radius:0 0 10px 10px; padding:22px; margin-bottom:12px;
+  border-radius:6px; padding:16px 18px; margin-bottom:12px;
   transition:border-color .2s;
 }
 .card:hover { border-color:var(--card-border-hover); }
-.card-first { border-radius:10px; }
+.card-first { border-radius:6px; }
+
+/* ===== 两栏主布局: 左=输入+消息汇总, 右=全统计面板 ===== */
+.cols { display:grid; grid-template-columns: 460px 1fr; gap:14px; align-items:stretch; }
+.col-left { display:flex; flex-direction:column; gap:12px; min-width:0; }
+.col-right { display:flex; flex-direction:column; gap:12px; min-width:0; }
+@media (max-width: 1080px) {
+  .cols { grid-template-columns: 1fr; }
+}
+
 .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
 .card-title { font-size:1rem; font-weight:600; color:var(--text-heading); letter-spacing:.01em; }
 
@@ -212,48 +226,38 @@ textarea {
 textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(255,94,59,.12); }
 
 /* ============================================================
-   号码网格 (按生肖分组)
-   .zodiac-group / .num-cell 是结构容器，不含数据底色
+   号码网格 (按生肖分组, 数据终端风格: 白底/细框/无渐变无发光)
    ============================================================ */
-.num-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.num-grid { display:flex; flex-direction:column; gap:5px; }
 .zodiac-group {
   background:var(--card-bg);
-  border:1px solid var(--surface);
-  border-radius:8px; padding:8px 6px 6px;
-  transition:border-color .2s,transform .2s;
+  border:1px solid var(--card-border);
+  border-radius:6px; padding:8px 12px; margin-bottom:6px;
+  display:flex; align-items:center; gap:16px;
 }
-.zodiac-group:hover { border-color:var(--card-border-hover); transform:translateY(-1px); }
-.zodiac-label { font-size:.85rem; font-weight:700; color:#fbbf24; margin-bottom:5px; text-align:center; letter-spacing:1px; }
-.zodiac-nums { display:flex; gap:3px; }
-.num-cell { border-radius:5px; padding:5px 3px; text-align:center; flex:1; transition:transform .15s; position:relative; }
-.num-cell .top10-badge { position:absolute; top:2px; right:2px; font-size:.62rem; background:#ef4444; color:#fff; padding:1px 4px; border-radius:3px; line-height:1.3; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.35); }
-.num-cell .n { font-size:.85rem; color:var(--text-secondary); }
-.num-cell .v { font-size:.78rem; font-weight:600; color:var(--text-muted); margin-top:2px; min-height:18px; }
+.zodiac-label { font-size:.8rem; font-weight:600; color:var(--text-secondary); width:32px; text-align:center; flex-shrink:0; letter-spacing:1px; }
+.zodiac-label.zg-hit { color:var(--red); }
+.zodiac-nums { display:flex; gap:10px; flex:1; }
+.num-cell { border-radius:4px; padding:4px 2px; text-align:center; flex:1; position:relative; background:var(--card-bg); }
+.num-cell .top10-badge { position:absolute; top:1px; right:2px; font-size:.6rem; background:var(--red); color:#fff; padding:0 3px; border-radius:2px; line-height:1.4; font-weight:700; }
+.num-cell .n { font-size:.78rem; color:var(--text); font-variant-numeric:tabular-nums; }
+.num-cell .v { font-size:.66rem; font-weight:600; color:var(--text-muted); margin-top:1px; min-height:13px; font-variant-numeric:tabular-nums; }
 
-/* ---- 波色 (与开奖球一致：渐变底+白字) ---- */
-.num-cell.wave-red { background:linear-gradient(135deg,#ef4444,#b91c1c); border:1px solid #ef4444; box-shadow:0 2px 6px rgba(239,68,68,.25); }
-.num-cell.wave-red .n { color:#fff; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.3); }
-.num-cell.wave-red .v { color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.4); }
-.num-cell.wave-blue { background:linear-gradient(135deg,#3b82f6,#1d4ed8); border:1px solid #3b82f6; box-shadow:0 2px 6px rgba(59,130,246,.25); }
-.num-cell.wave-blue .n { color:#fff; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.3); }
-.num-cell.wave-blue .v { color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.4); }
-.num-cell.wave-green { background:linear-gradient(135deg,#22c55e,#15803d); border:1px solid #22c55e; box-shadow:0 2px 6px rgba(34,197,94,.25); }
-.num-cell.wave-green .n { color:#fff; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.3); }
-.num-cell.wave-green .v { color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.4); }
+/* ---- 波色: 顶部细色条 (数据色, 非装饰) ---- */
+.num-cell.wave-red { border-top:2px solid #dc2626; }
+.num-cell.wave-blue { border-top:2px solid #2563eb; }
+.num-cell.wave-green { border-top:2px solid #16a34a; }
 
-/* ---- 投注/特码高亮覆盖 (白色文字+颜色发光区分状态) ---- */
-.num-cell.has-bet { border-color:#60a5fa; box-shadow:0 0 8px rgba(96,165,250,.45); }
-.num-cell.has-bet .n { color:#fff; font-weight:700; text-shadow:0 0 6px rgba(96,165,250,.8); }
-.num-cell.has-bet .v { color:#fff; font-weight:700; text-shadow:0 0 6px rgba(96,165,250,.8); }
-.num-cell.tema { border-color:#4ade80; box-shadow:0 0 18px rgba(74,222,128,.65),0 0 4px rgba(74,222,128,.35); }
-.num-cell.tema .n { color:#fff; font-weight:700; font-size:.95rem; text-shadow:0 0 6px rgba(74,222,128,.8); }
-.num-cell.tema .v { color:#fff; font-weight:700; text-shadow:0 0 6px rgba(74,222,128,.8); }
-.num-cell.alert-top10 { border-color:#f87171; box-shadow:0 0 10px rgba(248,113,113,.50); }
-.num-cell.alert-top10 .n { color:#fff; font-weight:700; text-shadow:0 0 6px rgba(248,113,113,.8); }
-.num-cell.alert-top10 .v { color:#fff; font-weight:700; text-shadow:0 0 6px rgba(248,113,113,.8); }
-.num-cell.alert-tema { border-color:#fbbf24; box-shadow:0 0 20px rgba(251,191,36,.6),0 0 4px rgba(251,191,36,.35); }
-.num-cell.alert-tema .n { color:#fff; font-weight:700; font-size:.95rem; text-shadow:0 0 6px rgba(251,191,36,.8); }
-.num-cell.alert-tema .v { color:#fff; font-weight:700; text-shadow:0 0 6px rgba(251,191,36,.8); }
+/* ---- 投注/开奖标记 (文字色, 无发光) ---- */
+.num-cell.has-bet { border-color:var(--card-border-hover); }
+.num-cell.tema { border-color:var(--accent); }
+.num-cell.tema .n { color:var(--accent); font-weight:700; }
+.num-cell.tema .v { color:var(--accent); font-weight:700; }
+.num-cell.is-win-num { border-color:var(--red); }
+.num-cell.is-win-num .n { color:var(--red); font-weight:600; }
+.num-cell.alert-tema { background:var(--accent); border-color:var(--accent); }
+.num-cell.alert-tema .n { color:#fff; font-weight:700; }
+.num-cell.alert-tema .v { color:rgba(255,255,255,.7); }
 
 /* ============================================================
    表格
@@ -289,6 +293,19 @@ textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px 
 .collapse-toggle.open::before { content:'▾ '; }
 .collapse-body { display:none; }
 .collapse-body.show { display:block; }
+
+/* ===== 消息汇总: 左栏撑满 + 吸顶表头 + 底部汇总条 + 中奖行 ===== */
+#msgSummaryCard { margin-bottom:0; }
+#msgSummaryBody { display:block; }
+#msgSummaryTable { width:100%; }
+#msgSummaryTable thead th { position:sticky; top:0; z-index:2; background:var(--card-bg); }
+#msgSummaryTable tfoot td { position:sticky; bottom:0; z-index:2; background:var(--card-bg); border-top:1px solid var(--input-border); font-weight:700; }
+#msgSummaryBody tr.win-row td { background:#fef2f2; }
+#msgSummaryBody td.win-cell { color:#dc2626; font-weight:600; }
+body.light #msgSummaryBody tr.win-row td { background:rgba(220,38,38,.14); }
+body.light #msgSummaryBody td.win-cell { color:#f87171; }
+body.light tr.win-row td { background:rgba(220,38,38,.10); }
+body.light td.win-cell { color:#f87171; }
 
 /* ============================================================
    弹窗
@@ -448,6 +465,306 @@ textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px 
   .card-title { font-size:.8rem; }
 
 }
+
+/* ===== 玩法汇总条: 一眼看全局 ===== */
+.sum-bar { display:flex; gap:20px; flex-wrap:wrap; padding:8px 0 10px; border-bottom:1px solid var(--border-light); margin-bottom:8px; }
+.sum-item { font-size:11px; color:var(--text-muted); }
+.sum-item .v { display:block; font-family:Consolas,"SF Mono","Roboto Mono",monospace; font-size:16px; font-weight:700; color:var(--text); margin-top:1px; font-variant-numeric:tabular-nums; }
+.sum-item .v.win { color:#dc2626; }
+body.light .sum-item .v.win { color:#f87171; }
+.sum-item .v.net { color:#16a34a; }
+body.light .sum-item .v.net { color:#4ade80; }
+
+/* ===== 消息命中标记(中奖号码/生肖/尾数) ===== */
+.hit-mark { color:#dc2626; font-weight:700; background:#fef2f2; border-radius:2px; padding:0 2px; }
+body.light .hit-mark { color:#f87171; background:rgba(248,113,113,.16); }
+
+/* ===== 消息汇总表: 固定布局4列, 消息列完整显示 ===== */
+#msgSummaryTable { table-layout:fixed; width:100%; }
+#msgSummaryTable th:nth-child(1), #msgSummaryTable td:nth-child(1) { width:6%; }
+#msgSummaryTable th:nth-child(2), #msgSummaryTable td:nth-child(2) { width:70%; }
+#msgSummaryTable th:nth-child(3), #msgSummaryTable td:nth-child(3) { width:12%; }
+#msgSummaryTable th:nth-child(4), #msgSummaryTable td:nth-child(4) { width:12%; }
+#msgSummaryTable td.msg-cell { word-break:break-all; }
+
+/* ===== 主按钮暗色适配 ===== */
+body.light .btn-primary { color:#14161a; }
+
+/* ===== 利来扣除面板 (号码分布下方独立区块) ===== */
+.subtract-panel {
+  margin-top:14px; padding-top:12px;
+  border-top:1px solid var(--border-light);
+  display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap;
+}
+.subtract-panel textarea {
+  font-size:.75rem; border:1px solid var(--card-border-hover);
+  border-radius:4px; padding:8px; resize:vertical;
+  background:var(--surface); color:var(--text); font-family:inherit; box-sizing:border-box;
+}
+.subtract-panel textarea:focus { outline:none; border-color:var(--text-muted); }
+.subtract-panel button {
+  padding:7px; font-size:.75rem; border:1px solid #dc2626; border-radius:4px;
+  background:rgba(220,38,38,.06); color:#dc2626; cursor:pointer; font-weight:600;
+}
+body.light .subtract-panel button { color:#f87171; border-color:#f87171; background:rgba(248,113,113,.08); }
+
+/* ===== v9 预览样式对齐 (追加覆盖, 已剔除 :root/body) ===== */
+/* ===== 数据终端风格: 无渐变 / 无发光 / 无弹性动画 ===== */
+  
+  * { margin:0; padding:0; box-sizing:border-box; }
+  
+
+  .topbar { display:flex; align-items:baseline; gap:16px; padding-bottom:14px; border-bottom:1px solid var(--border); margin-bottom:16px; }
+  .topbar h1 { font-size:17px; font-weight:600; letter-spacing:.02em; }
+  .topbar .meta { font-size:12px; color:var(--text-3); }
+  .topbar .right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+  .btn {
+    padding:5px 14px; font-size:12px; color:var(--text-2);
+    background:var(--surface); border:1px solid var(--border-strong);
+    border-radius:4px; cursor:pointer;
+  }
+  .btn:hover { border-color:var(--text-3); color:var(--text); }
+  .btn-primary { background:var(--accent); color:#14161a; border-color:var(--accent); }
+  .btn-primary:hover { opacity:.85; }
+  .btn-loading { opacity:.6; cursor:progress; }
+
+  /* ---- 开奖栏 ---- */
+  .draw {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:6px; padding:12px 18px; margin-bottom:10px;
+    display:flex; align-items:center; gap:24px; flex-wrap:wrap;
+  }
+  .draw .name { font-size:13px; font-weight:600; min-width:70px; }
+  .draw .status { font-size:12px; color:var(--text-3); margin-top:2px; }
+  .draw .right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--green, #16a34a); display:inline-block; vertical-align:middle; margin-right:5px; }
+  .balls { display:flex; align-items:center; gap:8px; }
+  .ball {
+    width:40px; height:40px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:15px; color:#fff;
+    font-variant-numeric:tabular-nums; position:relative;
+  }
+  .ball.red  { background:var(--red, #dc2626); }
+  .ball.green{ background:var(--green, #16a34a); }
+  .ball.blue { background:var(--blue, #2563eb); }
+  .ball.te   { width:46px; height:46px; font-size:17px; outline:2px solid var(--bg); outline-offset:-4px; }
+  .ball .z { position:absolute; bottom:-15px; font-size:10px; color:var(--text-3); font-weight:500; }
+
+  /* ---- Tab 栏 ---- */
+  .tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:14px; }
+  .tab { padding:7px 14px; font-size:12.5px; color:var(--text-2); border:none; background:none; cursor:pointer; border-bottom:2px solid transparent; }
+  .tab:hover { color:var(--text); }
+  .tab.active { color:var(--text); font-weight:600; border-bottom-color:var(--accent); }
+
+  .cols { display:grid; grid-template-columns: 600px 1fr; gap:16px; align-items:stretch;  }
+  .col-right { display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 16px; }
+  .card h2 { font-size:13px; font-weight:600; margin-bottom:10px; display:flex; align-items:baseline; gap:8px; }
+  .card h2 .sub { font-size:11px; color:var(--text-3); font-weight:400; }
+
+  /* 左卡: 输入在上, 汇总表撑满剩余高度 */
+  .col-left { display:flex; flex-direction:column; height:100%; }
+  .col-left textarea {
+    width:100%; height:110px; border:1px solid var(--border-strong);
+    border-radius:4px; padding:10px 12px; font-size:13px;
+    font-family:inherit; resize:vertical; color:var(--text); background:var(--surface);
+  }
+  textarea:focus { outline:none; border-color:var(--text-3); }
+  .row-actions { display:flex; gap:8px; margin-top:10px; align-items:center; }
+
+  /* ---- 计算结果区: 大量数据表格 ---- */
+  .result-head {
+    display:flex; align-items:baseline; gap:12px;
+    font-size:12px; color:var(--text-3); padding:10px 2px 8px;
+  }
+  .result-head .total { font-family:var(--mono); font-size:15px; font-weight:700; color:var(--text); }
+  .result-head .win { font-family:var(--mono); font-size:13px; font-weight:600; color:var(--red); }
+
+  .table-wrap { border:1px solid var(--border); border-radius:6px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  thead th {
+    position:sticky; top:0; z-index:1;
+    background:var(--surface); text-align:left; font-weight:500;
+    color:var(--text-3); font-size:11px; padding:6px 8px;
+    border-bottom:1px solid var(--border-strong);
+    white-space:nowrap;
+  }
+  tbody td { padding:5px 8px; border-bottom:1px solid var(--border); color:var(--text-2); white-space:nowrap; }
+  tbody td.msg { max-width:250px; overflow:hidden; text-overflow:ellipsis; }
+  tbody tr:last-child td { border-bottom:none; }
+  td.num, th.num { font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums; }
+  tr.win-row td { background:var(--win-bg); }
+  tr.win-row td.win { color:var(--red); font-weight:600; }
+  tbody tr:hover td { background:#23262d; }
+
+  /* 底部汇总条: 固定在可视区底部 */
+  .table-total {
+    position:sticky; bottom:0; background:var(--surface);
+    border-top:1px solid var(--border-strong);
+    display:flex; gap:24px; padding:8px 12px; font-size:12px;
+  }
+  .table-total .k { color:var(--text-3); }
+  .table-total .v { font-family:var(--mono); font-weight:700; }
+  .table-total .v.red { color:var(--red); }
+
+  /* ---- 号码分布网格(大金额) ---- */
+  .grid49 { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:8px; }
+  .cell {
+    border:1px solid var(--border); border-radius:4px;
+    text-align:center; padding:6px 2px; background:var(--surface);
+  }
+  .cell .n { display:block; font-family:var(--mono); font-size:13px; color:var(--text); font-variant-numeric:tabular-nums; }
+  .cell .amt { display:block; font-family:var(--mono); font-size:9.5px; color:var(--text-3); font-variant-numeric:tabular-nums; margin-top:1px; }
+  .cell .z { display:block; font-size:9px; color:var(--text-3); margin-top:1px; }
+  .cell.live { background:#2d3138; }
+  .cell.live .n { color:#fff; }
+  .cell.live .amt { color:rgba(255,255,255,.65); }
+  .cell.live .z { color:rgba(255,255,255,.6); }
+  .cell.hot .n { color:var(--red); font-weight:700; }  /* 投注额最高的号码: 红色加粗, 无其他装饰 */
+
+
+  .combo-line { display:flex; align-items:center; gap:10px; padding:6px 8px; border:1px solid var(--border); border-radius:4px; margin-bottom:6px; font-size:12px; }
+  .combo-line .c-nums { font-family:var(--mono); color:var(--text); }
+  .combo-line .c-desc { color:var(--text-3); }
+  .combo-line .c-bet { margin-left:auto; font-family:var(--mono); font-weight:600; }
+  .combo-line .c-win { color:var(--red); font-weight:600; }
+  .note { font-size:11.5px; color:var(--text-3); padding:4px 2px; }
+  h2 + table { margin-top:4px; }
+
+  /* ---- 号码分布: 按生肖分组 ---- */
+  .zodiac-groups { display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+  .zg { display:flex; align-items:center; gap:16px; padding:6px 4px; border-bottom:1px solid var(--border); }
+  .zg:last-child { border-bottom:none; }
+  .zg-label { width:40px; font-size:13px; font-weight:600; color:var(--text-2); flex-shrink:0; }
+  .zg-label.zg-hit { color:var(--red); }
+  .zg-nums { display:flex; gap:10px; flex-wrap:wrap; }
+  .znum {
+    border:1px solid var(--border); border-radius:4px;
+    width:60px; padding:6px 2px; text-align:center; background:var(--surface);
+    display:flex; flex-direction:column; gap:1px;
+  }
+  .znum .zn-n { font-family:var(--mono); font-size:12px; color:var(--text); font-variant-numeric:tabular-nums; }
+  .znum .zn-v { font-family:var(--mono); font-size:9.5px; color:var(--text-3); font-variant-numeric:tabular-nums; min-height:12px; }
+  .znum.zn-te { background:#2d3138; border-color:#3a3e47; }
+  .znum.zn-te .zn-n { color:#fff; font-weight:700; }
+  .znum.zn-te .zn-v { color:rgba(255,255,255,.7); }
+  .znum.zn-win { border-color:var(--red); }
+  .znum.zn-win .zn-n { color:var(--red); font-weight:600; }
+  .znum.zn-hot .zn-n { color:var(--red); font-weight:700; }
+  .znum.zn-hot .zn-v { color:var(--red); }
+
+  /* ---- 玩法汇总条: 一眼看全局 ---- */
+  .sum-bar { display:flex; gap:20px; flex-wrap:wrap; padding:8px 0 10px; border-bottom:1px solid var(--border); margin-bottom:8px; }
+  .sum-item { font-size:11px; color:var(--text-3); }
+  .sum-item .v { display:block; font-family:var(--mono); font-size:16px; font-weight:700; color:var(--text); margin-top:1px; font-variant-numeric:tabular-nums; }
+  .sum-item .v.win { color:var(--red); }
+  .sum-item .v.net { color:var(--green); }
+  .t-nums { background:#a1a1aa; } .t-flat { background:#2563eb; } .t-combo { background:#16a34a; } .t-n2 { background:#7c3aed; } .t-n3 { background:#f59e0b; }
+  /* 表格更紧凑: 消息单行省略, 序号/投注/中奖窄列 */
+  #msgTable thead th { font-size:10.5px; padding:5px 5px; }
+  #msgTable tbody td { padding:3.5px 5px; font-size:11.5px; }
+  #msgTable tbody td.msg { word-break:break-all; }
+  #msgTable .td-idx { width:22px; }
+  #msgTable .td-amt { width:64px; }
+  #msgTable .td-win { width:70px; }
+
+  /* 消息文本中的命中标记 */
+  .hit-mark { color:#f87171; font-weight:700; background:rgba(248,113,113,.16); border-radius:2px; padding:0 2px; }
+
+  /* 固定布局: 5列占比铺满容器, 不横向滚动 */
+  #msgTable { table-layout:fixed; width:100%; }
+  #msgTable th:nth-child(1), #msgTable td:nth-child(1) { width:6%; }
+  #msgTable th:nth-child(2), #msgTable td:nth-child(2) { width:72%; }
+  #msgTable th:nth-child(3), #msgTable td:nth-child(3) { width:12%; }
+  #msgTable th:nth-child(4), #msgTable td:nth-child(4) { width:10%; }
+  
+  #msgTable tbody td.msg { word-break:break-all; }
+
+  /* ---- 利来扣除面板 ---- */
+  .subtract-panel { margin-top:14px; border-top:1px solid var(--border); padding-top:12px; display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .subtract-panel textarea {
+    width:220px; height:52px; border:1px solid var(--border-strong); border-radius:4px;
+    padding:6px 8px; font-size:11.5px; font-family:inherit; resize:vertical; color:var(--text); background:var(--surface);
+  }
+  .subtract-panel .sp-btn {
+    padding:6px 14px; font-size:12px; color:var(--red); background:var(--surface);
+    border:1px solid var(--border-strong); border-radius:4px; cursor:pointer;
+  }
+  .subtract-panel .sp-btn:hover { border-color:var(--red); }
+  .subtract-history { font-size:11px; color:var(--text-3); margin-top:6px; }
+  .subtract-history .sh-item { padding:2px 0; color:var(--text-2); }
+  .subtract-note { font-size:10.5px; color:var(--text-3); margin-top:6px; }
+  .hint { font-size:11.5px; color:var(--text-3); margin-top:10px; }
+
+  .scene-note {
+    font-size:11px; color:var(--text-3); border:1px dashed var(--border-strong);
+    border-radius:4px; padding:6px 10px; margin:10px 0;
+  }
+/* ---- fsaf 类名适配 ---- */
+#msgSummaryTable { table-layout:fixed; width:100%; }
+#msgSummaryTable th:nth-child(1), #msgSummaryTable td:nth-child(1) { width:6%; }
+#msgSummaryTable th:nth-child(2), #msgSummaryTable td:nth-child(2) { width:70%; }
+#msgSummaryTable th:nth-child(3), #msgSummaryTable td:nth-child(3) { width:12%; }
+#msgSummaryTable th:nth-child(4), #msgSummaryTable td:nth-child(4) { width:12%; }
+#msgSummaryTable td.msg-cell { word-break:break-all; }
+/* 号码分布: 格子固定宽度(非撑满), 去波色顶条 */
+.zodiac-nums .num-cell { flex:none; width:56px; border:1px solid var(--border); border-radius:4px; padding:4px 2px; }
+.num-cell.wave-red, .num-cell.wave-blue, .num-cell.wave-green { border-top:1px solid var(--border); }
+/* 连码统计面板: 中性化(去彩色标题) */
+#comboStatsGrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+#comboStatsGrid > div { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:10px; }
+#comboStatsGrid > div > div:first-child { color:var(--text-2); font-size:12px; font-weight:600; margin-bottom:8px; }
+
+
+#msgSummaryTable td.msg-cell { white-space:normal; word-break:break-all; overflow-wrap:break-word; }
+
+/* 号码分布: 金额为主(号码不渲染) */
+.zodiac-nums .num-cell .v { font-size:.95rem; font-weight:700; color:var(--text); min-height:20px; }
+.num-cell .te-tag { font-size:9px; color:rgba(255,255,255,.75); margin-top:1px; }
+.zodiac-nums .num-cell.is-win-num .v { color:#dc2626; }
+body.light .zodiac-nums .num-cell.is-win-num .v { color:#f87171; }
+
+/* 特码格: 黑底醒目(与预览一致) */
+.zodiac-nums .num-cell.tema { animation: te-pulse 1.4s ease-in-out infinite; }
+.zodiac-nums .num-cell.tema .v { color:#fff; }
+
+body.light .zodiac-nums .num-cell.tema .v { color:#e5e7eb; }
+
+.zodiac-nums .num-cell.tema .n { color:#fff; }
+body.light .zodiac-nums .num-cell.tema .n { color:#e5e7eb; }
+.zodiac-nums .num-cell.alert-tema .n { color:#fff; }
+
+/* ===== 号码分布波色底色 + 标记体系 ===== */
+/* 波色: 整格底色, 白字 (与开奖球一致) */
+.zodiac-nums .num-cell.wave-red { background:#dc2626; border-color:#dc2626; }
+.zodiac-nums .num-cell.wave-blue { background:#2563eb; border-color:#2563eb; }
+.zodiac-nums .num-cell.wave-green { background:#16a34a; border-color:#16a34a; }
+.zodiac-nums .num-cell.wave-red .n, .zodiac-nums .num-cell.wave-red .v { color:#fff; }
+.zodiac-nums .num-cell.wave-blue .n, .zodiac-nums .num-cell.wave-blue .v { color:#fff; }
+.zodiac-nums .num-cell.wave-green .n, .zodiac-nums .num-cell.wave-green .v { color:#fff; }
+/* 开奖平码: 波色底保留 + 白色脉冲动态提示 */
+@keyframes win-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.55); }
+  50% { box-shadow: 0 0 0 5px rgba(255,255,255,.12); }
+}
+.zodiac-nums .num-cell.is-win-num { animation: win-pulse 1.4s ease-in-out infinite; }
+/* 特码: 黑底白字(区分于波色) + 金色脉冲动态提示 */
+@keyframes te-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,.65); }
+  50% { box-shadow: 0 0 0 5px rgba(251,191,36,.15); }
+}
+.zodiac-nums .num-cell.tema { animation: te-pulse 1.4s ease-in-out infinite; }
+.zodiac-nums .num-cell.tema .n, .zodiac-nums .num-cell.tema .v { color:#fff; }
+/* 最多投注(分析后): 金额/号码黄色加粗(波色底保留) + 黑粗框 */
+.zodiac-nums .num-cell.alert-top5 { outline:2px solid #18181b; outline-offset:-2px; }
+.zodiac-nums .num-cell.alert-top5 .n { color:#fbbf24; font-weight:700; }
+.zodiac-nums .num-cell.alert-top5 .v { color:#fbbf24; font-weight:700; font-size:1.05rem; }
+/* 波色格子的 te-tag 白字 */
+.zodiac-nums .num-cell .te-tag { color:rgba(255,255,255,.75); }
+/* 暗色适配 */
+
+body.light .zodiac-nums .num-cell.alert-top5 .n, body.light .zodiac-nums .num-cell.alert-top5 .v { color:#fbbf24; }
 </style>
 </head>
 <body>
@@ -527,8 +844,8 @@ textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px 
 </div>
 </div>
 
-<!-- ===== Tabs ===== -->
-<div class="tabs">
+<!-- ===== Tabs (已隐藏: 单面板全展示) ===== -->
+<div class="tabs" style="display:none;">
   <button class="tab-btn active" onclick="switchTab('bets')">投注分析</button>
   <button class="tab-btn" onclick="switchTab('detail')">号码明细</button>
   <button class="tab-btn" onclick="switchTab('zodiac')">生肖统计</button>
@@ -538,7 +855,115 @@ textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px 
 	  <button class="tab-btn" onclick="switchTab('admin')" id="tabBtnAdmin" style="margin-left:auto;color:#f59e0b;border-color:transparent;">管理</button>
 </div>
 
-<!-- ===== Tab: 管理面板 ===== -->
+<div class="cols">
+<div class="col-left">
+
+<!-- ===== Tab 1: 投注分析 ===== -->
+<div class="card" id="tabBets">
+  <div class="card-header">
+    <span class="card-title">投注规则输入</span>
+    <span style="font-size:.7rem;color:var(--text-muted);">Ctrl+Enter 确认</span>
+    <button class="btn btn-outline btn-sm clip-btn" onclick="pasteFromClipboard()" title="从剪贴板粘贴">&#x1f4cb; 粘贴</button>
+  </div>
+  <textarea id="inputRule" placeholder="粘贴玩家投注消息..."></textarea>
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button class="btn btn-primary" onclick="analyze()">分析投注</button>
+    <button class="btn btn-primary" onclick="analyzeWithAI()" id="btnAI" title="用 AI 大脑理解投注语义，再交给规则计算">🧠 AI 解析</button>
+    <button class="btn btn-amber" onclick="calcAll()">计算输赢</button>
+    <button class="btn btn-danger" onclick="showReset()">重置</button>
+  </div>
+</div>
+
+<!-- 消息投注汇总 -->
+<div class="card card-first" id="msgSummaryCard" style="display:none; margin-bottom:12px;">
+  <div class="card-header collapse-toggle open" onclick="toggleCollapse('msgSummaryBody')" style="margin-bottom:0;">
+    <span class="card-title">消息投注汇总</span>
+    <span style="font-size:.7rem;color:var(--text-muted);" id="msgSummaryCount"></span>
+  </div>
+  <div class="collapse-body show" id="msgSummaryBody">
+    <div class="sum-bar" id="sumBar">
+      <div class="sum-item">总收注<span class="v" id="sumTotal">0</span></div>
+      <div class="sum-item">号码<span class="v" id="sumNums">0</span></div>
+      <div class="sum-item">平特<span class="v" id="sumFlat">0</span></div>
+      <div class="sum-item">连肖<span class="v" id="sumCombo">0</span></div>
+      <div class="sum-item">复式<span class="v" id="sumN2N3">0</span></div>
+      <div class="sum-item">中奖<span class="v win" id="sumWin">0</span></div>
+      <div class="sum-item">净额<span class="v net" id="sumNet">0</span></div>
+    </div>
+    <table class="tbl" id="msgSummaryTable">
+      <thead><tr><th style="width:40px;">序号</th><th>消息内容</th><th style="width:80px;">投注总额</th><th style="width:120px;">中奖内容</th></tr></thead>
+      <tbody id="msgSummaryTbody"><tr><td colspan="4" style="text-align:center;color:var(--text-muted);">等待分析...</td></tr></tbody>
+      <tfoot><tr><td></td><td style="text-align:right;">合计</td><td style="text-align:center;font-weight:700;" id="msgSummaryGrandTotal">0</td><td></td></tr></tfoot>
+    </table>
+    <div id="msgSummaryStats" style="display:none; background:var(--surface); border:1px solid var(--input-border); border-radius:8px; padding:10px 14px; margin-top:10px; font-size:.78rem; line-height:1.8;">
+      <span>总收注: <b style="color:var(--accent);" id="msgSumTotalBet">0</b></span>
+      <span id="msgSumWinBreakdown" style="margin-left:8px;"></span>
+      <span style="margin-left:12px;">抽水率: <b style="color:#f59e0b;" id="msgSumWaterRate">0%</b></span>
+      <span style="margin-left:8px;">净收益: <b style="color:var(--accent);" id="msgSumNetAfter">0</b></span>
+    </div>
+  </div>
+</div>
+
+</div><!-- /col-left -->
+<div class="col-right">
+
+<!-- 投注明细表 -->
+<div class="card card-first" id="tabDetail">
+  <div class="card-header"><span class="card-title">号码分布 (按生肖)</span><span id="numGridTotal" style="font-size:.8rem;color:var(--text-secondary);font-weight:700;margin-left:auto;"></span></div>
+  <div class="detail-layout">
+    <div class="num-grid" id="numGrid"></div>
+    <div class="subtract-panel">
+      <textarea id="subtractInput" placeholder="利来扣除&#10;例：猴牛各数三十斤&#10;    鸡各数五十斤" style="width:260px;height:70px;font-size:.75rem;border:1px solid var(--card-border-hover);border-radius:6px;padding:8px;resize:vertical;background:var(--surface);color:var(--text-muted);font-family:inherit;box-sizing:border-box;"></textarea>
+      <button onclick="refreshNumGrid()" style="margin-top:6px;width:130px;padding:7px;font-size:.75rem;border:1px solid #ef4444;border-radius:5px;background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-weight:600;">确定扣除</button>
+      <div id="subtractHistory" style="margin-top:8px;"></div>
+      <div style="font-size:.65rem;color:#9ca3af;margin-top:4px;">扣除仅在号码明细生效，不影响投注分析</div>
+    </div>
+  </div>
+</div>
+<div class="card card-first" id="tabCombo">
+  <div class="card-header">
+    <span class="card-title">连码投注统计</span>
+    <span style="font-size:.7rem;color:var(--text-muted);">二连 / 三连 / 四连 / 五连</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="comboStatsGrid">
+    <div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:10px;" id="comboDoublePanel">
+      <div style="font-size:.8rem;color:#60a5fa;margin-bottom:8px;font-weight:600;">二连投注</div>
+      <div id="comboDoubleBody" style="font-size:.72rem;color:var(--text-muted);">等待分析...</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:10px;" id="comboTriplePanel">
+      <div style="font-size:.8rem;color:#f59e0b;margin-bottom:8px;font-weight:600;">三连投注</div>
+      <div id="comboTripleBody" style="font-size:.72rem;color:var(--text-muted);">等待分析...</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:10px;" id="comboQuadPanel">
+      <div style="font-size:.8rem;color:#a78bfa;margin-bottom:8px;font-weight:600;">四连投注</div>
+      <div id="comboQuadBody" style="font-size:.72rem;color:var(--text-muted);">等待分析...</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:10px;" id="comboQuintPanel">
+      <div style="font-size:.8rem;color:#f472b6;margin-bottom:8px;font-weight:600;">五连投注</div>
+      <div id="comboQuintBody" style="font-size:.72rem;color:var(--text-muted);">等待分析...</div>
+    </div>
+  </div>
+</div>
+<div class="card card-first" id="tabN3">
+  <div class="card-header">
+    <span class="card-title">三中三投注统计</span>
+    <span style="font-size:.7rem;color:var(--text-muted);">C(n,3) 赔率600x</span>
+  </div>
+  <div id="n3StatsBody" style="font-size:.72rem;color:var(--text-muted);max-height:500px;overflow-y:auto;">等待分析...</div>
+</div>
+<div class="card card-first" id="tabN2">
+  <div class="card-header">
+    <span class="card-title">二中二投注统计</span>
+    <span style="font-size:.7rem;color:var(--text-muted);">C(n,2) 赔率60x</span>
+  </div>
+  <div id="n2StatsBody" style="font-size:.72rem;color:var(--text-muted);max-height:500px;overflow-y:auto;">等待分析...</div>
+</div>
+<div class="card card-first" id="tabZodiac">
+  <div class="card-header"><span class="card-title">生肖投注统计</span></div>
+  <div id="zodiacGrid"></div>
+</div>
+
+<!-- ===== Tab: 管理面板 (移到右栏底部) ===== -->
 <div class="card card-first" id="tabAdmin" style="display:none;">
   <div class="card-header"><span class="card-title">远程管理</span><span style="font-size:.7rem;color:var(--text-muted);" id="adminConnStatus">未连接</span></div>
   <div id="adminPanelContent">
@@ -565,100 +990,13 @@ textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px 
   </div>
 </div>
 
-<!-- ===== Tab 1: 投注分析 ===== -->
-<div class="card" id="tabBets">
-  <div class="card-header">
-    <span class="card-title">投注规则输入</span>
-    <span style="font-size:.7rem;color:var(--text-muted);">Ctrl+Enter 确认</span>
-    <button class="btn btn-outline btn-sm clip-btn" onclick="pasteFromClipboard()" title="从剪贴板粘贴">&#x1f4cb; 粘贴</button>
-  </div>
-  <textarea id="inputRule" placeholder="粘贴玩家投注消息...&#10;&#10;支持格式：&#10;马蛇个10 · 02/08各15 · 平特猪狗各300&#10;牛狗羊三连500 · 香港虎牛二连500 · 猴兔牛鼠四连50 · 牛蛇鼠鸡羊五连50 · 狗猴兔鸡虎复式三连肖20一组&#10;香港平狗200 · 大各数10 · 单各10&#10;09各五十斤 · 狗龙虎鼠猪各号45&#10;7-5-4-6-8-1-3尾各数十 · 2-8尾各5&#10;01.04.18三中三十斤 · 23.03.40.28.45复试三中三各组10&#10;01.04.18.09.03复试二中二各组十斤&#10;&#10;每行一条或分号分隔"></textarea>
-  <div style="display:flex;gap:8px;margin-top:10px;">
-    <button class="btn btn-primary" onclick="analyze()">分析投注</button>
-    <button class="btn btn-primary" onclick="analyzeWithAI()" id="btnAI" title="用 AI 大脑理解投注语义，再交给规则计算">🧠 AI 解析</button>
-    <button class="btn btn-amber" onclick="calcAll()">计算输赢</button>
-    <button class="btn btn-danger" onclick="showReset()">重置</button>
-  </div>
-</div>
 
-<!-- 消息投注汇总 -->
-<div class="card card-first" id="msgSummaryCard" style="display:none; margin-bottom:12px;">
-  <div class="card-header collapse-toggle open" onclick="toggleCollapse('msgSummaryBody')" style="margin-bottom:0;">
-    <span class="card-title">消息投注汇总</span>
-    <span style="font-size:.7rem;color:var(--text-muted);" id="msgSummaryCount"></span>
-  </div>
-  <div class="collapse-body show" id="msgSummaryBody">
-    <table class="tbl" id="msgSummaryTable">
-      <thead><tr><th style="width:40px;">序号</th><th>消息内容</th><th style="width:80px;">投注总额</th><th style="width:120px;">中奖内容</th></tr></thead>
-      <tbody id="msgSummaryTbody"><tr><td colspan="4" style="text-align:center;color:var(--text-muted);">等待分析...</td></tr></tbody>
-      <tfoot><tr><td></td><td style="text-align:right;">合计</td><td style="text-align:center;font-weight:700;color:#60a5fa;" id="msgSummaryGrandTotal">0</td><td></td></tr></tfoot>
-    </table>
-    <div id="msgSummaryStats" style="display:none; background:var(--surface); border:1px solid var(--input-border); border-radius:8px; padding:10px 14px; margin-top:10px; font-size:.78rem; line-height:1.8;">
-      <span>总收注: <b style="color:var(--accent);" id="msgSumTotalBet">0</b></span>
-      <span id="msgSumWinBreakdown" style="margin-left:8px;"></span>
-      <span style="margin-left:12px;">抽水率: <b style="color:#f59e0b;" id="msgSumWaterRate">0%</b></span>
-      <span style="margin-left:8px;">净收益: <b style="color:var(--accent);" id="msgSumNetAfter">0</b></span>
-    </div>
-  </div>
-</div>
-
-<!-- 投注明细表 -->
-<div class="card card-first" id="tabDetail" style="display:none;">
-  <div class="card-header"><span class="card-title">号码分布 (按生肖)</span><span id="numGridTotal" style="font-size:.8rem;color:#2563eb;font-weight:700;margin-left:auto;"></span></div>
-  <div class="detail-layout" style="display:flex;gap:12px;align-items:flex-start;">
-    <div class="num-grid" id="numGrid" style="flex:1;min-width:0;"></div>
-    <div class="subtract-panel" style="width:180px;flex-shrink:0;">
-      <textarea id="subtractInput" placeholder="利来扣除&#10;例：猴牛各数三十斤&#10;    鸡各数五十斤" style="width:100%;height:160px;font-size:.75rem;border:1px solid var(--card-border-hover);border-radius:6px;padding:8px;resize:vertical;background:var(--surface);color:var(--text-muted);font-family:inherit;box-sizing:border-box;"></textarea>
-      <button onclick="refreshNumGrid()" style="margin-top:6px;width:100%;padding:7px;font-size:.75rem;border:1px solid #ef4444;border-radius:5px;background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-weight:600;">确定扣除</button>
-      <div id="subtractHistory" style="margin-top:8px;"></div>
-      <div style="font-size:.65rem;color:#9ca3af;margin-top:4px;">扣除仅在号码明细生效，不影响投注分析</div>
-    </div>
-  </div>
-</div>
-<div class="card card-first" id="tabCombo" style="display:none;">
-  <div class="card-header">
-    <span class="card-title">连码投注统计</span>
-    <span style="font-size:.7rem;color:var(--text-muted);">二连 / 三连 / 四连 / 五连</span>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="comboStatsGrid">
-    <div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:10px;" id="comboDoublePanel">
-      <div style="font-size:.8rem;color:#60a5fa;margin-bottom:8px;font-weight:600;">二连投注</div>
-      <div id="comboDoubleBody" style="font-size:.72rem;color:var(--text-muted);">等待分析...</div>
-    </div>
-    <div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:10px;" id="comboTriplePanel">
-      <div style="font-size:.8rem;color:#f59e0b;margin-bottom:8px;font-weight:600;">三连投注</div>
-      <div id="comboTripleBody" style="font-size:.72rem;color:var(--text-muted);">等待分析...</div>
-    </div>
-    <div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:10px;" id="comboQuadPanel">
-      <div style="font-size:.8rem;color:#a78bfa;margin-bottom:8px;font-weight:600;">四连投注</div>
-      <div id="comboQuadBody" style="font-size:.72rem;color:var(--text-muted);">等待分析...</div>
-    </div>
-    <div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:10px;" id="comboQuintPanel">
-      <div style="font-size:.8rem;color:#f472b6;margin-bottom:8px;font-weight:600;">五连投注</div>
-      <div id="comboQuintBody" style="font-size:.72rem;color:var(--text-muted);">等待分析...</div>
-    </div>
-  </div>
-</div>
-<div class="card card-first" id="tabN3" style="display:none;">
-  <div class="card-header">
-    <span class="card-title">三中三投注统计</span>
-    <span style="font-size:.7rem;color:var(--text-muted);">C(n,3) 赔率600x</span>
-  </div>
-  <div id="n3StatsBody" style="font-size:.72rem;color:var(--text-muted);max-height:500px;overflow-y:auto;">等待分析...</div>
-</div>
-<div class="card card-first" id="tabN2" style="display:none;">
-  <div class="card-header">
-    <span class="card-title">二中二投注统计</span>
-    <span style="font-size:.7rem;color:var(--text-muted);">C(n,2) 赔率60x</span>
-  </div>
-  <div id="n2StatsBody" style="font-size:.72rem;color:var(--text-muted);max-height:500px;overflow-y:auto;">等待分析...</div>
-</div>
-<div class="card card-first" id="tabZodiac" style="display:none;">
-  <div class="card-header"><span class="card-title">生肖投注统计</span></div>
-  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;" id="zodiacGrid"></div>
-</div>
+<div style="text-align:right;"><button class="btn btn-outline btn-sm" onclick="toggleAdminPanel()" id="btnAdminPanel">管理</button></div>
 
 <!-- 结算明细 -->
+</div><!-- /col-right -->
+</div><!-- /cols -->
+
 <div class="card card-first" id="settlementCard">
   <div class="card-header" style="justify-content:space-between;">
     <span class="collapse-toggle open" onclick="toggleCollapse('settlementBody')" style="display:flex;align-items:center;gap:4px;">
@@ -784,6 +1122,7 @@ let hkSpecialZodiacBets = {}; // 香港盘特肖
 let hkComboBets = [];       // 香港盘连肖
 let hkNumComboBets = [];    // 香港盘三中三/二中二
 let autoRefreshTimer = null;
+let windowSchedulerTimer = null;   // 窗口调度器(30秒纯时间检查, 不拉API)
 let autoRefreshOn = false;
 let currentTab = 'bets';
 let waterRate = 0;  // 抽水率 0-30%
@@ -842,7 +1181,7 @@ function splitMultiPairCombo(t) {
 }
 
 function norm(s){
-  let t = s.replace(/(各\d+(?:\.\d+)?)\s*[-—－]{2,}/g, '$1 ') // 保护: "各50----1" 破折号先转空格, 防 "号码----金额" 规则吞号
+  let t = s.replace(/(各(?:号|数)?\d+(?:\.\d+)?)\s*[-—－]{2,}/g, '$1 ') // 保护: "各50----1"/"各号70----4" 破折号先转空格, 防 "号码----金额" 规则吞号
     .replace(/[+＋]/g,'').replace(/。/g,'').replace(/^(.+)香港澳门$/g, '澳$1；港$1').replace(/(\d+(?:\.\d+)?\s*(?:斤|米|块|元|文))\s*[，]\s*(?=\d)/g, '$1；')
     .replace(/免/g,'兔').replace(/于一肖/g,'一肖')
     .replace(/候/g,'猴')  // 候→猴 纠错
@@ -850,12 +1189,18 @@ function norm(s){
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')  // 【】→， 展开 （必须在破折号→空格之前）
     .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })  // 每组→各组 归一化
     .replace(/元/g,'块').replace(/(\d)文/g,'$1块')  // 元→块 归一化，文→块
+    .replace(/(?:新澳|澳门|澳)$/g,'')  // 市场标记后缀剥离: "各10澳"/"各五十斤新澳"/"…五十，澳门" → 澳/新澳/澳门在行尾时是澳门系统标记
+    .replace(/落/g,'各')  // "落"=落注(下注): "13落五澳"→"13各五"
     .replace(/复试/g,'复式').replace(/两连/g,'二连').replace(/二友/g,'二连').replace(/三友/g,'三连')  // 复试→复式 归一化 + 二友/三友
     .replace(/(二连|三连|四连|五连)复式/g, '复式$1')  // "二连复式"→"复式二连"，确保expandLine fuShortRe能匹配展开
     .replace(/\d+期\s*/g,'').replace(/(\d+)\s*百(?!\d)/g, function(m, n){ return String(parseInt(n) * 100); }).replace(/(\d+)\s*千(?!\d)/g, function(m, n){ return String(parseInt(n) * 1000); })  // 去掉期号 + 8百→800
     .replace(/号个/g,'号各').replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/号各/g,'各数').replace(/名数/g,'各数').replace(/每个号码/g,'各数').replace(/每个号/g,'各数').replace(/号\/(\d)/g,'号$1').replace(/个组/g,'各组').replace(/个\//g,'各').replace(/一个\s*$/g,'')  // 个组→各组, 个/→各, 末尾一个剥离
+    // 口语助词"号"夹在数字间: "39号18号34号各10元"→"39 18 34各10元" (否则被KW"号"误拆成"39号18"→39投18)
+    .replace(/(\d{1,2})号(?=\d{1,2})/g, '$1 ')
     .replace(/蚊/g,'')  // 蚊→去掉 (粤语元)
     .replace(/[嘛呀啊呢吧哦噢哟唉]+/g, '')  // 去掉语气词
+    // 平特尾X尾金额: "平特尾0尾500元"→"平特0尾500元" (走processRule平特尾flat_tail逻辑, 一注不乘码数)
+    .replace(/(平特尾)\s*(\d)尾\s*(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, '平特$2尾$3$4')
     // 到 范围展开: 01到12 → 01 02 03 ... 12
     .replace(/(\d(?:[-—－]+\d)+)尾/g, function(m, nums){ return nums.split(/[-—－]+/).map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{2,})尾/g, function(m, digits){ return digits.split('').map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
@@ -864,7 +1209,7 @@ function norm(s){
     .replace(/个字/g,'各数').replace(/各字/g,'各数')  // "猴个字十"→"猴各数十"
     .replace(/字/g,'各数')  // "05字三十"→"05各数30", "龙字二十嘛"→"龙各数20嘛"
     .replace(/号个/g,'各数')  // "狗号个25米"→"狗各数25米"
-    .replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/=/g,'各').replace(/数十/g,'10')  // =各 → 各 (避免各各), 数十→10
+    .replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各').replace(/数十/g,'10')  // =各 → 各 (避免各各), 各买→各, 数十→10
     .replace(/单数/g,'单').replace(/双数/g,'双')  // 单数→单, 双数→双 (用于大小单双匹配)
     .replace(/各\.(\d)/g,'各$1')  // "各.10" → "各10"
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
@@ -893,6 +1238,7 @@ function norm(s){
     .replace(/(二连|三连|四连|五连)肖/g, '$1')
     .replace(/(\d{1,2})\s*([一二三四五六七八九十百千万廿卅两百]+)\s*(斤|米|块)/g, (m,n1,n2,n3)=>n1+'各'+cn(n2)+n3)
     .replace(/(\d{1,2})\s*[-—－]+\s*(\d+(?:\.\d+)?)\s*(斤|米|块)/g,'$1各$2$3')
+    .replace(/(\d{1,2})\/(\d{1,2})(斤|米|块)/g,'$1各$2$3；')  // 数字+单位紧跟斜杠后=金额: "20/10斤27/31各20斤"→"20各10斤；27/31各20斤"
     .replace(/--/g,'-');  // 双横线→单横线: "07--13"→"07-13"（避免13被误当金额）
   // 三中三/二中二 N组 各组V + 显式组合列表: "三中三 15组 各组2斤 01-10-20，02-05-23，..." → 逐组展开
   t = t.replace(/^(三中三|二中二)\s+(\d+)组\s+各组(\d+(?:\.\d+)?)\s*(斤|米|块)?\s+(.+)$/g, function(m, type, cntStr, val, unit, groupsStr){
@@ -2070,8 +2416,8 @@ function calcAll(){
   let hkWinNums = null, hkTeMa = null, hkWinFlat = null;
   if(hkResult && hkResult.numbers && hkResult.numbers.filter(function(n){ return n!==''; }).length >= 7){
     hkWinNums = hkResult.numbers;
-    hkTeMa = hkResult.teMa;
-    hkWinFlat = hkResult.flatZodiacs;
+    hkTeMa = hkResult.teMa || hkResult.numbers[6];  // 特码兜底: 取第7位
+    hkWinFlat = hkResult.flatZodiacs || [];
   }
 
   let canCalcMacau = winNums && teMa && betSummary.length > 0;
@@ -2083,18 +2429,16 @@ function calcAll(){
 
   // 结算辅助函数
   function settleRow(s, theWinNums, theTeMa, theWinFlat){
-    let win = 0, odds = 0, note = '', hitBet = 0;
+    let win = 0, odds = 0, note = '', hitBet = 0, hitNums = [], hitZs = [];
     if(s.type==='nums'){
       odds = ODDS_TM;
       const perBet = s.targets.length>0 ? s.bet/s.targets.length : s.bet;
-      let hitNums = [];
       s.targets.forEach(t=>{
         if(t === theTeMa){ win += perBet * ODDS_TM; hitBet += perBet; hitNums.push(t); }
       });
       if(hitNums.length){ note = `中${hitNums.join(',')} (特码)`; }
     } else if(s.type==='flat'){
       const perBet = s.targets.length>0 ? s.bet/s.targets.length : s.bet;
-      let hitZs = [];
       s.targets.forEach(z=>{
         if(theWinFlat.includes(z)){
           odds = z==='马' ? ODDS_PT_MA : ODDS_PT_OTHER;
@@ -2107,7 +2451,6 @@ function calcAll(){
     } else if(s.type==='flat_tail'){
       // 平特尾数: 多个号码共享一份投注额，命中任意号码即赢(只计一次)
       const perBet = s.bet;
-      let hitNums = [];
       s.targets.forEach(t=>{
         if(theWinNums.includes(t)){
           hitNums.push(t);
@@ -2123,7 +2466,6 @@ function calcAll(){
       // 特肖仅匹配特码的生肖，与前面6个正码生肖无关
       const teMaZodiac = NUM_TO_ZODIAC[theTeMa];
       const perBet = s.targets.length>0 ? s.bet/s.targets.length : s.bet;
-      let hitZs = [];
       s.targets.forEach(z=>{
         if(z === teMaZodiac){
           odds = z==='马' ? ODDS_TX_MA : ODDS_TX_OTHER;
@@ -2160,7 +2502,7 @@ function calcAll(){
       }
     }
     const net = win - s.bet;
-    return {...s, win:Math.round(win*100)/100, odds, net:Math.round(net*100)/100, note, hitBet:Math.round(hitBet*100)/100};
+    return {...s, win:Math.round(win*100)/100, odds, net:Math.round(net*100)/100, note, hitBet:Math.round(hitBet*100)/100, hitNums, hitZs};
   }
 
   let totalBet = 0, totalPayout = 0, hitCount = 0;
@@ -2224,16 +2566,35 @@ function calcAll(){
   wsReportBets({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, waterRate: waterRate, hitCount: hitCount, itemCount: allRows.length });
   wsReportSettlement({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100, rows: allRows.slice(0, 20) });
 
-  // 汇总每条消息的中奖内容到消息投注汇总
-  messageSummary.forEach(function(m){ m.winNote = ''; });
+  // 汇总每条消息的中奖内容到消息投注汇总 (简洁格式: 中30/平300/二连50 + 命中标记信息)
+  messageSummary.forEach(function(m){
+    m.winNote = ''; m._winTotal = 0; m._winParts = {};
+    m._hitNums = []; m._hitZods = []; m._hitComboZods = [];
+  });
   var comboWinDetails = [];
   allRows.forEach(function(r){
-    if(r.note && r.msgIndex !== undefined){
+    if(r.note && r.msgIndex !== undefined && r.hitBet > 0){
       var m = messageSummary[r.msgIndex];
       if(m){
-        var noteText = esc(r.display) + ' → ' + r.note;
-        if(m.winNote) m.winNote += '<br>';
-        m.winNote += noteText;
+        var prefix = '';
+        if(r.type==='nums') prefix = '中';
+        else if(r.type==='flat' || r.type==='flat_tail') prefix = '平';
+        else if(r.type==='special_zodiac') prefix = '特肖';
+        else if(r.type==='n2') prefix = '二中二';
+        else if(r.type==='n3') prefix = '三中三';
+        else if(r.type==='combo') prefix = r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
+        m._winParts[prefix] = (m._winParts[prefix]||0) + r.hitBet;
+        m._winTotal += r.hitBet;
+        // 命中标记信息 (渲染时在消息文本中高亮)
+        if((r.type==='nums' || r.type==='flat_tail') && r.hitNums){
+          r.hitNums.forEach(function(n){ if(m._hitNums.indexOf(n) < 0) m._hitNums.push(n); });
+        }
+        if(r.type==='flat' && r.hitZs){
+          r.hitZs.forEach(function(z){ if(m._hitZods.indexOf(z) < 0) m._hitZods.push(z); });
+        }
+        if(r.type==='combo' && r.comboZodiacs){
+          r.comboZodiacs.split('').forEach(function(z){ if(m._hitComboZods.indexOf(z) < 0) m._hitComboZods.push(z); });
+        }
       }
     }
     // 收集连肖中奖明细
@@ -2241,6 +2602,13 @@ function calcAll(){
       var typeName = r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
       comboWinDetails.push(r.comboZodiacs + typeName + '中' + r.win);
     }
+  });
+  messageSummary.forEach(function(m){
+    if(m._winParts){
+      m.winNote = Object.keys(m._winParts).map(function(p){ return p + Math.round(m._winParts[p]*100)/100; }).join(' ');
+      delete m._winParts;
+    }
+    m._winTotal = Math.round(m._winTotal*100)/100;
   });
   renderMsgSummary();
   // 上报结算数据+消息投注汇总到存储服务器
@@ -2348,31 +2716,11 @@ function renderNumGrid(winNums, teMa){
     ranked.push({num:n, bet:netV});
   }
   var totalEl = document.getElementById('numGridTotal');
-  if(totalEl) totalEl.textContent = '总额 ' + (Math.round(totalNet*100)/100);
+  if(totalEl) totalEl.textContent = '总额 ' + fmtNum(totalNet);
   ranked.sort(function(a,b){ return b.bet - a.bet; });
-  var top10Set = new Set();
-  var rankMap = {};
-  var top10Threshold = 0;
-  for(var r=0; r<10 && r<ranked.length; r++){
-    if(ranked[r].bet > 0){
-      top10Set.add(ranked[r].num);
-      top10Threshold = ranked[r].bet;
-    }
-  }
-
-  // 如果第10和11相等，也包含所有平齐的
-  for(var r=10; r<ranked.length; r++){
-    if(ranked[r].bet === top10Threshold && ranked[r].bet > 0){
-      top10Set.add(ranked[r].num);
-    }
-  }
-
-  // 排名映射（同金额同排名）
-  var rk = 1;
-  for(var r=0; r<ranked.length; r++){
-    if(!top10Set.has(ranked[r].num)) continue;
-    if(r>0 && ranked[r].bet < ranked[r-1].bet) rk = r+1;
-    rankMap[ranked[r].num] = rk;
+  var top5Set = new Set();  // 投注额前5名(金额黄色标记)
+  for(var ti=0; ti<5 && ti<ranked.length; ti++){
+    if(ranked[ti].bet > 0) top5Set.add(ranked[ti].num);
   }
 
   // 按生肖分组渲染
@@ -2384,6 +2732,10 @@ function renderNumGrid(winNums, teMa){
     var label = document.createElement('div');
     label.className = 'zodiac-label';
     label.textContent = z;
+    // 该肖有开奖号码命中 → 红色标签
+    if(winNums && winNums.some(function(w){ return nums.indexOf(w) >= 0; })){
+      label.className += ' zg-hit';
+    }
     group.appendChild(label);
 
     var numsDiv = document.createElement('div');
@@ -2392,27 +2744,30 @@ function renderNumGrid(winNums, teMa){
     nums.forEach(function(n){
       var rawV = numberBets[n]||0;
       var v = Math.max(0, rawV - (subMap[n]||0));  // 扣除后显示值
-      var isTop10 = top10Set.has(n);
+      var isTop5 = top5Set.has(n);
       var isTema = teMa && n===teMa;
+      var isWin = winNums && winNums.indexOf(n) >= 0 && n !== teMa;  // 开奖平码(特码单独处理)
       var cls = 'num-cell';
-      // 波色底色
+      // 波色: 整格底色
       var wave = NUM_TO_WAVE[n];
       if(wave === '红波') cls += ' wave-red';
       else if(wave === '蓝波') cls += ' wave-blue';
       else if(wave === '绿波') cls += ' wave-green';
-      // 投注/特码覆盖
-      if(isTop10 && isTema){
-        cls += ' alert-tema';
-      } else if(isTop10){
-        cls += ' alert-top10';
-      } else if(isTema){
+      // 标记: 特码黑底 / 前5金额黄 / 开奖平码波色脉冲
+      if(isTema){
         cls += ' tema';
-      } else if(v>0){
+      }
+      if(isTop5){
+        cls += ' alert-top5';
+      }
+      if(isWin){
+        cls += ' is-win-num';
+      } else if(v>0 && !isTop5){
         cls += ' has-bet';
       }
       var cell = document.createElement('div'); cell.className = cls;
-      var rkBadge = rankMap[n] ? '<span class="top10-badge">'+rankMap[n]+'</span>' : '';
-      cell.innerHTML = '<div class="n">'+n+'</div><div class="v">'+(v||'')+'</div>' + rkBadge;
+      // 号码(上) + 金额(下, 大字为主); 特码格加"特"标记
+      cell.innerHTML = '<div class="n">'+n+'</div><div class="v">'+(v||'')+'</div>' + (isTema ? '<div class="te-tag">特</div>' : '');
       numsDiv.appendChild(cell);
     });
 
@@ -2423,15 +2778,24 @@ function renderNumGrid(winNums, teMa){
 
 function renderZodiacGrid(winFlat){
   const grid=document.getElementById('zodiacGrid'); if(!grid) return;
-  grid.innerHTML='';
-  ALL_ZODIACS.forEach(z=>{
-    const v=flatBets[z]||0;
-    const isWin=winFlat && winFlat.includes(z);
-    const cell=document.createElement('div');
-    cell.style.cssText=`background:var(--surface);border:1px solid ${isWin?'#22c55e':v>0?'#2563eb':'var(--card-border)'};border-radius:4px;padding:8px;text-align:center;`;
-    cell.innerHTML=`<div style="font-size:.85rem;font-weight:600;color:${isWin?'#4ade80':'var(--text)'};">${z}</div><div style="font-size:.78rem;font-weight:600;color:${v>0?'#60a5fa':'#6b6f78'};margin-top:2px;">${v||''}</div>`;
-    grid.appendChild(cell);
+  // 每肖号码投注总额(含平特/尾数摊分), 表格展示
+  var zodTotal = {};
+  ALL_ZODIACS.forEach(function(z){
+    var t = 0;
+    ZODIAC_MAP[z].forEach(function(n){ t += (numberBets[n]||0); });
+    zodTotal[z] = t;
   });
+  var grand = 0;
+  ALL_ZODIACS.forEach(function(z){ grand += zodTotal[z]; });
+  var h = '<table class="tbl"><thead><tr><th>生肖</th><th class="td-r">投注</th><th class="td-r">开奖</th></tr></thead><tbody>';
+  ALL_ZODIACS.forEach(function(z){
+    var hit = winFlat && winFlat.indexOf(z) >= 0;
+    h += '<tr' + (hit ? ' class="win-row"' : '') + '><td>' + z + '</td>' +
+      '<td class="td-r fmt-num">' + fmtNum(zodTotal[z]) + '</td>' +
+      '<td class="td-r">' + (hit ? '<span class="win-cell">命中</span>' : '') + '</td></tr>';
+  });
+  h += '<tr><td style="font-weight:700;">合计</td><td class="td-r fmt-num" style="font-weight:700;">' + fmtNum(grand) + '</td><td></td></tr></tbody></table>';
+  grid.innerHTML = h;
 }
 
 function getComboOdds(zodiacs){
@@ -2470,10 +2834,10 @@ function renderComboStats(winNums){
       }
       var odds = getComboOdds(a.zodiacs);
       var risk = a.totalBet * odds;
-      var hitColor = allHit ? '#4ade80' : 'var(--text-muted)';
+      var hitColor = allHit ? '#16a34a' : 'var(--text-muted)';
       h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--card-border);">';
-      h += '<span>'+a.zodiacs.map(function(z){ return '<span style="color:#60a5fa;">'+z+'</span>'; }).join('')+(a.isHK?' <span style="color:#ef4444;font-size:.6rem;">HK</span>':'')+'</span>';
-      h += '<span style="text-align:right;">投'+a.totalBet+' <span style="color:#fbbf24;">赔'+odds+'</span> <span style="color:#ef4444;">险'+risk+'</span> <span style="color:'+hitColor+';">'+(winNums&&winNums.length?(allHit?'全中':'未中'):'')+'</span></span>';
+      h += '<span>'+a.zodiacs.map(function(z){ return z; }).join('')+(a.isHK?' <span style="font-size:.6rem;color:var(--text-muted);">HK</span>':'')+'</span>';
+      h += '<span style="text-align:right;">投'+a.totalBet+' 赔'+odds+' 险'+risk+' <span style="color:'+hitColor+';">'+(winNums&&winNums.length?(allHit?'全中':'未中'):'')+'</span></span>';
       h += '</div>';
     });
     h += '<div style="text-align:right;color:var(--text-heading);font-weight:600;padding-top:4px;">合计: '+grandTotal+' (组数:'+Object.keys(agg).length+')</div>';
@@ -2496,8 +2860,8 @@ function renderN3Stats(winNums, teMa){
     grandTotal += b.count * b.perUnit;
     html += '<div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:8px;margin-bottom:8px;">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
-    html += '<span style="color:#60a5fa;font-weight:600;">'+b.numbers.join('.')+'</span>';
-    html += '<span style="color:var(--text-secondary);">'+b.count+'组 × '+b.perUnit+' = <span style="color:#fbbf24;">投'+(b.count*b.perUnit)+'</span></span>';
+    html += '<span style="font-family:Consolas,monospace;font-weight:600;">'+b.numbers.join('.')+'</span>';
+    html += '<span style="color:var(--text-secondary);">'+b.count+'组 × '+b.perUnit+' = <span >投'+(b.count*b.perUnit)+'</span></span>';
     html += '</div>';
     var hitGroups = 0;
     var showAllCombos = b.count <= COMBO_EXPAND_MAX;
@@ -2508,7 +2872,7 @@ function renderN3Stats(winNums, teMa){
         combos.forEach(combo => {
           var allHit = combo.every(n => regNums.includes(n));
           if(allHit) hitGroups++;
-          html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#166534;color:#4ade80;border:1px solid #22c55e;':'background:var(--card-border);color:var(--text-muted);border:1px solid var(--input-border);')+'">'+combo.join('.')+'</span>';
+          html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#16a34a;color:#fff;border:1px solid #16a34a;':'background:var(--card-border);color:var(--text-muted);border:1px solid var(--input-border);')+'">'+combo.join('.')+'</span>';
         });
         html += '</div>';
       } else {
@@ -2517,7 +2881,7 @@ function renderN3Stats(winNums, teMa){
         html += '<div style="color:var(--text-muted);font-size:.68rem;">'+b.numbers.length+'个号×三中三 = '+b.count+'组 (太多，不展开显示)</div>';
       }
       if(hitGroups > 0){
-        html += '<div style="color:#4ade80;font-weight:600;margin-top:4px;">中'+hitGroups+'组 → 派彩 '+hitGroups+'×'+b.perUnit+'×600 = <span style="color:#fbbf24;">'+(hitGroups*b.perUnit*600)+'</span></div>';
+        html += '<div style="color:#16a34a;font-weight:600;margin-top:4px;">中'+hitGroups+'组 → 派彩 '+hitGroups+'×'+b.perUnit+'×600 = <span >'+(hitGroups*b.perUnit*600)+'</span></div>';
       }
     } else {
       html += '<div style="color:var(--text-muted);font-size:.68rem;">'+b.count+'组 | 等待开奖</div>';
@@ -2539,8 +2903,8 @@ function renderN2Stats(winNums, teMa){
     grandTotal += b.count * b.perUnit;
     html += '<div style="background:var(--surface);border:1px solid var(--input-border);border-radius:6px;padding:8px;margin-bottom:8px;">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
-    html += '<span style="color:#60a5fa;font-weight:600;">'+b.numbers.join('.')+'</span>';
-    html += '<span style="color:var(--text-secondary);">'+b.count+'组 × '+b.perUnit+' = <span style="color:#fbbf24;">投'+(b.count*b.perUnit)+'</span></span>';
+    html += '<span style="font-family:Consolas,monospace;font-weight:600;">'+b.numbers.join('.')+'</span>';
+    html += '<span style="color:var(--text-secondary);">'+b.count+'组 × '+b.perUnit+' = <span >投'+(b.count*b.perUnit)+'</span></span>';
     html += '</div>';
     var hitGroups = 0;
     var showAllCombos = b.count <= COMBO_EXPAND_MAX;
@@ -2551,7 +2915,7 @@ function renderN2Stats(winNums, teMa){
         combos.forEach(combo => {
           var allHit = combo.every(n => regNums.includes(n));
           if(allHit) hitGroups++;
-          html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#166534;color:#4ade80;border:1px solid #22c55e;':'background:var(--card-border);color:var(--text-muted);border:1px solid var(--input-border);')+'">'+combo.join('.')+'</span>';
+          html += '<span style="padding:2px 6px;border-radius:3px;font-size:.68rem;'+(allHit?'background:#16a34a;color:#fff;border:1px solid #16a34a;':'background:var(--card-border);color:var(--text-muted);border:1px solid var(--input-border);')+'">'+combo.join('.')+'</span>';
         });
         html += '</div>';
       } else {
@@ -2560,7 +2924,7 @@ function renderN2Stats(winNums, teMa){
         html += '<div style="color:var(--text-muted);font-size:.68rem;">'+b.numbers.length+'个号×二中二 = '+b.count+'组 (太多，不展开显示)</div>';
       }
       if(hitGroups > 0){
-        html += '<div style="color:#4ade80;font-weight:600;margin-top:4px;">中'+hitGroups+'组 → 派彩 '+hitGroups+'×'+b.perUnit+'×60 = <span style="color:#fbbf24;">'+(hitGroups*b.perUnit*60)+'</span></div>';
+        html += '<div style="color:#16a34a;font-weight:600;margin-top:4px;">中'+hitGroups+'组 → 派彩 '+hitGroups+'×'+b.perUnit+'×60 = <span >'+(hitGroups*b.perUnit*60)+'</span></div>';
       }
     } else {
       html += '<div style="color:var(--text-muted);font-size:.68rem;">'+b.count+'组 | 等待开奖</div>';
@@ -2645,16 +3009,90 @@ function renderMsgSummary(){
   var grandTotal = 0;
   tbody.innerHTML = messageSummary.map(function(m){
     grandTotal += m.totalBet;
-    return '<tr>' +
+    var hasWin = m.winNote;
+    return '<tr' + (hasWin ? ' class="win-row"' : '') + '>' +
       '<td class="td-r" style="color:var(--text-muted);">' + m.index + '</td>' +
-      '<td style="font-size:.75rem;word-break:break-all;" title="' + esc(m.fullText) + '">' + esc(m.text) + '</td>' +
-      '<td class="td-r" style="color:#60a5fa;font-weight:600;">' + m.totalBet + '</td>' +
-      '<td style="font-size:.7rem;color:#22c55e;">' + (m.winNote || '') + '</td>' +
+      '<td class="msg-cell" title="' + esc(m.fullText) + '">' + renderHitMarks(m) + '</td>' +
+      '<td class="td-r fmt-num" style="font-weight:600;">' + fmtNum(m.totalBet) + '</td>' +
+      '<td class="td-r fmt-num' + (hasWin ? ' win-cell' : '') + '">' + (hasWin ? esc(m.winNote) : '') + '</td>' +
       '</tr>';
   }).join('');
 
-  grandEl.textContent = Math.round(grandTotal * 100) / 100;
+  grandEl.textContent = fmtNum(grandTotal);
+  updateSumBar();
   renderBetTypeStats();
+}
+
+// 在消息文本中高亮命中的号码/生肖/尾数 (中奖标记)
+function renderHitMarks(m){
+  var t = esc(m.fullText || m.text || '');
+  var sentArr = [], sentMap = {};
+  function addMark(w){
+    if(sentMap[w] === undefined){ sentMap[w] = sentArr.length; sentArr.push(w); }
+  }
+  (m._hitNums||[]).forEach(function(n){
+    addMark(n);
+    if(n.length === 2){
+      var tailW = n[1] + '尾';
+      if(t.indexOf(tailW) >= 0) addMark(tailW);
+    }
+  });
+  (m._hitZods||[]).forEach(function(z){ addMark(z); });
+  (m._hitComboZods||[]).forEach(function(z){ addMark(z); });
+  if(!sentArr.length) return t;
+  var words = sentArr.slice().sort(function(a,b){ return b.length - a.length; });
+  words.forEach(function(w){
+    var re = /^\d{1,2}$/.test(w) ?
+      new RegExp('(?<![0-9])' + w + '(?![0-9])', 'g') :
+      new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    t = t.replace(re, '\u0001' + sentMap[w] + '\u0001');
+  });
+  t = t.replace(/\u0001(\d+)\u0001/g, function(mm, idx){ return '<span class="hit-mark">' + sentArr[parseInt(idx)] + '</span>'; });
+  return t;
+}
+
+// 玩法汇总条: 总收注/号码/平特/连肖/复式/中奖/净额
+function updateSumBar(){
+  var sums = {nums:0, flat:0, combo:0, n2n3:0};
+  [betSummary, hkBetSummary].forEach(function(list){
+    (list||[]).forEach(function(b){
+      if(b.type==='nums' || b.type==='special_zodiac') sums.nums += b.bet;  // 特肖计入号码类
+      else if(b.type==='flat'||b.type==='flat_tail') sums.flat += b.bet;
+      else if(b.type==='combo') sums.combo += b.bet;
+      else if(b.type==='n2'||b.type==='n3') sums.n2n3 += b.bet;
+    });
+  });
+  var winTotal = 0;
+  messageSummary.forEach(function(m){ winTotal += (m._winTotal||0); });
+  var total = sums.nums + sums.flat + sums.combo + sums.n2n3;
+  var sumWin = document.getElementById('sumWin');
+  var sumNet = document.getElementById('sumNet');
+  document.getElementById('sumTotal').textContent = fmtNum(total);
+  document.getElementById('sumNums').textContent = fmtNum(sums.nums);
+  document.getElementById('sumFlat').textContent = fmtNum(sums.flat);
+  document.getElementById('sumCombo').textContent = fmtNum(sums.combo);
+  document.getElementById('sumN2N3').textContent = fmtNum(sums.n2n3);
+  if(sumWin) sumWin.textContent = winTotal > 0 ? fmtNum(winTotal) : '-';
+  if(sumNet) sumNet.textContent = winTotal > 0 ? (total - winTotal >= 0 ? '+' : '') + fmtNum(total - winTotal) : '-';
+}
+
+// 千分位格式化 (保留小数)
+function fmtNum(n){
+  var r = Math.round(n * 100) / 100;
+  return r.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+// 管理面板显示/隐藏 (原Tab按钮入口)
+function toggleAdminPanel(){
+  var el = document.getElementById('tabAdmin');
+  var btn = document.getElementById('btnAdminPanel');
+  if(el.style.display === 'none'){
+    el.style.display = '';
+    if(btn) btn.textContent = '收起管理';
+  } else {
+    el.style.display = 'none';
+    if(btn) btn.textContent = '管理';
+  }
 }
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -2821,8 +3259,8 @@ function handleServerLottery(data){
 }
 
 // 统一入口：先API，后本地文件
-async function fetchLatestResult(){
-  document.getElementById('liveStatus').textContent = '获取中...';
+async function fetchLatestResult(silent){
+  if(!silent) document.getElementById('liveStatus').textContent = '获取中...';
 
   // 优先直接调用API
   var apiResult = await fetchFromApi();
@@ -2859,13 +3297,35 @@ async function fetchLatestResult(){
 }
 
 
+// 开奖窗口判断(客户端本地时间): 21:31:30 ~ 21:35:30
+function isInDrawWindowClient(){
+  var now = new Date();
+  var t = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  return t >= 21 * 3600 + 31 * 60 + 30 && t <= 21 * 3600 + 35 * 60 + 30;
+}
+
+// 窗口调度器: 每30秒纯时间检查(不拉API), 窗口内启动实时轮询, 窗口外停止
+// 页面打开第一时间由 init 各刷新一次, 其余时间不轮询
+function windowScheduler(){
+  if(isInDrawWindowClient()){
+    if(!autoRefreshTimer){
+      fetchLatestResult(true);
+      autoRefreshTimer = setInterval(function(){ fetchLatestResult(true); }, 3000);
+    }
+    if(!hkFetchTimer){
+      fetchHKLatest(true);
+      hkFetchTimer = setInterval(function(){ fetchHKLatest(true); }, 15000);
+    }
+  } else {
+    if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+    if(hkFetchTimer){ clearInterval(hkFetchTimer); hkFetchTimer = null; }
+  }
+}
+
 function startAutoRefresh(){
-  if(autoRefreshTimer) return;
-  fetchLatestResult().then(function(){});
-  autoRefreshTimer = setInterval(async function(){
-    var ok = await fetchLatestResult();
-    if(ok) document.getElementById('liveDot').classList.add('online');
-  }, 10000);
+  if(windowSchedulerTimer) return;
+  windowScheduler();
+  windowSchedulerTimer = setInterval(windowScheduler, 30000);
   var btn = document.getElementById('btnAuto');
   if(btn){
     btn.textContent = '自动刷新中';
@@ -2875,10 +3335,12 @@ function startAutoRefresh(){
   }
 }
 function stopAutoRefresh(){
-  if(autoRefreshTimer){
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = null;
+  if(windowSchedulerTimer){
+    clearInterval(windowSchedulerTimer);
+    windowSchedulerTimer = null;
   }
+  if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  if(hkFetchTimer){ clearInterval(hkFetchTimer); hkFetchTimer = null; }
   var btn = document.getElementById('btnAuto');
   if(btn){
     btn.textContent = '自动刷新';
@@ -2888,7 +3350,7 @@ function stopAutoRefresh(){
   }
 }
 function toggleAutoRefresh(){
-  if(autoRefreshTimer){ stopAutoRefresh(); }
+  if(windowSchedulerTimer){ stopAutoRefresh(); }
   else { startAutoRefresh(); }
 }
 async function manualFetch(){
@@ -3019,23 +3481,9 @@ async function fetchHKLatest(silent){
   if(btn){ btn.disabled = false; btn.textContent = '🔄 获取开奖'; }
 }
 
+// 香港开奖轮询由 windowScheduler 统一管理(仅开奖窗口内每15秒), 页面打开时 init 已刷新一次
 function startHKPolling(){
-  if(hkFetchTimer) return;
-  function check(){
-    var now = new Date();
-    var h = now.getHours();
-    var m = now.getMinutes();
-    // 开奖窗口 21:30-21:45，每15秒轮询一次
-    if(h === 21 && m >= 30 && m <= 45){
-      fetchHKLatest(true);
-    }
-    // 其他时间每30分钟刷新一次，保持数据不过时
-    else if(m % 30 === 0 && !hkResult){
-      fetchHKLatest(true);
-    }
-  }
-  check();
-  hkFetchTimer = setInterval(check, 15000);
+  windowScheduler();
 }
 
 startHKPolling();
@@ -3424,7 +3872,12 @@ function wsReportSettlement(results){
 function saveResultRemote(settlementData){
   var payload = {
     settlement: settlementData.settlement,
-    messageSummary: settlementData.messageSummary,
+    // 剥离 _ 开头临时字段(_winTotal/_hitNums等), 只持久化展示数据
+    messageSummary: (settlementData.messageSummary || []).map(function(m){
+      var copy = {};
+      for (var k in m) { if (k.charAt(0) !== "_") copy[k] = m[k]; }
+      return copy;
+    }),
     winNumbers: settlementData.winNumbers,
     clientInfo: { id: (typeof clientId !== 'undefined' ? clientId : 'unknown'), ip: '' }
   };

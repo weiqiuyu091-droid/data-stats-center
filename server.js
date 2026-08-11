@@ -71,10 +71,10 @@ function broadcastLottery(data) {
   });
 }
 
-// ===== 自适应开奖轮询 =====
-// 21:32-21:35 开奖窗口内高频轮询（300ms），其他时间低频（8秒）
+// ===== 开奖轮询（仅开奖窗口内高频，其余时间静默） =====
+// 21:31:30 ~ 21:35:30 窗口内 300ms 高频轮询并广播；
+// 窗口外完全不拉 API（客户端打开页面时通过 /api/live 主动拉取一次）
 const POLL_FAST = 300;   // 开奖窗口内的轮询间隔(ms)
-const POLL_SLOW = 8000;  // 正常时段的轮询间隔(ms)
 let pollTimer = null;
 let polling = false;     // 防止并发请求堆积
 
@@ -85,6 +85,30 @@ function isInDrawWindow() {
   const start = 21 * 3600 + 31 * 60 + 30;
   const end   = 21 * 3600 + 35 * 60 + 30;
   return totalSec >= start && totalSec <= end;
+}
+
+// 开奖延迟兜底尾段: 21:35:30 ~ 21:40 低频轮询(30秒), 防开奖晚点漏广播
+function isInDrawTail() {
+  const now = new Date();
+  const totalSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  return totalSec >= 21 * 3600 + 35 * 60 + 30 && totalSec <= 21 * 3600 + 40 * 60;
+}
+const POLL_TAIL = 30000;
+
+// 调度器: 窗口内高频, 尾段低频兜底, 其余时间静默等待到次日窗口开始
+function scheduleLotteryPoll() {
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+  if (isInDrawWindow()) {
+    pollLottery();
+  } else if (isInDrawTail()) {
+    pollTimer = setTimeout(pollLottery, POLL_TAIL);
+  } else {
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(21, 31, 30, 0);
+    if (now >= target) target.setDate(target.getDate() + 1);
+    pollTimer = setTimeout(scheduleLotteryPoll, target - now);
+  }
 }
 
 async function pollLottery() {
@@ -104,13 +128,12 @@ async function pollLottery() {
   } catch(e) {}
   polling = false;
 
-  // 动态调整下一次轮询间隔
-  const interval = isInDrawWindow() ? POLL_FAST : POLL_SLOW;
-  pollTimer = setTimeout(pollLottery, interval);
+  // 窗口内继续高频; 窗口结束后由 scheduleLotteryPoll 转入静默等待
+  pollTimer = setTimeout(scheduleLotteryPoll, isInDrawWindow() ? POLL_FAST : 0);
 }
 
-// 启动轮询（初始延迟1秒）
-pollTimer = setTimeout(pollLottery, 1000);
+// 启动调度（初始延迟1秒）
+pollTimer = setTimeout(scheduleLotteryPoll, 1000);
 
 wss.on('connection', function(ws, req) {
   const clientId = 'C' + (++clientIdCounter);
