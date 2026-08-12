@@ -119,8 +119,8 @@ body{font-family:'Microsoft YaHei',sans-serif;background:#0f172a;color:#cbd5e1;m
     <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
       <div class="form-field"><label>账号</label><input id="nu_username" class="inp" placeholder="如: 张三"></div>
       <div class="form-field"><label>密码</label><input id="nu_password" class="inp" placeholder="初始密码"></div>
-      <div class="form-field"><label>租期(天)</label><input id="nu_days" class="inp inp-sm" type="number" placeholder="30"></div>
-      <div class="form-field"><label>到期日期(可选)</label><input id="nu_expires" class="inp" type="date"></div>
+      <div class="form-field"><label>租期(天)，自动算到期</label><input id="nu_days" class="inp inp-sm" type="number" placeholder="30"></div>
+      <div class="form-field"><label>到期日期(填天数自动生成)</label><input id="nu_expires" class="inp" type="date"></div>
       <div class="form-field"><label>备注(可选)</label><input id="nu_note" class="inp" placeholder="备注"></div>
       <button class="btn btn-primary btn-sm" onclick="addUser()">添加客户</button>
     </div>
@@ -375,6 +375,15 @@ function restoreUsers(input){
   };
   reader.readAsText(file);
 }
+
+// 填租期天数 → 自动推演到期日期（YYYY-MM-DD）
+document.getElementById('nu_days').addEventListener('input', function(){
+  var days = parseInt(this.value);
+  var exp = document.getElementById('nu_expires');
+  if(!days || days <= 0){ exp.value = ''; return; }
+  var d = new Date(Date.now() + days * 86400000);
+  exp.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+});
 
 function addUser(){
   var username = document.getElementById('nu_username').value.trim();
