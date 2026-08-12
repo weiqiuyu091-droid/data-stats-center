@@ -273,6 +273,38 @@ module.exports = function createAuth(opts) {
       })) });
     });
 
+    // 备份：导出全部客户数据（含密码哈希，受 ADMIN_PW 保护）
+    // 注意必须注册在 /api/admin/users/:name 之前，否则 'export' 会被当作用户名
+    app.get('/api/admin/users/export', requireAdmin, function(req, res) {
+      const users = store.list();
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename="users-backup-' + stamp + '.json"');
+      res.send(JSON.stringify(users, null, 2));
+    });
+
+    // 恢复：覆盖导入客户数据（安全提醒：会替换当前全部客户）
+    app.post('/api/admin/users/import', requireAdmin, function(req, res) {
+      const data = req.body || {};
+      const users = Array.isArray(data) ? data : (Array.isArray(data.users) ? data.users : null);
+      if (!users) return res.status(400).json({ error: '格式无效：需要客户数组' });
+      let ok = 0;
+      users.forEach(function(u) {
+        if (!u || !u.username || !u.passHash) return;
+        store.upsert({
+          username: u.username,
+          passHash: u.passHash,
+          expiresAt: typeof u.expiresAt === 'number' ? u.expiresAt : 0,
+          createdAt: typeof u.createdAt === 'number' ? u.createdAt : Date.now(),
+          pwVersion: typeof u.pwVersion === 'number' ? u.pwVersion : 1,
+          note: u.note || ''
+        });
+        ok++;
+      });
+      console.log('[租期] 恢复客户数据:', ok, '个');
+      res.json({ ok: true, imported: ok });
+    });
+
     // 新建客户
     app.post('/api/admin/users', requireAdmin, function(req, res) {
       const { username, password, expiresAt, days, note } = req.body || {};

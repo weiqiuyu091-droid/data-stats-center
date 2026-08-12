@@ -110,6 +110,9 @@ body{font-family:'Microsoft YaHei',sans-serif;background:#0f172a;color:#cbd5e1;m
     <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
       <span style="color:#94a3b8;font-size:.85rem;">租期客户管理</span>
       <span style="flex:1;"></span>
+      <button class="btn btn-outline btn-sm" onclick="backupUsers()">备份数据</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('restoreFile').click()">恢复数据</button>
+      <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreUsers(this)">
       <button class="btn btn-outline btn-sm" onclick="loadUsers()">刷新</button>
     </div>
     <!-- 新建客户 -->
@@ -329,6 +332,48 @@ function apiPost(url, body, okMsg, cb){
       else showToast(d.error || '操作失败');
     })
     .catch(function(){ showToast('网络错误'); });
+}
+
+// 备份：下载全部客户数据（含密码哈希，仅管理员可见）
+function backupUsers(){
+  if(!adminPw) return;
+  fetch('/api/admin/users/export?pw=' + encodeURIComponent(adminPw))
+    .then(function(r){ return r.blob(); })
+    .then(function(blob){
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '客户备份-' + new Date().toLocaleDateString('zh-CN') + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      showToast('备份已下载');
+    })
+    .catch(function(){ showToast('备份失败'); });
+}
+
+// 恢复：上传备份文件，覆盖导入
+function restoreUsers(input){
+  var file = input.files && input.files[0];
+  input.value = '';
+  if(!file) return;
+  if(!confirm('恢复将覆盖当前全部客户数据！\n建议先点"备份数据"保存当前客户。\n确定继续？')) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    var data;
+    try { data = JSON.parse(reader.result); } catch(e) { showToast('文件格式无效'); return; }
+    var users = Array.isArray(data) ? data : (data && data.users);
+    if(!users || !users.length){ showToast('文件里没有客户数据'); return; }
+    fetch('/api/admin/users/import', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminPassword: adminPw, users: users }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d.ok){ showToast('已恢复 ' + d.imported + ' 个客户'); loadUsers(); }
+        else showToast(d.error || '恢复失败');
+      })
+      .catch(function(){ showToast('网络错误'); });
+  };
+  reader.readAsText(file);
 }
 
 function addUser(){
