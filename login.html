@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 - 数据统计中心</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:#ecedee; color:#1a1a1a;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background:#14161a; color:#c9cdd4; }
+  }
+  .card {
+    width:min(92vw,360px);
+    background:#fff; border:1px solid #ddd; border-radius:6px;
+    padding:28px 24px;
+  }
+  @media (prefers-color-scheme: dark) {
+    .card { background:#1b1e24; border-color:#2a2e36; }
+  }
+  .logo { font-size:1.05rem; font-weight:700; text-align:center; margin-bottom:4px; }
+  .sub { font-size:.78rem; text-align:center; color:#888; margin-bottom:22px; }
+  label { display:block; font-size:.8rem; margin:12px 0 5px; color:#555; }
+  @media (prefers-color-scheme: dark) { label { color:#9aa1ac; } }
+  input {
+    width:100%; padding:9px 11px; font-size:.92rem;
+    border:1px solid #ccc; border-radius:4px; background:#fafafa; color:inherit; outline:none;
+  }
+  input:focus { border-color:#000; }
+  @media (prefers-color-scheme: dark) { input { background:#14161a; border-color:#3a3f49; } }
+  button {
+    width:100%; margin-top:20px; padding:10px; font-size:.92rem; font-weight:600;
+    background:#000; color:#fff; border:none; border-radius:4px; cursor:pointer;
+  }
+  @media (prefers-color-scheme: dark) { button { background:#c9cdd4; color:#14161a; } }
+  button:disabled { opacity:.5; cursor:wait; }
+  .err { color:#d33; font-size:.8rem; margin-top:12px; min-height:1.2em; text-align:center; }
+  .foot { margin-top:18px; font-size:.72rem; color:#999; text-align:center; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">数据统计中心</div>
+  <div class="sub">请输入您的账号密码登录</div>
+  <form id="loginForm" autocomplete="on">
+    <label for="username">账号</label>
+    <input id="username" name="username" autocomplete="username" placeholder="您的账号" required>
+    <label for="password">密码</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" placeholder="您的密码" required>
+    <button type="submit" id="btn">登 录</button>
+  </form>
+  <div class="err" id="err"></div>
+  <div class="foot">登录即代表您已购买有效租期</div>
+</div>
+<script>
+(function(){
+  var form = document.getElementById('loginForm');
+  var btn = document.getElementById('btn');
+  var err = document.getElementById('err');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var username = document.getElementById('username').value.trim();
+    var password = document.getElementById('password').value;
+    if(!username || !password){ err.textContent = '请输入账号和密码'; return; }
+    btn.disabled = true; btn.textContent = '登录中...';
+    fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ username: username, password: password })
+    }).then(function(resp){
+      return resp.json().then(function(data){ return { status: resp.status, data: data }; });
+    }).then(function(r){
+      if(r.status === 200 && r.data.ok){
+        err.textContent = '';
+        location.href = '/';
+      } else if(r.status === 403 && r.data.error === 'expired'){
+        location.href = '/expired';
+      } else {
+        err.textContent = r.data.message || r.data.error || '登录失败';
+        btn.disabled = false; btn.textContent = '登 录';
+      }
+    }).catch(function(){
+      err.textContent = '网络错误，请稍后重试';
+      btn.disabled = false; btn.textContent = '登 录';
+    });
+  });
+})();
+</script>
+</body>
+</html>

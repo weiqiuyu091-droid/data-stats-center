@@ -4,3 +4,7 @@ node-v24.17.0-win-x64.zip
 dist.zip
 *.log
 .env
+archive/
+backup/
+tests/
+data/

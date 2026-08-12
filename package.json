@@ -12,6 +12,7 @@
     "deploy": "git add . && git commit -m \"update\" && git push"
   },
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "express": "^4.21.0",
     "hkjc-marksix-client": "^0.0.2",
     "jsdom": "^30.0.1",

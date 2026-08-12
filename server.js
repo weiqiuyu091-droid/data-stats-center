@@ -16,6 +16,19 @@ const fs = require('fs');
 let aiBrain = null;
 try { aiBrain = require('./ai_brain.js'); console.log('[AI] 大脑模块已加载'); } catch(e) { console.log('[AI] 大脑模块未加载:', e.message); }
 
+// ===== 租期管控（可选启用：AUTH_ENABLED=1） =====
+// 未启用时 auth=null，所有路由行为与原来完全一致
+const AUTH_ENABLED = process.env.AUTH_ENABLED === '1';
+let auth = null;
+if (AUTH_ENABLED) {
+  try {
+    auth = require('./auth.js')();
+    console.log('[租期] 租期管控已启用');
+  } catch (e) {
+    console.error('[租期] auth 模块初始化失败:', e.message);
+  }
+}
+
 const app = express();
 const server = http.createServer(app);
 
@@ -136,6 +149,8 @@ async function pollLottery() {
 pollTimer = setTimeout(scheduleLotteryPoll, 1000);
 
 wss.on('connection', function(ws, req) {
+  // 租期管控：连接不拦截（管理后台 admin_auth 与客户页面 register 在消息层分别校验）
+  ws._reqHeaders = req.headers || {};
   const clientId = 'C' + (++clientIdCounter);
   const ip = req.socket.remoteAddress || 'unknown';
   ws._clientId = clientId;
@@ -195,6 +210,13 @@ function handleMessage(ws, msg) {
 
   switch(msg.type) {
     case 'register':
+      // 租期管控：客户页面 WS 需登录且未到期（防绕过页面直连 WS 接收开奖推送）
+      // 管理后台走 admin_auth（ADMIN_PW 认证），不受此校验
+      if (auth) {
+        const wu = auth.wsAuth({ headers: ws._reqHeaders || {} });
+        if (!wu) { ws.close(1008, 'unauthorized'); return; }
+        if (auth.isExpired(wu)) { ws.close(1008, 'expired'); return; }
+      }
       info.userAgent = msg.userAgent || '';
       ws.send(JSON.stringify({ type: 'registered', clientId: info.id }));
       // 发送当前缓存的开奖数据
@@ -292,7 +314,32 @@ app.use(function(req, res, next) {
 
 app.use(express.json());
 
-app.get('/', function(req, res) {
+// ===== 租期管控路由（AUTH_ENABLED=1 时生效） =====
+// 公开页与登录 API 必须放在鉴权中间件之前注册
+if (auth) {
+  app.get('/login', function(req, res) { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(__dirname, 'login.html')); });
+  app.get('/expired', function(req, res) { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(__dirname, 'expired.html')); });
+  app.post('/api/login', auth.loginHandler);
+  app.post('/api/logout', auth.logoutHandler);
+  app.get('/api/me', auth.meHandler);
+
+  // 客户管理 API（受 ADMIN_PW 保护）
+  auth.installAdminApi(app);
+
+  // 静态页鉴权（未登录→/login，到期→/expired）
+  // 注: /admin 是运营后台，走 ADMIN_PW 密码认证，不受客户租期管控（否则管理员无客户账号时无法进入后台建账号）
+  app.use(['/parser.js'], auth.requirePageAuth);
+
+  // 业务 API 鉴权（未登录→401，到期→403）——防止 F12 绕过前端直接调接口
+  app.use(['/api/live', '/api/hk-latest', '/api/hk-jc', '/api/save-result', '/api/ai/analyze', '/api/export'], auth.requireApiAuth);
+
+  // 定时批量检测过期用户（默认每小时，启动先跑一次）
+  auth.startExpiryChecker();
+
+  console.log('[租期] 路由已挂载: /login /expired /api/login /api/logout /api/me /api/admin/users');
+}
+
+app.get('/', auth ? auth.requirePageAuth : function(req, res, next) { next(); }, function(req, res) {
   res.set('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'fsaf.html'));
 });

@@ -28,6 +28,11 @@ body{font-family:'Microsoft YaHei',sans-serif;background:#0f172a;color:#cbd5e1;m
 .btn-outline{background:transparent;border:1px solid #475569;color:#94a3b8}
 .btn-outline:hover{border-color:#64748b;color:#e2e8f0}
 .btn-sm{padding:4px 10px;font-size:.7rem}
+.inp{padding:8px 10px;background:#0f172a;border:1px solid #334155;border-radius:4px;color:#e2e8f0;font-size:.8rem;outline:none;width:130px;box-sizing:border-box}
+.inp:focus{border-color:#f59e0b}
+.inp-sm{width:84px}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-field label{font-size:.68rem;color:#64748b}
 
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
 .stat-card{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:14px;text-align:center}
@@ -99,6 +104,25 @@ body{font-family:'Microsoft YaHei',sans-serif;background:#0f172a;color:#cbd5e1;m
     <button class="btn btn-outline btn-sm" onclick="broadcastCmd('analyze')">全部触发分析</button>
   </div>
   <div id="clientList"></div>
+
+  <!-- 租期客户管理 -->
+  <div style="margin-top:24px;border-top:1px solid #334155;padding-top:16px;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+      <span style="color:#94a3b8;font-size:.85rem;">租期客户管理</span>
+      <span style="flex:1;"></span>
+      <button class="btn btn-outline btn-sm" onclick="loadUsers()">刷新</button>
+    </div>
+    <!-- 新建客户 -->
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="form-field"><label>账号</label><input id="nu_username" class="inp" placeholder="如: 张三"></div>
+      <div class="form-field"><label>密码</label><input id="nu_password" class="inp" placeholder="初始密码"></div>
+      <div class="form-field"><label>租期(天)</label><input id="nu_days" class="inp inp-sm" type="number" placeholder="30"></div>
+      <div class="form-field"><label>到期日期(可选)</label><input id="nu_expires" class="inp" type="date"></div>
+      <div class="form-field"><label>备注(可选)</label><input id="nu_note" class="inp" placeholder="备注"></div>
+      <button class="btn btn-primary btn-sm" onclick="addUser()">添加客户</button>
+    </div>
+    <div id="userList"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -107,6 +131,7 @@ body{font-family:'Microsoft YaHei',sans-serif;background:#0f172a;color:#cbd5e1;m
 var ws = null;
 var authed = false;
 var clients = [];
+var adminPw = ''; // 管理密码（登录后用于租期客户管理 API）
 
 function doLogin(){
   var pw = document.getElementById('pwInput').value;
@@ -116,6 +141,7 @@ function doLogin(){
 
 function doLogout(){
   authed = false;
+  adminPw = '';
   if(ws){ ws.close(); ws = null; }
   document.getElementById('loginArea').style.display = '';
   document.getElementById('mainArea').style.display = 'none';
@@ -126,6 +152,7 @@ function doLogout(){
 }
 
 function connectWs(pw){
+  adminPw = pw;
   if(ws){ try{ws.close()}catch(e){} }
   var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   var url = proto + '//' + location.host;
@@ -167,6 +194,7 @@ function handleMsg(msg){
       document.getElementById('btnLogout').style.display = '';
       clients = msg.clients || [];
       renderAll();
+      loadUsers();
       break;
     case 'admin_auth_failed':
       document.getElementById('loginErr').style.display = '';
@@ -247,6 +275,104 @@ function sendCmd(cid, cmd, params){
 function broadcastCmd(cmd, params){
   var regularClients = clients.filter(function(c){ return !c.isAdmin && c.online; });
   regularClients.forEach(function(c){ sendCmd(c.id, cmd, params); });
+}
+
+// ===== 租期客户管理 =====
+function loadUsers(){
+  var listEl = document.getElementById('userList');
+  if(!adminPw) return;
+  listEl.innerHTML = '<div style="text-align:center;color:#475569;padding:30px;">加载中...</div>';
+  fetch('/api/admin/users?pw=' + encodeURIComponent(adminPw))
+    .then(function(r){ return r.json().catch(function(){ return { error: 'HTTP ' + r.status }; }); })
+    .then(function(data){
+      if(data.error){ listEl.innerHTML = '<div style="color:#ef4444;font-size:.8rem;padding:20px;">' + esc(data.error) + '</div>'; return; }
+      var users = data.users || [];
+      if(users.length === 0){
+        listEl.innerHTML = '<div style="text-align:center;color:#475569;padding:30px;">暂无客户，用上方表单添加第一个客户</div>';
+        return;
+      }
+      listEl.innerHTML = users.map(function(u){
+        var badge, expText;
+        if(u.expiresAt === 0){ badge = '<span class="client-status" style="background:#064e3b;color:#34d399;">永久</span>'; expText = '永久'; }
+        else if(u.expired){
+          badge = '<span class="client-status" style="background:#450a0a;color:#fca5a5;">已过期</span>';
+          expText = new Date(u.expiresAt).toLocaleString('zh-CN',{hour12:false});
+        } else {
+          badge = '<span class="client-status" style="background:#166534;color:#4ade80;">正常</span>';
+          expText = new Date(u.expiresAt).toLocaleString('zh-CN',{hour12:false}) + '（剩' + u.daysLeft + '天）';
+        }
+        var html = '<div class="client-card">';
+        html += '<div class="client-header"><span class="client-id">' + esc(u.username) + '</span>' + badge + '</div>';
+        html += '<div class="client-info">';
+        html += '<div>到期: <span>' + expText + '</span></div>';
+        html += '<div>创建: <span>' + new Date(u.createdAt).toLocaleString('zh-CN',{hour12:false}) + '</span></div>';
+        if(u.note) html += '<div>备注: <span>' + esc(u.note) + '</span></div>';
+        html += '</div>';
+        html += '<div class="client-actions">';
+        html += '<button class="btn btn-outline btn-sm" onclick="renewUser(\'' + esc(u.username) + '\')">+30天</button>';
+        html += '<button class="btn btn-outline btn-sm" onclick="setExpiry(\'' + esc(u.username) + '\')">改到期</button>';
+        html += '<button class="btn btn-outline btn-sm" onclick="changePwd(\'' + esc(u.username) + '\')">改密码</button>';
+        html += '<button class="btn btn-danger btn-sm" onclick="delUser(\'' + esc(u.username) + '\')">删除</button>';
+        html += '</div></div>';
+        return html;
+      }).join('');
+    })
+    .catch(function(){ listEl.innerHTML = '<div style="color:#ef4444;font-size:.8rem;padding:20px;">加载失败</div>'; });
+}
+
+function apiPost(url, body, okMsg, cb){
+  fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ adminPassword: adminPw }, body)) })
+    .then(function(r){ return r.json().catch(function(){ return { error: 'HTTP ' + r.status }; }); })
+    .then(function(d){
+      if(d.ok){ if(okMsg) showToast(okMsg); if(cb) cb(); }
+      else showToast(d.error || '操作失败');
+    })
+    .catch(function(){ showToast('网络错误'); });
+}
+
+function addUser(){
+  var username = document.getElementById('nu_username').value.trim();
+  var password = document.getElementById('nu_password').value.trim();
+  if(!username || !password){ showToast('请填写账号和密码'); return; }
+  var days = parseInt(document.getElementById('nu_days').value) || 0;
+  var expires = document.getElementById('nu_expires').value;
+  var note = document.getElementById('nu_note').value.trim();
+  var body = { username: username, password: password, note: note };
+  if(expires){ body.expiresAt = expires + 'T23:59:59'; }
+  else if(days > 0){ body.days = days; }
+  apiPost('/api/admin/users', body, '客户已添加', function(){
+    document.getElementById('nu_username').value = '';
+    document.getElementById('nu_password').value = '';
+    document.getElementById('nu_days').value = '';
+    document.getElementById('nu_expires').value = '';
+    document.getElementById('nu_note').value = '';
+    loadUsers();
+  });
+}
+
+function renewUser(name){ apiPost('/api/admin/users/' + encodeURIComponent(name), { days: 30 }, '已续费30天', loadUsers); }
+
+function setExpiry(name){
+  var v = prompt('输入到期日期（如 2026-12-31；留空或输入0=永久）:', '');
+  if(v === null) return;
+  var body = (v.trim() === '' || v.trim() === '0') ? { days: 0 } : { expiresAt: v.trim() + 'T23:59:59' };
+  apiPost('/api/admin/users/' + encodeURIComponent(name), body, '到期时间已更新', loadUsers);
+}
+
+function changePwd(name){
+  var v = prompt('输入新密码:', '');
+  if(v === null || v.trim() === '') return;
+  apiPost('/api/admin/users/' + encodeURIComponent(name), { password: v.trim() }, '密码已修改', loadUsers);
+}
+
+function delUser(name){
+  if(!confirm('确定删除客户 ' + name + '？删除后该账号无法登录')) return;
+  fetch('/api/admin/users/' + encodeURIComponent(name), { method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ adminPassword: adminPw }) })
+    .then(function(r){ return r.json().catch(function(){ return { error: 'HTTP ' + r.status }; }); })
+    .then(function(d){ if(d.ok){ showToast('已删除'); loadUsers(); } else showToast(d.error || '删除失败'); })
+    .catch(function(){ showToast('网络错误'); });
 }
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

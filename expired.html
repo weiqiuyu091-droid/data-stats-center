@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>租期已到期 - 数据统计中心</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:#ecedee; color:#1a1a1a;
+  }
+  @media (prefers-color-scheme: dark) { body { background:#14161a; color:#c9cdd4; } }
+  .card {
+    width:min(92vw,380px);
+    background:#fff; border:1px solid #ddd; border-radius:6px;
+    padding:32px 26px; text-align:center;
+  }
+  @media (prefers-color-scheme: dark) { .card { background:#1b1e24; border-color:#2a2e36; } }
+  .icon { font-size:2.4rem; margin-bottom:10px; }
+  h1 { font-size:1.1rem; margin-bottom:8px; }
+  p { font-size:.85rem; color:#666; line-height:1.7; }
+  @media (prefers-color-scheme: dark) { p { color:#9aa1ac; } }
+  .exp { display:inline-block; margin-top:8px; font-size:.78rem; color:#d33;
+        background:rgba(221,51,51,.08); border:1px solid rgba(221,51,51,.3);
+        padding:3px 10px; border-radius:4px; }
+  button {
+    width:100%; margin-top:20px; padding:10px; font-size:.9rem; font-weight:600;
+    background:#000; color:#fff; border:none; border-radius:4px; cursor:pointer;
+  }
+  @media (prefers-color-scheme: dark) { button { background:#c9cdd4; color:#14161a; } }
+  .tip { margin-top:14px; font-size:.72rem; color:#999; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">⏳</div>
+  <h1>您的租期已到期</h1>
+  <p>核心功能已全部暂停。请微信联系管理员办理续费，<br>续费后点击下方按钮即可立即恢复使用。</p>
+  <div class="exp" id="expInfo"></div>
+  <button id="refreshBtn">续费已完成，刷新状态</button>
+  <div class="tip">续费后无需重新登录，刷新状态即可恢复</div>
+</div>
+<script>
+(function(){
+  var expInfo = document.getElementById('expInfo');
+  var btn = document.getElementById('refreshBtn');
+
+  // 显示到期时间（服务端 /api/me 返回 403 + expiresAt）
+  fetch('/api/me', { credentials: 'same-origin' }).then(function(r){
+    if(r.status === 403) return r.json();
+    return null;
+  }).then(function(data){
+    if(data && data.expiresAt){
+      var d = new Date(data.expiresAt);
+      expInfo.textContent = '原到期时间: ' + d.toLocaleString('zh-CN', { hour12: false });
+    }
+  }).catch(function(){});
+
+  btn.addEventListener('click', function(){
+    btn.disabled = true; btn.textContent = '检查中...';
+    fetch('/api/me', { credentials: 'same-origin' }).then(function(r){
+      if(r.ok){
+        location.href = '/';
+      } else if(r.status === 401){
+        location.href = '/login';
+      } else {
+        btn.disabled = false; btn.textContent = '续费已完成，刷新状态';
+      }
+    }).catch(function(){
+      btn.disabled = false; btn.textContent = '续费已完成，刷新状态';
+    });
+  });
+})();
+</script>
+</body>
+</html>
