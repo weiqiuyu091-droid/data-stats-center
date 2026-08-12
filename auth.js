@@ -87,16 +87,21 @@ module.exports = function createAuth(opts) {
     )`);
     const rowToUser = r => r ? { username: r.username, passHash: r.passHash, expiresAt: r.expiresAt,
       createdAt: r.createdAt, pwVersion: r.pwVersion, note: r.note } : null;
+    // 预编译语句复用，避免每次调用重新 prepare
+    const stmt = {
+      list: db.prepare('SELECT * FROM users'),
+      get: db.prepare('SELECT * FROM users WHERE username = ?'),
+      upsert: db.prepare(`INSERT INTO users (username, passHash, expiresAt, createdAt, pwVersion, note)
+        VALUES (@username, @passHash, @expiresAt, @createdAt, @pwVersion, @note)
+        ON CONFLICT(username) DO UPDATE SET
+          passHash = @passHash, expiresAt = @expiresAt, pwVersion = @pwVersion, note = @note`),
+      remove: db.prepare('DELETE FROM users WHERE username = ?'),
+    };
     return {
-      list() { return db.prepare('SELECT * FROM users').all().map(rowToUser); },
-      get(name) { return rowToUser(db.prepare('SELECT * FROM users WHERE username = ?').get(name)); },
-      upsert(u) {
-        db.prepare(`INSERT INTO users (username, passHash, expiresAt, createdAt, pwVersion, note)
-          VALUES (@username, @passHash, @expiresAt, @createdAt, @pwVersion, @note)
-          ON CONFLICT(username) DO UPDATE SET
-            passHash = @passHash, expiresAt = @expiresAt, pwVersion = @pwVersion, note = @note`).run(u);
-      },
-      remove(name) { db.prepare('DELETE FROM users WHERE username = ?').run(name); },
+      list() { return stmt.list.all().map(rowToUser); },
+      get(name) { return rowToUser(stmt.get.get(name)); },
+      upsert(u) { stmt.upsert.run(u); },
+      remove(name) { stmt.remove.run(name); },
     };
   }
 
@@ -105,8 +110,8 @@ module.exports = function createAuth(opts) {
     store = cfg.store === 'sqlite' ? createSqliteStore() : createJsonStore();
     console.log('[租期] 用户存储: ' + cfg.store + ' @ ' + cfg.dataDir);
   } catch (e) {
-    console.error('[租期] 存储初始化失败:', e.message);
-    process.exit(1);
+    // 抛给 server.js 处理（打印警告后按未启用继续跑，避免静默无锁也不至于崩溃循环）
+    throw new Error('[租期] 存储初始化失败: ' + e.message);
   }
 
   // ================= 密码哈希（scrypt） =================
@@ -153,15 +158,22 @@ module.exports = function createAuth(opts) {
   }
 
   // ================= 登录限流（防爆破） =================
-  const failMap = new Map(); // key=ip:username → {count, resetAt}
-  function checkRate(ip, username) {
-    const key = ip + ':' + username;
+  // 按 IP 维度计数（防换用户名绕过）；定时清理过期条目防内存无限增长
+  const RATE_WINDOW = 10 * 60 * 1000;
+  const RATE_MAX = 5;
+  const failMap = new Map(); // key=ip → {count, resetAt}
+  function checkRate(ip) {
     const now = Date.now();
-    const e = failMap.get(key);
-    if (!e || now > e.resetAt) { failMap.set(key, { count: 1, resetAt: now + 10 * 60 * 1000 }); return true; }
+    const e = failMap.get(ip);
+    if (!e || now > e.resetAt) { failMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW }); return true; }
     e.count++;
-    return e.count <= 5;
+    return e.count <= RATE_MAX;
   }
+  const rateCleanTimer = setInterval(function() {
+    const now = Date.now();
+    failMap.forEach(function(e, key) { if (now > e.resetAt) failMap.delete(key); });
+  }, RATE_WINDOW);
+  if (rateCleanTimer.unref) rateCleanTimer.unref();
 
   // ================= 中间件 =================
   function getTokenFromReq(req) {
@@ -213,16 +225,17 @@ module.exports = function createAuth(opts) {
     if (!username || !password) return res.status(400).json({ error: '请输入账号和密码' });
     const uname = String(username).trim();
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!checkRate(ip, uname)) return res.status(429).json({ error: '尝试次数过多，请10分钟后再试' });
+    if (!checkRate(ip)) return res.status(429).json({ error: '尝试次数过多，请10分钟后再试' });
 
     const user = store.get(uname);
+    // 先验密码再报到期：避免通过错误提示枚举账号是否存在
     if (!user || !verifyPassword(password, user.passHash)) {
       return res.status(403).json({ error: '账号或密码错误' });
     }
     if (isExpired(user)) {
       return res.status(403).json({ error: 'expired', expiresAt: user.expiresAt, message: '账号已到期，请联系管理员续费' });
     }
-    failMap.delete(ip + ':' + uname);
+    failMap.delete(ip);
     setAuthCookie(res, signToken(user));
     res.json({ ok: true, username: user.username, expiresAt: user.expiresAt });
   }
@@ -382,12 +395,8 @@ module.exports = function createAuth(opts) {
     return { run };
   }
 
+  // 只暴露 server.js 实际使用的接口（store/hash 等内部实现不导出）
   return {
-    store,
-    hashPassword,
-    verifyPassword,
-    signToken,
-    verifyToken,
     isExpired,
     requirePageAuth,
     requireApiAuth,

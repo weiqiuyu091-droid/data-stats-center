@@ -393,7 +393,8 @@ function addUser(){
   var expires = document.getElementById('nu_expires').value;
   var note = document.getElementById('nu_note').value.trim();
   var body = { username: username, password: password, note: note };
-  if(expires){ body.expiresAt = expires + 'T23:59:59'; }
+  // 日期转毫秒时间戳（按浏览器本地时区当天23:59:59），避免跨时区差一天
+  if(expires){ body.expiresAt = new Date(expires + 'T23:59:59').getTime(); }
   else if(days > 0){ body.days = days; }
   apiPost('/api/admin/users', body, '客户已添加', function(){
     document.getElementById('nu_username').value = '';
@@ -410,7 +411,7 @@ function renewUser(name){ apiPost('/api/admin/users/' + encodeURIComponent(name)
 function setExpiry(name){
   var v = prompt('输入到期日期（如 2026-12-31；留空或输入0=永久）:', '');
   if(v === null) return;
-  var body = (v.trim() === '' || v.trim() === '0') ? { days: 0 } : { expiresAt: v.trim() + 'T23:59:59' };
+  var body = (v.trim() === '' || v.trim() === '0') ? { days: 0 } : { expiresAt: new Date(v.trim() + 'T23:59:59').getTime() };
   apiPost('/api/admin/users/' + encodeURIComponent(name), body, '到期时间已更新', loadUsers);
 }
 

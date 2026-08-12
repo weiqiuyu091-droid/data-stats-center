@@ -26,6 +26,7 @@ if (AUTH_ENABLED) {
     console.log('[租期] 租期管控已启用');
   } catch (e) {
     console.error('[租期] auth 模块初始化失败:', e.message);
+    console.error('[租期] 警告：租期管控未生效，页面不会加锁！请检查 AUTH_STORE/AUTH_DATA_DIR 配置');
   }
 }
 
@@ -194,13 +195,14 @@ wss.on('connection', function(ws, req) {
     broadcastAdminUpdate();
   });
 
-  // 心跳检测
+  // 心跳检测（每30秒）：同时复查客户租期，页面开着到期后断开长连接
   ws._heartbeatTimer = setInterval(function() {
-    if (ws.readyState === ws.OPEN) {
-      ws.ping();
-    } else {
-      clearInterval(ws._heartbeatTimer);
+    if (ws.readyState !== ws.OPEN) { clearInterval(ws._heartbeatTimer); return; }
+    if (auth && !ws._isAdmin && ws._reqHeaders) {
+      const wu = auth.wsAuth({ headers: ws._reqHeaders });
+      if (!wu || auth.isExpired(wu)) { ws.close(1008, 'expired'); return; }
     }
+    ws.ping();
   }, 30000);
 });
 
