@@ -75,6 +75,8 @@ function norm(s, debug){
     .replace(/候/g,'猴').replace(/㺅/g,'猴')
     .replace(/[，,]/g,' ')
     .replace(/[（(]\s*\d+\s*[码个]?\s*[）)]/g,'')
+    // "2中2"/"3中3"数字形式转中文: "复试2中2【11.48】各组五斤"→"复式二中二…" (必须在【】删除前, 否则"2中2"与后续数字粘连无法识别; 否则被当普通号码投注)
+    .replace(/(^|[^\d])2中2(?![0-9])/g, '$1二中二').replace(/(^|[^\d])3中3(?![0-9])/g, '$1三中三')
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')
     .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })
     .replace(/元/g,'块').replace(/(\d)文/g,'$1块')
@@ -96,6 +98,18 @@ function norm(s, debug){
     .replace(/(平特尾)\s*(\d)尾\s*(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, function(m, pt, d, v, unit){
       var r=[]; for(var i=0;i<=4;i++){ var n=i*10+parseInt(d); if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); }
       return '平特' + r.join(' ') + ' 各' + v + (unit||'');
+    })
+    // 括号包裹的尾列表: "（2-3-4-9）尾" → "2尾3尾4尾9尾" (否则括号挡在数字与尾之间整段丢失)
+    .replace(/[（(]\s*([\d\-—－\s]+)\s*[）)]\s*尾/g, function(m, inner){
+      var ds = inner.split(/[\s\-—－]+/).filter(Boolean);
+      if(!ds.length || ds.some(function(d){ return !/^\d$/.test(d); })) return m;
+      return ds.map(function(d){ return d + '尾'; }).join(' ');
+    })
+    // 空格分隔多尾: "2 5 7 8尾" → "2尾5尾7尾8尾" (否则只有紧贴尾字的数字被展开, 其余被当号码)
+    .replace(/(\d(?:\s+\d)+)\s*尾/g, function(m, digits){
+      var ds = digits.split(/\s+/);
+      if(ds.some(function(d){ return !/^\d$/.test(d); })) return m;
+      return ds.map(function(d){ return d + '尾'; }).join(' ');
     })
     .replace(/(\d(?:[-—－]+\d)+)尾/g, function(m, nums){ return nums.split(/[-—－]+/).map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{2,})尾/g, function(m, digits){ return digits.split('').map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); }).replace(/尾数(\d)尾/g, '$1尾').replace(/(\d)尾/g, function(m, d){ var r=[]; for(var i=0;i<=4;i++){ var n=i*10+parseInt(d); if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     // 红波/蓝波/绿波+单/双组合展开
@@ -133,6 +147,10 @@ function norm(s, debug){
     // "特肖猪狗各号5" → "特肖猪 5 特肖狗 5" (澳特/门特转换后展开)
     .replace(new RegExp(`特肖([${ZODIAC_CHARS}]+)各号(\\d+(?:\\\.\\d+)?)`,'g'), function(m, zs, v){
       return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
+    })
+    // 空格分隔多肖+各肖: "鸡 猪各肖20米" → "特肖鸡 20 特肖猪 20" (连写规则只处理无空格, 空格分隔时只剩最后一肖)
+    .replace(new RegExp(`([${ZODIAC_CHARS}](?:\\s+[${ZODIAC_CHARS}])+)\\s*各肖\\s*各?\\s*(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
+      return zs.split(/\s+/).map(function(z){ return '特肖'+z+' '+v; }).join(' ');
     })
     .replace(new RegExp(`([${ZODIAC_CHARS}]+)各肖各?(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
       return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
@@ -288,6 +306,19 @@ function norm(s, debug){
       var kk = k === '二' ? 2 : k === '三' ? 3 : k === '四' ? 4 : 5;
       if (zsArr.length >= kk) {
         combinations(zsArr, kk).forEach(function(c){ out.push(c.join('') + lx[k] + v + (unit || '')); });
+      }
+    });
+    return out.join('；');
+  });
+  // 三段以上复式: "猪龙牛羊鼠 复三复四复五 各10" → 枚举三连/四连/五连组合 (上面规则只处理两段, 三段时整条不匹配被当普通号码投注)
+  t = t.replace(new RegExp(`(平特\\s*)?([${ZODIAC_CHARS}]+)\\s*(复[二三四五](?:\\s*复[二三四五])+)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(斤|米|块)?`, 'g'), function(m, flat, zs, lxs, v, unit){
+    var lx = {二:'二连', 三:'三连', 四:'四连', 五:'五连'};
+    var zsArr = zs.split('');
+    var out = [];
+    (lxs.match(/复[二三四五]/g)||[]).forEach(function(seg){
+      var kk = seg[1] === '二' ? 2 : seg[1] === '三' ? 3 : seg[1] === '四' ? 4 : 5;
+      if (zsArr.length >= kk) {
+        combinations(zsArr, kk).forEach(function(c){ out.push(c.join('') + lx[seg[1]] + v + (unit || '')); });
       }
     });
     return out.join('；');

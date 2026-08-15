@@ -1186,7 +1186,10 @@ function norm(s){
     .replace(/[+＋]/g,'').replace(/。/g,'').replace(/^(.+)香港澳门$/g, '澳$1；港$1').replace(/(\d+(?:\.\d+)?\s*(?:斤|米|块|元|文))\s*[，]\s*(?=\d)/g, '$1；')
     .replace(/免/g,'兔').replace(/于一肖/g,'一肖')
     .replace(/候/g,'猴')  // 候→猴 纠错
+    .replace(/[，,]/g,' ')  // 逗号→空格 (与parser.js同步; 否则依赖空格的规则如"多肖+各肖"失效)
     .replace(/[（(]\s*\d+\s*[码个]?\s*[）)]/g,'')  // 过滤括号注释如（24码）
+    // "2中2"/"3中3"数字形式转中文: "复试2中2【11.48】各组五斤"→"复式二中二…" (必须在【】删除前, 否则"2中2"与后续数字粘连无法识别; 否则被当普通号码投注)
+    .replace(/(^|[^\d])2中2(?![0-9])/g, '$1二中二').replace(/(^|[^\d])3中3(?![0-9])/g, '$1三中三')
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')  // 【】→， 展开 （必须在破折号→空格之前）
     .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })  // 每组→各组 归一化
     .replace(/元/g,'块').replace(/(\d)文/g,'$1块')  // 元→块 归一化，文→块
@@ -1203,6 +1206,18 @@ function norm(s){
     .replace(/[嘛呀啊呢吧哦噢哟唉]+/g, '')  // 去掉语气词
     // 平特尾X尾金额: "平特尾0尾500元"→"平特0尾500元" (走processRule平特尾flat_tail逻辑, 一注不乘码数)
     .replace(/(平特尾)\s*(\d)尾\s*(\d+(?:\.\d+)?)\s*(斤|米|块)?/g, '平特$2尾$3$4')
+    // 括号包裹的尾列表: "（2-3-4-9）尾" → "2尾3尾4尾9尾" (否则括号挡在数字与尾之间整段丢失)
+    .replace(/[（(]\s*([\d\-—－\s]+)\s*[）)]\s*尾/g, function(m, inner){
+      var ds = inner.split(/[\s\-—－]+/).filter(Boolean);
+      if(!ds.length || ds.some(function(d){ return !/^\d$/.test(d); })) return m;
+      return ds.map(function(d){ return d + '尾'; }).join(' ');
+    })
+    // 空格分隔多尾: "2 5 7 8尾" → "2尾5尾7尾8尾" (否则只有紧贴尾字的数字被展开, 其余被当号码)
+    .replace(/(\d(?:\s+\d)+)\s*尾/g, function(m, digits){
+      var ds = digits.split(/\s+/);
+      if(ds.some(function(d){ return !/^\d$/.test(d); })) return m;
+      return ds.map(function(d){ return d + '尾'; }).join(' ');
+    })
     // 到 范围展开: 01到12 → 01 02 03 ... 12
     .replace(/(\d(?:[-—－]+\d)+)尾/g, function(m, nums){ return nums.split(/[-—－]+/).map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{2,})尾/g, function(m, digits){ return digits.split('').map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
@@ -1232,7 +1247,11 @@ function norm(s){
       return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
     })
 
-    // "各肖"→平特(flat bet per zodiac): "狗马各肖45" → "平特狗45 平特马45"
+    // "各肖"→特肖(per zodiac): "狗马各肖45" → "特肖狗45 特肖马45"
+    // 空格分隔多肖+各肖: "鸡 猪各肖20米" → "特肖鸡 20 特肖猪 20" (连写规则只处理无空格, 空格分隔时只剩最后一肖)
+    .replace(new RegExp(`([${ZODIAC_CHARS}](?:\\s+[${ZODIAC_CHARS}])+)\\s*各肖\\s*各?\\s*(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
+      return zs.split(/\s+/).map(function(z){ return '特肖'+z+' '+v; }).join(' ');
+    })
     .replace(new RegExp(`([${ZODIAC_CHARS}]+)各肖各?(\\d+(?:\\.\\d+)?)`,'g'), function(m, zs, v){
       return zs.split('').map(function(z){ return '特肖'+z+' '+v; }).join(' ');
     })
@@ -1376,6 +1395,19 @@ function norm(s){
       var kk = k === '二' ? 2 : k === '三' ? 3 : k === '四' ? 4 : 5;
       if (zsArr.length >= kk) {
         combinations(zsArr, kk).forEach(function(c){ out.push(c.join('') + lx[k] + v + (unit || '')); });
+      }
+    });
+    return out.join('；');
+  });
+  // 三段以上复式: "猪龙牛羊鼠 复三复四复五 各10" → 枚举三连/四连/五连组合 (上面规则只处理两段, 三段时整条不匹配被当普通号码投注)
+  t = t.replace(new RegExp(`(平特\\s*)?([${ZODIAC_CHARS}]+)\\s*(复[二三四五](?:\\s*复[二三四五])+)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(斤|米|块)?`, 'g'), function(m, flat, zs, lxs, v, unit){
+    var lx = {二:'二连', 三:'三连', 四:'四连', 五:'五连'};
+    var zsArr = zs.split('');
+    var out = [];
+    (lxs.match(/复[二三四五]/g)||[]).forEach(function(seg){
+      var kk = seg[1] === '二' ? 2 : seg[1] === '三' ? 3 : seg[1] === '四' ? 4 : 5;
+      if (zsArr.length >= kk) {
+        combinations(zsArr, kk).forEach(function(c){ out.push(c.join('') + lx[seg[1]] + v + (unit || '')); });
       }
     });
     return out.join('；');
@@ -2571,9 +2603,11 @@ function calcAll(){
   wsReportSettlement({ totalBet: totalBet, totalPayout: Math.round(totalPayout*100)/100, netProfit: Math.round(netProfit*100)/100, netAfterWater: Math.round((netProfit*(1-waterRate/100))*100)/100, rows: allRows.slice(0, 20) });
 
   // 汇总每条消息的中奖内容到消息投注汇总 (简洁格式: 中30/平300/二连50 + 命中标记信息)
+  // 命中标记按市场分流(_hitNums=澳门/_hitNumsHK=香港), 避免同消息内澳港子行互被对方开奖标记
   messageSummary.forEach(function(m){
     m.winNote = ''; m._winTotal = 0; m._winParts = {};
     m._hitNums = []; m._hitZods = []; m._hitComboZods = [];
+    m._hitNumsHK = []; m._hitZodsHK = []; m._hitComboZodsHK = [];
   });
   var comboWinDetails = [];
   allRows.forEach(function(r){
@@ -2589,15 +2623,18 @@ function calcAll(){
         else if(r.type==='combo') prefix = r.comboType==='quintuple'?'五连':r.comboType==='quadruple'?'四连':r.comboType==='triple'?'三连':'二连';
         m._winParts[prefix] = (m._winParts[prefix]||0) + r.hitBet;
         m._winTotal += r.hitBet;
-        // 命中标记信息 (渲染时在消息文本中高亮)
+        // 命中标记信息 (渲染时在消息文本中高亮) — 按市场分流, 澳/港各标各的
         if((r.type==='nums' || r.type==='flat_tail') && r.hitNums){
-          r.hitNums.forEach(function(n){ if(m._hitNums.indexOf(n) < 0) m._hitNums.push(n); });
+          var hitNumArr = r.hk ? m._hitNumsHK : m._hitNums;
+          r.hitNums.forEach(function(n){ if(hitNumArr.indexOf(n) < 0) hitNumArr.push(n); });
         }
         if(r.type==='flat' && r.hitZs){
-          r.hitZs.forEach(function(z){ if(m._hitZods.indexOf(z) < 0) m._hitZods.push(z); });
+          var hitZodArr = r.hk ? m._hitZodsHK : m._hitZods;
+          r.hitZs.forEach(function(z){ if(hitZodArr.indexOf(z) < 0) hitZodArr.push(z); });
         }
         if(r.type==='combo' && r.comboZodiacs){
-          r.comboZodiacs.split('').forEach(function(z){ if(m._hitComboZods.indexOf(z) < 0) m._hitComboZods.push(z); });
+          var hitComboArr = r.hk ? m._hitComboZodsHK : m._hitComboZods;
+          r.comboZodiacs.split('').forEach(function(z){ if(hitComboArr.indexOf(z) < 0) hitComboArr.push(z); });
         }
       }
     }
@@ -3028,31 +3065,43 @@ function renderMsgSummary(){
 }
 
 // 在消息文本中高亮命中的号码/生肖/尾数 (中奖标记)
+// 同一消息可含澳/港两市场子行, 命中标记按市场分流(_hitNums=澳门/_hitNumsHK=香港),
+// 渲染时逐子行判断市场归属(继承式, 与解析时curHKMode逻辑一致), 只高亮本市场命中词, 澳港互不串标
 function renderHitMarks(m){
   var t = esc(m.fullText || m.text || '');
-  var sentArr = [], sentMap = {};
-  function addMark(w){
-    if(sentMap[w] === undefined){ sentMap[w] = sentArr.length; sentArr.push(w); }
-  }
-  (m._hitNums||[]).forEach(function(n){
-    addMark(n);
-    if(n.length === 2){
-      var tailW = n[1] + '尾';
-      if(t.indexOf(tailW) >= 0) addMark(tailW);
+  var lines = t.split('；');
+  var hkMode = false;
+  var out = lines.map(function(line){
+    var slNoSender = line.replace(/^[^\d]{1,15}?[：:]\s*/, '').trim();
+    if (/^(?:香港|港|香)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /香港/.test(slNoSender) || /(?:[\s\d]|^)(?:港|香)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender) || /^(?:香港|港|香)[：:\s]*$/.test(line)) hkMode = true;
+    else if (/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /澳门|澳門/.test(slNoSender) || /(?:[\s\d]|^)(?:澳特|利来|门特|新澳|新奥)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) hkMode = false;
+    var nums = hkMode ? (m._hitNumsHK||[]) : (m._hitNums||[]);
+    var zods = hkMode ? (m._hitZodsHK||[]) : (m._hitZods||[]);
+    var combos = hkMode ? (m._hitComboZodsHK||[]) : (m._hitComboZods||[]);
+    var sentArr = [], sentMap = {};
+    function addMark(w){
+      if(sentMap[w] === undefined){ sentMap[w] = sentArr.length; sentArr.push(w); }
     }
+    nums.forEach(function(n){
+      addMark(n);
+      if(n.length === 2){
+        var tailW = n[1] + '尾';
+        if(line.indexOf(tailW) >= 0) addMark(tailW);
+      }
+    });
+    zods.forEach(function(z){ addMark(z); });
+    combos.forEach(function(z){ addMark(z); });
+    if(!sentArr.length) return line;
+    var words = sentArr.slice().sort(function(a,b){ return b.length - a.length; });
+    words.forEach(function(w){
+      var re = /^\d{1,2}$/.test(w) ?
+        new RegExp('(?<![0-9])' + w + '(?![0-9])', 'g') :
+        new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      line = line.replace(re, '' + sentMap[w] + '');
+    });
+    return line.replace(/(\d+)/g, function(mm, idx){ return '<span class="hit-mark">' + sentArr[parseInt(idx)] + '</span>'; });
   });
-  (m._hitZods||[]).forEach(function(z){ addMark(z); });
-  (m._hitComboZods||[]).forEach(function(z){ addMark(z); });
-  if(!sentArr.length) return t;
-  var words = sentArr.slice().sort(function(a,b){ return b.length - a.length; });
-  words.forEach(function(w){
-    var re = /^\d{1,2}$/.test(w) ?
-      new RegExp('(?<![0-9])' + w + '(?![0-9])', 'g') :
-      new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    t = t.replace(re, '\u0001' + sentMap[w] + '\u0001');
-  });
-  t = t.replace(/\u0001(\d+)\u0001/g, function(mm, idx){ return '<span class="hit-mark">' + sentArr[parseInt(idx)] + '</span>'; });
-  return t;
+  return out.join('；');
 }
 
 // 玩法汇总条: 总收注/号码/平特/连肖/复式/中奖/净额
