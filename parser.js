@@ -8,6 +8,7 @@ const ZODIAC_MAP = {
 };
 const ALL_ZODIACS = ["马","蛇","龙","兔","虎","牛","鼠","猪","狗","鸡","猴","羊"];
 const ZODIAC_CHARS = ALL_ZODIACS.join('');
+const LX = {二:'二连', 三:'三连', 四:'四连', 五:'五连'};
 const WAVE_RED = ["01","02","07","08","12","13","18","19","23","24","29","30","34","35","40","45","46"];
 const WAVE_BLUE = ["03","04","09","10","14","15","20","25","26","31","36","37","41","42","47","48"];
 const WAVE_GREEN = ["05","06","11","16","17","21","22","27","28","32","33","38","39","43","44","49"];
@@ -299,7 +300,7 @@ function norm(s, debug){
   t = t.replace(/平特肖/g, '平特');
   // 复式缩写展开: "猴虎狗蛇复三复四各30" → 枚举组合 "猴虎狗三连30；猴虎蛇三连30；..."
   t = t.replace(new RegExp(`(平特\\s*)?([${ZODIAC_CHARS}]+)\\s*复([二三四五])复([二三四五])\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(斤|米|块)?`, 'g'), function(m, flat, zs, k1, k2, v, unit){
-    var lx = {二:'二连', 三:'三连', 四:'四连', 五:'五连'};
+    var lx = LX;
     var zsArr = zs.split('');
     var out = [];
     [k1, k2].forEach(function(k){
@@ -312,7 +313,7 @@ function norm(s, debug){
   });
   // 三段以上复式: "猪龙牛羊鼠 复三复四复五 各10" → 枚举三连/四连/五连组合 (上面规则只处理两段, 三段时整条不匹配被当普通号码投注)
   t = t.replace(new RegExp(`(平特\\s*)?([${ZODIAC_CHARS}]+)\\s*(复[二三四五](?:\\s*复[二三四五])+)\\s*各?\\s*(\\d+(?:\\.\\d+)?)\\s*(斤|米|块)?`, 'g'), function(m, flat, zs, lxs, v, unit){
-    var lx = {二:'二连', 三:'三连', 四:'四连', 五:'五连'};
+    var lx = LX;
     var zsArr = zs.split('');
     var out = [];
     (lxs.match(/复[二三四五]/g)||[]).forEach(function(seg){
@@ -325,7 +326,7 @@ function norm(s, debug){
   });
   // 复式在前格式: "复式三连猴虎狗蛇各30" → 枚举组合（AI canonical 输出形式）
   t = t.replace(new RegExp(`复式([二三四五])连([${ZODIAC_CHARS}]+)\\s*各?(\\d+(?:\\.\\d+)?)\\s*(斤|米|块)?`, 'g'), function(m, k, zs, v, unit){
-    var lx = {二:'二连', 三:'三连', 四:'四连', 五:'五连'};
+    var lx = LX;
     var kk = k === '二' ? 2 : k === '三' ? 3 : k === '四' ? 4 : 5;
     var zsArr = zs.split('');
     if (zsArr.length < kk) return m;
@@ -876,7 +877,7 @@ function analyze(inputText){
   for (var _fi = 0; _fi < rawLines.length; _fi++) {
     var _re = new RegExp('复(二|三|四|五)复(二|三|四|五)([' + ZODIAC_CHARS + ']+)各组([\\d一二三四五六七八九十百千万廿卅两百]+(?:\\.[\\d]+)?)', 'g');
     rawLines[_fi] = rawLines[_fi].replace(_re, function(_m, _fa, _fb, _fzs, _fv) {
-      var _map = {二:'二连',三:'三连',四:'四连',五:'五连'};
+      var _map = LX;
       var _nv = cn(_fv) || parseCNNum(_fv) || _fv;
       var _kA = _map[_fa] === '二连' ? 2 : _map[_fa] === '三连' ? 3 : _map[_fa] === '四连' ? 4 : 5;
       var _kB = _map[_fb] === '二连' ? 2 : _map[_fb] === '三连' ? 3 : _map[_fb] === '四连' ? 4 : 5;
@@ -966,7 +967,7 @@ rawLines.forEach(function(rawLine, lineIdx){
     var curHKMode = false;
     // 未识别行收集(防漏算): 子行有实质内容(数字/生肖)但没解析出任何投注 → 记入 failedLines
     function hasBetContent(sl2){
-      var c = sl2.replace(/^(?:香港|港|香|澳|澳门|澳特|利来|门|门特|新澳|新奥|新)\s*[:：]?\s*/,'').replace(/[：:。，,\s]+$/,'').trim();
+      var c = sl2.replace(/^(?:香港|新澳门|新奥|新澳|澳门|澳門|澳特|利来|门特|澳|港|香|门|新)\s*[:：]?\s*/,'').replace(/[：:。，,\s]+$/,'').trim();
       return /[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(c);
     }
     var failedLines = [];
