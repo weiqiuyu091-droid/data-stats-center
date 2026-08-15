@@ -964,21 +964,30 @@ rawLines.forEach(function(rawLine, lineIdx){
     }
     } // end if (!preprocessedCombo)
     var curHKMode = false;
+    // 未识别行收集(防漏算): 子行有实质内容(数字/生肖)但没解析出任何投注 → 记入 failedLines
+    function hasBetContent(sl2){
+      var c = sl2.replace(/^(?:香港|港|香|澳|澳门|澳特|利来|门|门特|新澳|新奥|新)\s*[:：]?\s*/,'').replace(/[：:。，,\s]+$/,'').trim();
+      return /[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(c);
+    }
+    var failedLines = [];
     subLines.forEach(function(sl){
       var segs = splitByModeMarkers(sl);
       if (segs) {
         segs.forEach(function(seg) {
           var mode = seg.isHK;
           curHKMode = mode;  // 更新状态，后续子行继承
+          var segBets = 0;
           expandLine(seg.text).forEach(function(sr){
             var r = processRule(sr);
             if (r) {
+              segBets++;
               r.msgIndex = lineIdx;
               r.hk = mode;
               msgBet += r.bet;
               betSummary.push(r);
             }
           });
+          if (segBets === 0 && hasBetContent(seg.text)) failedLines.push(seg.text);
         });
         return;
       }
@@ -986,15 +995,18 @@ rawLines.forEach(function(rawLine, lineIdx){
       var slNoSender = sl.replace(/^[^\d]{1,15}?[：:]\s*/, '').trim();
       if (/^(?:香港|港|香)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /香港/.test(slNoSender) || /(?:[\s\d]|^)(?:港|香)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender) || /^(?:香港|港|香)[：:\s]*$/.test(sl)) curHKMode = true;
       else if (/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /澳门|澳門/.test(slNoSender) || /(?:[\s\d]|^)(?:澳特|利来|门特|新澳|新奥)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = false;
+      var slBets = 0;
       expandLine(sl).forEach(function(sr){
         var r = processRule(sr);
         if (r) {
+          slBets++;
           r.msgIndex = lineIdx;
           r.hk = curHKMode;
           msgBet += r.bet;
           betSummary.push(r);
         }
       });
+      if (slBets === 0 && hasBetContent(sl)) failedLines.push(sl);
     });
     var rawDisplay = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
     var displayText = rawDisplay.replace(/\n/g, '；');
@@ -1002,7 +1014,8 @@ rawLines.forEach(function(rawLine, lineIdx){
       index: lineIdx + 1,
       text: displayText.length > 80 ? displayText.substring(0, 80) + '...' : displayText,
       fullText: displayText,
-      totalBet: Math.round(msgBet * 100) / 100
+      totalBet: Math.round(msgBet * 100) / 100,
+      failedLines: failedLines
     });
     grandTotal += msgBet;
   });

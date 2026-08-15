@@ -302,6 +302,10 @@ textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px 
 #msgSummaryTable tfoot td { position:sticky; bottom:0; z-index:2; background:var(--card-bg); border-top:1px solid var(--input-border); font-weight:700; }
 #msgSummaryBody tr.win-row td { background:#fef2f2; }
 #msgSummaryBody td.win-cell { color:#dc2626; font-weight:600; }
+#msgSummaryBody tr.fail-row td { background:rgba(245,158,11,.10); }
+#msgSummaryBody .fail-tag { color:#b45309; background:#fef3c7; border-radius:3px; padding:0 4px; font-size:.72rem; font-weight:600; margin-right:4px; cursor:help; }
+body.light #msgSummaryBody tr.fail-row td { background:rgba(245,158,11,.12); }
+body.light #msgSummaryBody .fail-tag { color:#92400e; background:#fde68a; }
 body.light #msgSummaryBody tr.win-row td { background:rgba(220,38,38,.14); }
 body.light #msgSummaryBody td.win-cell { color:#f87171; }
 body.light tr.win-row td { background:rgba(220,38,38,.10); }
@@ -2364,6 +2368,12 @@ rawLines.forEach(function(rawLine, lineIdx){
     }
     } // end if (!preprocessedCombo)
     var curHKMode = false; // Default Macau, stateful within a line
+    // 未识别行收集(防漏算): 子行有实质内容(数字/生肖)但没解析出任何投注 → 记入 failedLines
+    function hasBetContent(sl2){
+      var c = sl2.replace(/^(?:香港|港|香|澳|澳门|澳特|利来|门|门特|新澳|新奥|新)\s*[:：]?\s*/,'').replace(/[：:。，,\s]+$/,'').trim();
+      return /[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(c);
+    }
+    var failedLines = [];
     subLines.forEach(function(sl){
       // Try inline mode switching first (e.g. "澳门内容  香港内容")
       var segs = splitByModeMarkers(sl);
@@ -2371,9 +2381,11 @@ rawLines.forEach(function(rawLine, lineIdx){
         segs.forEach(function(seg) {
           var mode = seg.isHK;
           curHKMode = mode;  // 更新状态，后续子行继承
+          var segBets = 0;
           expandLine(seg.text).forEach(function(sr){
             var r = processRule(sr);
             if (r) {
+              segBets++;
               r.msgIndex = lineIdx;
               r.hk = mode;
               msgBet += r.bet;
@@ -2388,6 +2400,7 @@ rawLines.forEach(function(rawLine, lineIdx){
               }
             }
           });
+          if (segBets === 0 && hasBetContent(seg.text)) failedLines.push(seg.text);
         });
         return; // skip default processing
       }
@@ -2395,9 +2408,11 @@ rawLines.forEach(function(rawLine, lineIdx){
       var slNoSender = sl.replace(/^[^\d]{1,15}?[：:]\s*/, '').trim();
       if (/^(?:香港|港|香)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /香港/.test(slNoSender) || /(?:[\s\d]|^)(?:港|香)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender) || /^(?:香港|港|香)[：:\s]*$/.test(sl)) curHKMode = true;
       else if (/^(?:澳门|澳門|澳特|澳|利来|门特|门|新澳|新奥|新)(?:[\s，：:。、]|[一-鿿\d])/.test(slNoSender) || /澳门|澳門/.test(slNoSender) || /(?:[\s\d]|^)(?:澳特|利来|门特|新澳|新奥)(?:$|[\s，：:。、]|[一-鿿])/.test(slNoSender)) curHKMode = false;
+      var slBets = 0;
       expandLine(sl).forEach(function(sr){
         var r = processRule(sr);
         if (r) {
+          slBets++;
           r.msgIndex = lineIdx;
           r.hk = curHKMode;
           msgBet += r.bet;
@@ -2412,6 +2427,7 @@ rawLines.forEach(function(rawLine, lineIdx){
           }
         }
       });
+      if (slBets === 0 && hasBetContent(sl)) failedLines.push(sl);
     });
     } catch(e2) {
       console.error('analyze msg ' + (lineIdx+1) + ' error:', e2);
@@ -2423,7 +2439,8 @@ rawLines.forEach(function(rawLine, lineIdx){
       index: lineIdx + 1,
       text: displayText.length > 80 ? displayText.substring(0, 80) + '...' : displayText,
       fullText: fullText,
-      totalBet: Math.round(msgBet * 100) / 100
+      totalBet: Math.round(msgBet * 100) / 100,
+      failedLines: failedLines
     });
   });
 
@@ -3051,9 +3068,11 @@ function renderMsgSummary(){
   tbody.innerHTML = messageSummary.map(function(m){
     grandTotal += m.totalBet;
     var hasWin = m.winNote;
-    return '<tr' + (hasWin ? ' class="win-row"' : '') + '>' +
+    var hasFailed = m.failedLines && m.failedLines.length > 0;
+    var failedTag = hasFailed ? '<span class="fail-tag" title="' + esc(m.failedLines.join('\n')) + '">⚠未识别' + m.failedLines.length + '</span> ' : '';
+    return '<tr' + (hasWin ? ' class="win-row"' : '') + (hasFailed ? ' class="fail-row"' : '') + '>' +
       '<td class="td-r" style="color:var(--text-muted);">' + m.index + '</td>' +
-      '<td class="msg-cell" title="' + esc(m.fullText) + '">' + renderHitMarks(m) + '</td>' +
+      '<td class="msg-cell" title="' + esc(m.fullText) + '">' + failedTag + renderHitMarks(m) + '</td>' +
       '<td class="td-r fmt-num" style="font-weight:600;">' + fmtNum(m.totalBet) + '</td>' +
       '<td class="td-r fmt-num' + (hasWin ? ' win-cell' : '') + '">' + (hasWin ? esc(m.winNote) : '') + '</td>' +
       '</tr>';
@@ -3938,6 +3957,10 @@ function saveResultRemote(settlementData){
       return copy;
     }),
     winNumbers: settlementData.winNumbers,
+    // 期号幂等键(同期待同号覆盖, 防重复结算写多份)
+    expect: (settlementData.winNumbers && settlementData.winNumbers.expect) || '',
+    // 投注明细(含结算结果) — 历史统计/对账数据源
+    betSummary: (typeof betSummary !== 'undefined' ? betSummary : []).concat(typeof hkBetSummary !== 'undefined' ? hkBetSummary : []),
     clientInfo: { id: (typeof clientId !== 'undefined' ? clientId : 'unknown'), ip: '' }
   };
   fetch('/api/save-result', {

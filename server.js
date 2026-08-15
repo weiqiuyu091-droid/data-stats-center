@@ -657,6 +657,11 @@ app.post('/api/save-result', function(req, res) {
       if (!fs.existsSync(saveDir)) fs.mkdirSync(saveDir, { recursive: true });
     }
 
+    // 幂等键: 优先期号(同期待同号覆盖, 防重复结算写多份), 无期号退回时间戳
+    const expect = payload.expect || (payload.winNumbers && payload.winNumbers.expect) || '';
+    const key = expect ? String(expect).replace(/[^\w-]/g, '') : ts;
+    const base = 'settlement_' + key;
+
     // 生成可读文本内容
     const s = payload.settlement;
     const clientInfo = payload.clientInfo || {};
@@ -710,16 +715,21 @@ app.post('/api/save-result', function(req, res) {
     }
     text += '========================================\n';
 
-    const filename = 'settlement_' + ts + '.txt';
-    const filepath = path.join(saveDir, filename);
+    const filepath = path.join(saveDir, base + '.txt');
     fs.writeFile(filepath, text, 'utf-8', function(err) {
       if (err) console.error('[存储] 写入失败: ' + err.message);
       else console.log('[存储] 结算数据已保存: ' + filepath);
     });
+    // JSON 明细(含 betSummary)落库 — 统计/对账的地基, 同期待同号覆盖
+    const jsonDoc = Object.assign({}, payload, { savedAt: now.toISOString(), key: key });
+    const jsonPath = path.join(saveDir, base + '.json');
+    fs.writeFile(jsonPath, JSON.stringify(jsonDoc, null, 1), 'utf-8', function(err) {
+      if (err) console.error('[存储] JSON 写入失败: ' + err.message);
+    });
     // 新数据写入后使 XLSX 缓存失效
     xlsxCache = null;
 
-    res.json({ ok: true, file: filename, dir: saveDir });
+    res.json({ ok: true, file: base + '.json', dir: saveDir, deduped: !!expect });
   } catch(e) {
     console.error('[存储] 保存失败: ' + e.message);
     res.status(500).json({ ok: false, error: e.message });
