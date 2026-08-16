@@ -129,7 +129,7 @@ function norm(s, debug){
     .replace(/个字/g,'各数').replace(/各字/g,'各数')
     .replace(/字([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, n){ return '各' + (cn(n) || parseCNNum(n) || '') + ';'; }).replace(/字/g,'各数')
     .replace(/号个/g,'各数')
-    .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各')
+    .replace(/一个号各/g,'各').replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各').replace(/每号/g,'各数').replace(/各各数/g,'各数')
     .replace(/单数/g,'单').replace(/双数/g,'双')
     .replace(/各\.(\d)/g,'各$1')
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
@@ -904,7 +904,7 @@ rawLines.forEach(function(rawLine, lineIdx){
     // 预处理 "xxx香港澳门" → "澳xxx；港xxx"（必须在子行分割之前）
     rawLine = rawLine.replace(/^(.+)(?:香港澳门|澳门香港|港澳)$/g, '澳$1；港$1');
     var msgBet = 0;
-    const subLines = rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').replace(/。(\s*各)/g, ' 各').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
+    const subLines = rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').replace(/。(\s*各)/g, ' 各').replace(new RegExp('(二连|三连|四连|五连)。(?=[' + ZODIAC_CHARS + '])','g'), '$1 ').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
     // 合并续行: 前一行只有号码/生肖但无金额标记时，与后一行合并
     // 检测消息中是否有三中三/二中二结构（防止级联破坏独立投注行）
     var hasComboStruct = subLines.some(function(sl) {

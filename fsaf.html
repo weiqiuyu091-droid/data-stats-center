@@ -1231,7 +1231,7 @@ function norm(s){
     .replace(/个字/g,'各数').replace(/各字/g,'各数')  // "猴个字十"→"猴各数十"
     .replace(/字/g,'各数')  // "05字三十"→"05各数30", "龙字二十嘛"→"龙各数20嘛"
     .replace(/号个/g,'各数')  // "狗号个25米"→"狗各数25米"
-    .replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各').replace(/数十/g,'10')  // =各 → 各 (避免各各), 各买→各, 数十→10
+    .replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各').replace(/数十/g,'10').replace(/每号/g,'各数').replace(/各各数/g,'各数')  // =各 → 各 (避免各各), 各买→各, 数十→10, 每号→各数 (每号188斤)
     .replace(/单数/g,'单').replace(/双数/g,'双')  // 单数→单, 双数→双 (用于大小单双匹配)
     .replace(/各\.(\d)/g,'各$1')  // "各.10" → "各10"
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
@@ -2299,7 +2299,7 @@ rawLines.forEach(function(rawLine, lineIdx){
     if ((lineIdx + 1) % 20 === 0) console.log('analyze progress:', lineIdx + 1, '/', rawLines.length);
     try {
     var msgBet = 0;
-    const subLines=rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').replace(/。(\s*各)/g, ' 各').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
+    const subLines=rawLine.replace(/(\d)。(\d)/g, '$1.$2').replace(/([^斤米块\d])。(\d)/g, '$1$2').replace(/。(\s*各)/g, ' 各').replace(new RegExp('(二连|三连|四连|五连)。(?=[' + ZODIAC_CHARS + '])','g'), '$1 ').split(/[；;·。]/).map(function(l){ return l.trim(); }).filter(Boolean);
     // 合并【】三中三行: 将【开头的行合并到前面最近的"三中三...每组..."行
     for (var si = 0; si < subLines.length; si++) {
       if (/^【/.test(subLines[si])) {
@@ -3669,32 +3669,34 @@ function doExportXlsx(){
     var wb = XLSX.utils.book_new();
 
     // ===== Sheet 1: 消息明细 (用户指定格式) =====
-    // 汇总每条消息的中奖金额
-    var msgWinMap = {};   // msgIndex -> { total:0, flat:0, nums:0, combo:0, special:0, n2:0, n3:0 }
+    // 汇总每条消息的中奖本金(原始中奖数据, 非赔付计算); 平特尾归平特, 与页面winNote同口径
+    var msgWinMap = {};   // msgIndex -> { total, flat, nums, combo, special, n2, n3 }
     settlementAllRows.forEach(function(r){
-      if(r.msgIndex !== undefined && r.win > 0){
+      if(r.msgIndex !== undefined && (r.hitBet||0) > 0){
         if(!msgWinMap[r.msgIndex]) msgWinMap[r.msgIndex] = { total:0, flat:0, nums:0, combo:0, special:0, n2:0, n3:0 };
-        msgWinMap[r.msgIndex].total += r.win;
-        if(r.type==='flat') msgWinMap[r.msgIndex].flat += r.win;
-        else if(r.type==='nums') msgWinMap[r.msgIndex].nums += r.win;
-        else if(r.type==='combo') msgWinMap[r.msgIndex].combo += r.win;
-        else if(r.type==='special_zodiac') msgWinMap[r.msgIndex].special += r.win;
-        else if(r.type==='n2') msgWinMap[r.msgIndex].n2 += r.win;
-        else if(r.type==='n3') msgWinMap[r.msgIndex].n3 += r.win;
+        msgWinMap[r.msgIndex].total += r.hitBet;
+        if(r.type==='flat' || r.type==='flat_tail') msgWinMap[r.msgIndex].flat += r.hitBet;
+        else if(r.type==='nums') msgWinMap[r.msgIndex].nums += r.hitBet;
+        else if(r.type==='combo') msgWinMap[r.msgIndex].combo += r.hitBet;
+        else if(r.type==='special_zodiac') msgWinMap[r.msgIndex].special += r.hitBet;
+        else if(r.type==='n2') msgWinMap[r.msgIndex].n2 += r.hitBet;
+        else if(r.type==='n3') msgWinMap[r.msgIndex].n3 += r.hitBet;
       }
     });
 
-    // 构建"中"列文本
+    // 构建"中"列文本: 特码单独中奖时纯数字(手搓格式"5"), 与平特等共存时标"特"(手搓"平1100 特15")
+    function round2(x){ return Math.round(x*100)/100; }
     function formatWin(mi){
       var w = msgWinMap[mi];
       if(!w || w.total === 0) return '';
       var parts = [];
-      if(w.flat > 0) parts.push('平' + Math.round(w.flat*100)/100);
-      if(w.nums > 0) parts.push('' + Math.round(w.nums*100)/100);
-      if(w.combo > 0) parts.push('连' + Math.round(w.combo*100)/100);
-      if(w.special > 0) parts.push('肖' + Math.round(w.special*100)/100);
-      if(w.n2 > 0) parts.push('二' + Math.round(w.n2*100)/100);
-      if(w.n3 > 0) parts.push('三' + Math.round(w.n3*100)/100);
+      var otherWin = w.flat + w.combo + w.special + w.n2 + w.n3;
+      if(w.flat > 0) parts.push('平' + round2(w.flat));
+      if(w.nums > 0) parts.push((otherWin > 0 ? '特' : '') + round2(w.nums));
+      if(w.combo > 0) parts.push('连' + round2(w.combo));
+      if(w.special > 0) parts.push('特肖' + round2(w.special));
+      if(w.n2 > 0) parts.push('二中二' + round2(w.n2));
+      if(w.n3 > 0) parts.push('三中三' + round2(w.n3));
       return parts.join(' ');
     }
 
@@ -3732,23 +3734,18 @@ function doExportXlsx(){
     // 汇总总投注额
     var totalAllBet = settlementAllRows.reduce(function(s,r){ return s+(r.bet||0); }, 0);
     var totalAllWin = settlementAllRows.reduce(function(s,r){ return s+(r.win||0); }, 0);
-    var netProfit = totalAllBet - totalAllWin;
-    var waterAmount = Math.round(netProfit * waterRate / 100 * 100) / 100;
-    var netAfterWater = Math.round((netProfit * (1 - waterRate/100)) * 100) / 100;
 
-    // 构建中奖类型汇总文本 (匹配用户格式)
+    // 构建中奖类型汇总文本 (手搓格式: 总数6446 特码87平特50)
     var winTypeSummary = '';
-    if(totalNumsWin > 0) winTypeSummary += '特码中奖额' + totalNumsWin;
-    if(totalFlatWin > 0) winTypeSummary += (winTypeSummary?' ':'') + '平特中奖额' + totalFlatWin;
-    if(totalComboWin > 0) winTypeSummary += (winTypeSummary?' ':'') + '连肖中奖额' + totalComboWin;
-    if(totalSpecialWin > 0) winTypeSummary += (winTypeSummary?' ':'') + '特肖中奖额' + totalSpecialWin;
-    if(totalN2Win > 0) winTypeSummary += (winTypeSummary?' ':'') + '二中二中奖额' + totalN2Win;
-    if(totalN3Win > 0) winTypeSummary += (winTypeSummary?' ':'') + '三中三中奖额' + totalN3Win;
+    if(totalNumsWin > 0) winTypeSummary += '特码' + Math.round(totalNumsWin*100)/100;
+    if(totalFlatWin > 0) winTypeSummary += (winTypeSummary?' ':'') + '平特' + Math.round(totalFlatWin*100)/100;
+    if(totalComboWin > 0) winTypeSummary += (winTypeSummary?' ':'') + '连肖' + Math.round(totalComboWin*100)/100;
+    if(totalSpecialWin > 0) winTypeSummary += (winTypeSummary?' ':'') + '特肖' + Math.round(totalSpecialWin*100)/100;
+    if(totalN2Win > 0) winTypeSummary += (winTypeSummary?' ':'') + '二中二' + Math.round(totalN2Win*100)/100;
+    if(totalN3Win > 0) winTypeSummary += (winTypeSummary?' ':'') + '三中三' + Math.round(totalN3Win*100)/100;
 
-    // 汇总行
-    s1Rows.push(['', Math.round(totalAllBet*100)/100, winTypeSummary]);
-    s1Rows.push(['', '', '抽水后净收益' + (netAfterWater >= 0 ? '+' : '') + netAfterWater]);
-    s1Rows.push(['', '', '水' + waterAmount]);
+    // 汇总行 (手搓格式)
+    s1Rows.push(['', '总数' + Math.round(totalAllBet*100)/100, winTypeSummary]);
 
     // 添加空行占位
     s1Rows.push(['', '', '']);
