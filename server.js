@@ -342,31 +342,56 @@ if (auth) {
 }
 
 app.get('/', auth ? auth.requirePageAuth : function(req, res, next) { next(); }, function(req, res) {
-  res.set('Cache-Control', 'no-cache');
+  // ETag协商缓存(express sendFile默认) + 60秒max-age: 重复打开走304/本地缓存, 部署后最多1分钟延迟
+  res.set('Cache-Control', 'no-cache, max-age=60');
   res.sendFile(path.join(__dirname, 'fsaf.html'));
 });
 
 app.get('/admin', function(req, res) {
-  res.set('Cache-Control', 'no-cache');
+  res.set('Cache-Control', 'no-cache, max-age=60');
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
 app.get('/parser.js', function(req, res) {
-  res.set('Cache-Control', 'no-cache');
+  res.set('Cache-Control', 'no-cache, max-age=60');
   res.sendFile(path.join(__dirname, 'parser.js'));
 });
 
+// XLSX 库本地托管：原 CDN(cdn.sheetjs.com) 海外加载慢/被墙会阻塞页面脚本，改为本地静态文件
+app.get('/xlsx.full.min.js', function(req, res) {
+  res.set('Cache-Control', 'no-cache, max-age=3600');
+  res.sendFile(path.join(__dirname, 'node_modules', 'xlsx', 'dist', 'xlsx.full.min.js'));
+});
+
 // API 代理 - 解决 CORS 问题
+// 澳门开奖每天固定 21:33-34（北京时间）。窗口感知缓存：
+//   窗口内(21:31-21:36) 直连外部源, 保证开奖瞬间 3 秒轮询拿到最新
+//   窗口外 缓存300秒, 页面刷新/打开 0 外部调用; 外部源故障时回退缓存
+var liveCache = { data: null, ts: 0 };
+function inMacauDrawWindow(now) {
+  const t = now.getHours() * 60 + now.getMinutes();
+  return t >= 21 * 60 + 31 && t <= 21 * 60 + 36;
+}
 app.get('/api/live', async function(req, res) {
+  const now = new Date(Date.now() + 8 * 3600 * 1000); // 北京时间
+  if (!inMacauDrawWindow(now) && liveCache.data && Date.now() - liveCache.ts < 300000) {
+    return res.json(liveCache.data);
+  }
   try {
     const resp = await fetch('https://macaumarksix.com/api/live2', {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
     });
-    if (!resp.ok) return res.status(502).json({ error: 'API unavailable' });
+    if (!resp.ok) {
+      if (liveCache.data) return res.json(liveCache.data);
+      return res.status(502).json({ error: 'API unavailable' });
+    }
     const json = await resp.json();
     const data = Array.isArray(json) ? json[0] : json;
+    liveCache.data = data;
+    liveCache.ts = Date.now();
     res.json(data);
   } catch(e) {
+    if (liveCache.data) return res.json(liveCache.data);
     res.status(502).json({ error: 'API unreachable' });
   }
 });

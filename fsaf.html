@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>数据统计中心 v2.1</title>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="/xlsx.full.min.js"></script>
 <style>
 /* ============================================================
    DESIGN TOKENS — 站酷 ZCOOL 风格
@@ -3504,18 +3504,34 @@ async function fetchHKLatest(silent){
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 获取中...'; }
   try {
     var data = null;
-    // 多源尝试：本地服务器 → onrender 中继 → lhc888 备用
+    // 多源竞速：本地服务器 → onrender 中继（并行发请求，第一个成功的胜出，不再串行干等）
     var HK_API_URLS = [
       '/api/hk-jc',
       'https://data-stats-center.onrender.com/api/hk-jc?direct=1',
       '/api/hk-latest',
       'https://data-stats-center.onrender.com/api/hk-latest?direct=1'
     ];
-    for (var u = 0; u < HK_API_URLS.length && !data; u++) {
+    function hkFetchOne(url){
+      return fetch(url).then(function(resp){
+        if(!resp.ok) throw new Error(url + ' HTTP ' + resp.status);
+        return resp.json();
+      });
+    }
+    if (typeof Promise.any === 'function') {
       try {
-        var resp = await fetch(HK_API_URLS[u]);
-        if(resp.ok) { data = await resp.json(); console.log('[HK] 成功(' + HK_API_URLS[u] + '):', data.expect); }
-      } catch(e) { console.warn('[HK] 失败(' + HK_API_URLS[u] + '):', e.message); }
+        data = await Promise.any(HK_API_URLS.map(hkFetchOne));
+        console.log('[HK] 竞速成功:', data.expect);
+      } catch(e) {
+        console.warn('[HK] 竞速全部失败:', e.errors ? e.errors.map(function(x){return x.message;}).join(' | ') : e.message);
+      }
+    } else {
+      // 旧浏览器兜底：串行逐个尝试
+      for (var u = 0; u < HK_API_URLS.length && !data; u++) {
+        try {
+          var resp = await hkFetchOne(HK_API_URLS[u]);
+          data = resp; console.log('[HK] 成功(' + HK_API_URLS[u] + '):', data.expect);
+        } catch(e) { console.warn('[HK] 失败(' + HK_API_URLS[u] + '):', e.message); }
+      }
     }
     if(!data) throw new Error('所有香港开奖接口不可用');
     // 优先用 opencode（逗号分隔的7个中奖号码），比 one~seven 字段更早更新
