@@ -112,6 +112,12 @@ function norm(s, debug){
       if(ds.some(function(d){ return !/^\d$/.test(d); })) return m;
       return ds.map(function(d){ return d + '尾'; }).join(' ');
     })
+    // 点号粘连多尾: ".4..8.2尾" → "4尾 8尾 2尾" (发消息时"4尾8尾2尾"的尾字被点号粘连吞掉)
+    .replace(/(\d(?:\.+\d)+)\s*尾/g, function(m, nums){
+      var ds = nums.split(/\.+/);
+      if(ds.some(function(d){ return !/^\d$/.test(d); })) return m;
+      return ds.map(function(d){ return d + '尾'; }).join(' ');
+    })
     .replace(/(\d(?:[-—－]+\d)+)尾/g, function(m, nums){ return nums.split(/[-—－]+/).map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{2,})尾/g, function(m, digits){ return digits.split('').map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); }).replace(/尾数(\d)尾/g, '$1尾').replace(/(\d)尾/g, function(m, d){ var r=[]; for(var i=0;i<=4;i++){ var n=i*10+parseInt(d); if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     // 红波/蓝波/绿波+单/双组合展开
     .replace(/(红波|蓝波|绿波)(单|双)/g, function(m, wave, od) {
@@ -134,7 +140,7 @@ function norm(s, debug){
     .replace(/各\.(\d)/g,'各$1')
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
     .replace(/(?<!各)数十斤/g,'各10斤').replace(/(?<!各)数十米/g,'各10米').replace(/(?<!各)数十块/g,'各10块')
-    .replace(/平特\s*一肖/g,'平特')
+    .replace(/平特\s*[一1]肖/g,'平特')
     .replace(/一肖\s*平特/g,'平特').replace(new RegExp('一肖\\s*平(?=[' + ZODIAC_CHARS + '])','g'),'平特')
     .replace(/平特(三连|二连|四连|五连)肖/g, '$1')
     .replace(/平特(三连|二连|四连|五连)(?!肖)/g, '$1')

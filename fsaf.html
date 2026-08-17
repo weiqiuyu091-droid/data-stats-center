@@ -1223,6 +1223,12 @@ function norm(s){
       if(ds.some(function(d){ return !/^\d$/.test(d); })) return m;
       return ds.map(function(d){ return d + '尾'; }).join(' ');
     })
+    // 点号粘连多尾: ".4..8.2尾" → "4尾 8尾 2尾" (发消息时"4尾8尾2尾"的尾字被点号粘连吞掉)
+    .replace(/(\d(?:\.+\d)+)\s*尾/g, function(m, nums){
+      var ds = nums.split(/\.+/);
+      if(ds.some(function(d){ return !/^\d$/.test(d); })) return m;
+      return ds.map(function(d){ return d + '尾'; }).join(' ');
+    })
     // 到 范围展开: 01到12 → 01 02 03 ... 12
     .replace(/(\d(?:[-—－]+\d)+)尾/g, function(m, nums){ return nums.split(/[-—－]+/).map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{2,})尾/g, function(m, digits){ return digits.split('').map(function(d){ return d+'尾'; }).join(' '); }).replace(/(\d{1,2})到(\d{1,2})/g, function(m, a, b){ var r=[]; for(var i=parseInt(a);i<=parseInt(b);i++) r.push(i.toString().padStart(2,'0')); return r.join(' '); }).replace(/(\d)头/g, function(m, d){ var r=[]; for(var i=0;i<=9;i++){ var n=parseInt(d)*10+i; if(n>=1&&n<=49) r.push(n.toString().padStart(2,'0')); } return r.join(' '); })
     .replace(/个数十斤/g,'各数10斤').replace(/个数十米/g,'各数10米').replace(/个数十块/g,'各数10块')
@@ -1231,12 +1237,12 @@ function norm(s){
     .replace(/个字/g,'各数').replace(/各字/g,'各数')  // "猴个字十"→"猴各数十"
     .replace(/字/g,'各数')  // "05字三十"→"05各数30", "龙字二十嘛"→"龙各数20嘛"
     .replace(/号个/g,'各数')  // "狗号个25米"→"狗各数25米"
-    .replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各').replace(/数十/g,'10').replace(/每号/g,'各数').replace(/各各数/g,'各数')  // =各 → 各 (避免各各), 各买→各, 数十→10, 每号→各数 (每号188斤)
+    .replace(/一个号/g,'').replace(/个号/g,'各号').replace(/=个/g,'各').replace(/=各/g,'各').replace(/各买/g,'各').replace(/=/g,'各').replace(/数十(?![一二三四五六七八九十])/g,'10').replace(/每号/g,'各数').replace(/各各数/g,'各数')  // =各 → 各 (避免各各), 各买→各, 数十→10 (仅当十后无中文数字, 防"个数十五"被拆成"个105"), 每号→各数 (每号188斤)
     .replace(/单数/g,'单').replace(/双数/g,'双')  // 单数→单, 双数→双 (用于大小单双匹配)
     .replace(/各\.(\d)/g,'各$1')  // "各.10" → "各10"
     .replace(/[：∶:]/g,'').replace(/\s*各\s*\/\s*/g,'各').replace(/(\d{1,2})\s*各\s*\/\s*/g,'$1各')
     .replace(/(?<!各)数十斤/g,'各10斤').replace(/(?<!各)数十米/g,'各10米').replace(/(?<!各)数十块/g,'各10块')
-    .replace(/平特\s*一肖/g,'平特')
+    .replace(/平特\s*[一1]肖/g,'平特')
     .replace(/一肖\s*平特/g,'平特').replace(new RegExp('一肖\\s*平(?=[' + ZODIAC_CHARS + '])','g'),'平特')
     .replace(/平特(三连|二连|四连|五连)肖/g, '$1')
     .replace(/平特(三连|二连|四连|五连)(?!肖)/g, '$1')
