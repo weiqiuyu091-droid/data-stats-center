@@ -314,7 +314,7 @@ app.use(function(req, res, next) {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // ===== 租期管控路由（AUTH_ENABLED=1 时生效） =====
 // 公开页与登录 API 必须放在鉴权中间件之前注册
