@@ -1197,6 +1197,7 @@ function norm(s){
     .replace(/(^|[^\d])2中2(?![0-9])/g, '$1二中二').replace(/(^|[^\d])3中3(?![0-9])/g, '$1三中三')
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')  // 【】→， 展开 （必须在破折号→空格之前）
     .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })  // 每组→各组 归一化
+    .replace(/(三中三|二中二)一组各([一二三四五六七八九十百千万廿卅两百\d]+(?:\.\d+)?)(斤|米|块)?/g, function(m, type, amt, unit){ var v = /^\d/.test(amt) ? amt : (cn(amt) || parseCNNum(amt) || ''); return type + '各组' + (v || '') + (unit || ''); })  // 三中三一组各十斤→三中三各组10斤 (一组=1组)
     .replace(/元/g,'块').replace(/(\d)文/g,'$1块')  // 元→块 归一化，文→块
     .replace(/(?:新澳|澳门|澳)$/g,'')  // 市场标记后缀剥离: "各10澳"/"各五十斤新澳"/"…五十，澳门" → 澳/新澳/澳门在行尾时是澳门系统标记
     .replace(/总数\d+(?:\.\d+)?\s*(?:块|斤|米)?\s*$/g,'')  // 总额提示剥离(行尾): "每数50总数350"→"每数50"
@@ -1482,7 +1483,7 @@ function norm(s){
       return nums + ' ' + type + ' ' + val + (unit || '');
     }).join('；');
   });
-  t = t.replace(/(\d{1,2})\s*\/\s*(\d+(?:\.\d+)?)\s*(?=[斤米块，；。\s]|$)/g, '$1各$2');
+  t = t.replace(/(\d{1,2})\s*\/\s*(\d+(?:\.\d+)?)(?!\s*\d)\s*(?=[斤米块，；。]|$)/g, '$1各$2');
   return t;
 }
 function clean(s){ return s.replace(/^[、，,\s\-－—ㅤ]+/,'').replace(/[、，,。.\s\-－—ㅤ]+$/,'').replace(/[。]/g,'').trim(); }
@@ -2306,6 +2307,8 @@ function analyze(){
       return _lines.join("；");
     });
   }
+  var msgIndexMap = {};   // 原始 lineIdx → 压缩后序号 (空消息跳过时重映射用)
+  var compactIdx = 0;
 
 rawLines.forEach(function(rawLine, lineIdx){
 
@@ -2447,17 +2450,24 @@ rawLines.forEach(function(rawLine, lineIdx){
     } catch(e2) {
       console.error('analyze msg ' + (lineIdx+1) + ' error:', e2);
     }
+    if (msgBet === 0 && failedLines.length === 0) return;  // 空消息跳过(无投注且无未识别), 与手搓序号对齐
+    msgIndexMap[lineIdx] = compactIdx;
     var rawDisplay = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
     var displayText = rawDisplay.replace(/\n/g, '；');
     var fullText = displayText;
     messageSummary.push({
-      index: lineIdx + 1,
+      index: compactIdx + 1,
+      msgIndex: compactIdx,
       text: displayText.length > 80 ? displayText.substring(0, 80) + '...' : displayText,
       fullText: fullText,
       totalBet: Math.round(msgBet * 100) / 100,
       failedLines: failedLines
     });
+    compactIdx++;
   });
+  // 空消息跳过后的 msgIndex 重映射(消息数组索引须与 msgIndex 对齐, 供中奖行关联)
+  betSummary.forEach(function(b){ if (b.msgIndex !== undefined) b.msgIndex = msgIndexMap[b.msgIndex]; });
+  hkBetSummary.forEach(function(b){ if (b.msgIndex !== undefined) b.msgIndex = msgIndexMap[b.msgIndex]; });
 
   try { renderAll(); } catch(e3) { console.error('renderAll error:', e3); alert('渲染号码网格失败: ' + e3.message); }
   try { renderMsgSummary(); } catch(e4) { console.error('renderMsgSummary error:', e4); alert('渲染消息汇总失败: ' + e4.message); }
@@ -3751,7 +3761,7 @@ function doExportXlsx(){
     var s1Rows = [['序号', '各条总数', '中']];
     messageSummary.forEach(function(m){
       var bet = Math.round((m.totalBet||0)*100)/100;
-      var mi = m.index - 1;  // messageSummary.index 是 1-based, msgIndex 是 0-based
+      var mi = m.msgIndex !== undefined ? m.msgIndex : (m.index - 1);  // 空消息跳过时 index 已压缩, 直接用 msgIndex
       var winText = formatWin(mi);
       s1Rows.push([m.index, bet, winText]);
       grandTotal += m.totalBet || 0;

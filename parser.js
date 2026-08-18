@@ -80,6 +80,7 @@ function norm(s, debug){
     .replace(/(^|[^\d])2中2(?![0-9])/g, '$1二中二').replace(/(^|[^\d])3中3(?![0-9])/g, '$1三中三')
     .replace(/】【/g, '，').replace(/【/g, '').replace(/】/g, '')
     .replace(/每组/g, '各组').replace(/(三中三|二中二)组(\d)/g, '$1各组$2').replace(/(三中三|二中二)组([一二三四五六七八九十百千万廿卅两百]+)/g, function(m, type, cnVal) { var v = cn(cnVal) || parseCNNum(cnVal); return type + '各组' + (v || ''); })
+    .replace(/(三中三|二中二)一组各([一二三四五六七八九十百千万廿卅两百\d]+(?:\.\d+)?)(斤|米|块)?/g, function(m, type, amt, unit){ var v = /^\d/.test(amt) ? amt : (cn(amt) || parseCNNum(amt) || ''); return type + '各组' + (v || '') + (unit || ''); })
     .replace(/元/g,'块').replace(/(\d)文/g,'$1块')
     // 市场标记后缀剥离: "各10澳"/"各五十斤新澳"/"…五十，澳门" → 澳/新澳/澳门在行尾时是澳门系统标记
     .replace(/(?:新澳|澳门|澳)$/g,'')
@@ -393,7 +394,7 @@ function norm(s, debug){
       return nums + type + val + (unit || '');
     }).join('；');
   });
-  t = t.replace(/(\d{1,2})\s*\/\s*(\d+(?:\.\d+)?)\s*(?=[斤米块，；。\s]|$)/g, '$1各$2');
+  t = t.replace(/(\d{1,2})\s*\/\s*(\d+(?:\.\d+)?)(?!\s*\d)\s*(?=[斤米块，；。]|$)/g, '$1各$2');
   if (debug) console.log('[norm] 输出:', JSON.stringify(t));
   return t;
 }
@@ -886,6 +887,8 @@ function analyze(inputText){
   var betSummary = [];
   var messageSummary = [];
   var grandTotal = 0;
+  var msgIndexMap = {};   // 原始 lineIdx → 压缩后序号 (空消息跳过时重映射用)
+  var compactIdx = 0;
 
   
   // 复X复Y展开
@@ -1024,17 +1027,24 @@ rawLines.forEach(function(rawLine, lineIdx){
       });
       if (slBets === 0 && hasBetContent(sl)) failedLines.push(sl);
     });
+    if (msgBet === 0 && failedLines.length === 0) return;  // 空消息跳过(无投注且无未识别), 与手搓序号对齐
+    msgIndexMap[lineIdx] = compactIdx;
     var rawDisplay = useNewFormat ? (groupedMessages[lineIdx].displayText || rawLine) : rawLine;
     var displayText = rawDisplay.replace(/\n/g, '；');
     messageSummary.push({
-      index: lineIdx + 1,
+      index: compactIdx + 1,
+      msgIndex: compactIdx,
       text: displayText.length > 80 ? displayText.substring(0, 80) + '...' : displayText,
       fullText: displayText,
       totalBet: Math.round(msgBet * 100) / 100,
       failedLines: failedLines
     });
+    compactIdx++;
     grandTotal += msgBet;
   });
+
+  // 空消息跳过后的 msgIndex 重映射(消息数组索引须与 msgIndex 对齐, 供中奖行关联)
+  betSummary.forEach(function(b){ if (b.msgIndex !== undefined) b.msgIndex = msgIndexMap[b.msgIndex]; });
 
   return { betSummary, messageSummary, grandTotal: Math.round(grandTotal * 100) / 100, groupedMessages, useNewFormat };
 }
