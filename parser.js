@@ -703,6 +703,15 @@ function splitByModeMarkers(sl){
   }
   var after = sl.substring(prev).trim();
   if (after) segs.push({ text: after, isHK: isHKMarker(matches[matches.length-1].marker) });
+  // 悬挂号码段合并: "10.16.17.22.23.26.34.46 香港各数20" → 首段是悬空号码列表(无金额),
+  // 并入下一段继承其市场与金额, 否则两段各自解析失败(号码段无金额/金额段无号码)
+  if (segs.length >= 2 && getVal(norm(segs[0].text)) === 0) {
+    var list0 = getList(segs[0].text);
+    if (list0 && /[\d马蛇龙兔虎牛鼠猪狗鸡猴羊]/.test(list0) && !/三中三|二中二|平特|特肖|复式|连/.test(segs[0].text)) {
+      segs[1].text = segs[0].text + ' ' + segs[1].text;
+      segs.splice(0, 1);
+    }
+  }
   // 只要检测到模式标记就返回，单分段也要处理（如"香港：xxx"）
   return segs.length > 0 ? segs : null;
 }
